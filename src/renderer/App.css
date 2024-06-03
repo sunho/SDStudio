@@ -1,0 +1,265 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: sans-serif;
+}
+
+.alert-window {
+  position: fixed;
+  z-index: 3000;
+}
+
+.confirm-window {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.brush-tool {
+  width: 32rem;
+}
+
+.float-view-comp {
+  height: calc(95vh - 44px);
+}
+
+.float-view-comp-width {
+  width: 95vw;
+}
+
+.clear-textarea {
+  display: block;
+  width: 100%;
+  border: none;
+  overflow: auto;
+  outline: none;
+  -webkit-box-shadow: none;
+  -moz-box-shadow: none;
+  box-shadow: none;
+  resize: none;
+}
+
+.scene {
+  padding: 15px;
+  margin: 5px;
+  border: solid;
+  border-width: 1px;
+  border-color: black;
+  display: flex;
+}
+
+.sceneActive {
+  border-color: blue;
+}
+
+.button {
+  padding: 5px;
+  margin: 5px;
+}
+
+.sceneProgress {
+  padding: 10px;
+  background: orange;
+  font-weight: 800;
+  color: white;
+  border-radius: 5px;
+  margin: 3px;
+}
+
+.sceneDone {
+  background: #17b169;
+}
+
+.progressTab {
+  margin-left: auto;
+}
+
+.toggle-container {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lock-scroll {
+  overflow: hidden;
+}
+
+.floating-component {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.content {
+  background: white;
+  width: 95vw;
+  height: 95vh;
+  overflow: hidden;
+}
+
+.scrollable-content {
+  max-height: 90vh; /* Adjust this value to fit your needs */
+  overflow-y: auto;
+  border-radius: 4px;
+}
+
+.image {
+  width: 100%;
+  height: auto;
+}
+
+.imageSmall {
+  object-fit: scale-down;
+  max-width: 100%;
+  max-height: 100%;
+  height: auto;
+  width: auto;
+}
+
+.canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0.5;
+  z-index: 2;
+  object-fit: contain;
+  max-height: 100%;
+  max-width: 100%;
+}
+
+.canvas-image {
+  position: relative;
+  user-select: none;
+  top: 0;
+  left: 0;
+  object-fit: contain;
+  max-height: 100%;
+  max-width: 100%;
+}
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
+.image-cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* This ensures the image fits and is cropped to the cell */
+  animation-name: show;
+  transition-timing-function: cubic-bezier(
+    0.645,
+    0.045,
+    0.355,
+    1
+  ); /* easeInOutCubic */
+  animation-duration: 0.3s;
+}
+
+@keyframes show {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.canvas-tooltip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 5px;
+  z-index: 3;
+  background: white;
+  opacity: 0.4;
+}
+
+.canvas-container {
+  user-select: none;
+  height: 100%;
+  overflow: auto;
+  position: relative;
+}
+
+.syntax-error {
+  color: red;
+}
+
+.syntax-strong {
+  font-weight: bold;
+}
+
+.syntax-weak {
+  font-style: italic;
+}
+
+.syntax-wildcard {
+  color: #0ea5e9;
+  font-weight: 800;
+}
+
+.syntax-word {
+  white-space: pre-line;
+}
+
+.syntax-line {
+  white-space: pre-line;
+}
+
+.progress-transition {
+  transition: background-color 1s;
+}
+
+.progress-animation {
+  animation-name: fill;
+  animation-timing-function: linear;
+}
+
+@keyframes fill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.progress-clip-animation {
+  animation-name: clipFill;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes clipFill {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
