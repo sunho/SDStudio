@@ -18,6 +18,11 @@ import { resolveHtmlPath } from './util';
 import { v4 as uuidv4 } from 'uuid';
 import { NovelAiImageGenService } from './genVendors/nai';
 const sharp = require('sharp');
+import contextMenu from 'electron-context-menu';
+
+contextMenu({
+	showSaveImageAs: true
+});
 
 class AppUpdater {
   constructor() {
@@ -182,7 +187,7 @@ const isDebug =
   process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
 
 if (isDebug) {
-  require('electron-debug')({ showDevTools: false });
+  // require('electron-debug')({ showDevTools: false });
 }
 
 const installExtensions = async () => {
@@ -264,7 +269,7 @@ const createWindow = async () => {
 
   // Remove this if your app does not use auto updates
   // eslint-disable-next-line
-  new AppUpdater();
+  // new AppUpdater();
 };
 
 const gotTheLock = app.requestSingleInstanceLock()
