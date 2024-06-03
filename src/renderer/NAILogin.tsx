@@ -1,0 +1,68 @@
+import { useContext, useEffect, useState } from 'react';
+import { loginService } from './models';
+import { AppContext } from './App';
+import { grayInput, primaryColor, roundButton } from './styles';
+
+const NAILogin = () => {
+  const ctx = useContext(AppContext)!;
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  useEffect(() => {
+    const onChange = () => {
+      setLoggedIn(loginService.loggedIn);
+    };
+    onChange();
+    loginService.addEventListener('change', onChange);
+    return () => {
+      loginService.removeEventListener('change', onChange);
+    };
+  }, []);
+
+  const login = () => {
+    (async () => {
+      try {
+        await loginService.login(email, password);
+      } catch (err: any) {
+        ctx.pushMessage('로그인 실패:' + err.message);
+      }
+    })();
+  };
+
+  const roundTag = 'text-white px-3 py-1 rounded-full';
+
+  return (
+    <div className="flex border-b border-gray-200 px-2 py-2 justify-between items-center">
+      <div className="flex gap-3">
+        <input
+          className={`${grayInput}`}
+          type="text"
+          placeholder="이메일"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <input
+          className={`${grayInput}`}
+          type="password"
+          placeholder="암호"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button className={`${roundButton} ${primaryColor}`} onClick={login}>
+          로그인
+        </button>
+      </div>
+      <p className="mr-2">
+        <span className="text-black">로그인 상태:</span>{' '}
+        {loggedIn ? (
+          <span className={`${roundTag} bg-green-500`}>Yes</span>
+        ) : (
+          <span className={`${roundTag} bg-red-500`}>No</span>
+        )}
+      </p>
+    </div>
+  );
+};
+
+export default NAILogin;
