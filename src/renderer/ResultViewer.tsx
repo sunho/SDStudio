@@ -21,7 +21,7 @@ import { FixedSizeGrid as Grid, GridChildComponentProps } from 'react-window';
 import ResizeObserver from 'resize-observer-polyfill';
 import { AppContext } from './App';
 import { userInfo } from 'os';
-import { FloatView } from './UtilComponents';
+import { CustomScrollbars, FloatView } from './UtilComponents';
 import Tournament from './Tournament';
 import { roundButton } from './styles';
 import { FaStar } from 'react-icons/fa';
@@ -145,6 +145,11 @@ const Cell = ({
   );
 };
 
+const CustomScrollbarsVirtualGrid = forwardRef((props, ref) => (
+  <CustomScrollbars {...props} forwardedRef={ref} />
+));
+
+
 const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
   ({ filePaths, isMainImage, onSelected, onFilenameChange }, ref) => {
     const { curSession } = useContext(AppContext)!;
@@ -191,6 +196,7 @@ const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
           rowCount={Math.ceil(filePaths.length / columnCount)}
           rowHeight={rowHeight}
           width={columnCount * columnWidth}
+          outerElementType={CustomScrollbarsVirtualGrid}
           itemData={{
             filePaths,
             onSelected,

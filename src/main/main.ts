@@ -101,7 +101,7 @@ ipcMain.handle('login', async (event, email, password) => {
 });
 
 ipcMain.handle('show-file', async (event, arg) => {
-  shell.showItemInFolder(APP_DIR + '/' + arg);
+  shell.showItemInFolder(path.join(APP_DIR, arg));
 });
 
 const AdmZip = require('adm-zip');
@@ -187,7 +187,7 @@ const isDebug =
   process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
 
 if (isDebug) {
-  // require('electron-debug')({ showDevTools: false });
+  require('electron-debug')({ showDevTools: true });
 }
 
 const installExtensions = async () => {
@@ -260,6 +260,7 @@ const createWindow = async () => {
 
   const menuBuilder = new MenuBuilder(mainWindow);
   menuBuilder.buildMenu();
+  mainWindow.setMenu(null)
 
   // Open urls in the user's browser
   mainWindow.webContents.setWindowOpenHandler((edata) => {

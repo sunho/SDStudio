@@ -550,13 +550,17 @@ export class ImageService extends EventTarget {
   async renameScene(session: Session, oldName: string, newName: string) {
     const oldDir = 'outs/' + session.name + '/' + oldName;
     const newDir = 'outs/' + session.name + '/' + newName;
-    for (const cache of [this.cache, this.smallCache]) {
-      for (const key of cache.cache.keys()) {
+    for (const cache of [this.cache.cache, this.smallCache.cache]) {
+      const keys = cache.keys();
+      const toRename = [];
+      for (const key of keys) {
         if (key.startsWith(oldDir)) {
-          const newKey = key.replace(oldDir, newDir);
-          cache.set(newKey, cache.get(key)!);
-          cache.delete(key);
+          toRename.push([key, newDir + key.slice(oldDir.length)]);
         }
+      }
+      for (const [key, newKey] of toRename) {
+        cache.set(newKey, cache.get(key)!);
+        cache.delete(key);
       }
     }
     try {

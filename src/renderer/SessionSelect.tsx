@@ -74,7 +74,7 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSamples }) => {
 
   return (
     <div className="px-3 py-2 border-t flex gap-3 items-center">
-      <span>프로젝트: </span>
+      <span className="whitespace-nowrap">프로젝트: </span>
       <div className="w-1/5 xl:w-1/4">
         <DropdownSelect
           menuPlacement="top"

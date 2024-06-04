@@ -156,7 +156,7 @@ const SceneCell = ({
             {getSceneQueueCount(scene)}
           </span>
         )}
-        <span className="text-lg overflow-auto">{scene.name}</span>
+        <span className="text-lg overflow-auto no-scrollbars">{scene.name}</span>
         <div className="w-full flex mt-auto justify-center items-center gap-2">
           <button
             className={`${roundButton} bg-green-500`}
@@ -372,6 +372,10 @@ const QueueControl = ({ type }: QueueControlProps) => {
                 return;
               }
               const orgScene = curSession!.scenes[scene.sceneRef];
+              if (!orgScene) {
+                ctx.pushMessage('원본 씬이 삭제되었거나 이동했습니다.');
+                return;
+              }
               await invoke(
                 'copy-file',
                 path,

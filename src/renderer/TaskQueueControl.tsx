@@ -138,8 +138,10 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
 
   return (
     <div className="flex gap-4 items-center">
-      <div>
+      <div className="whitespace-nowrap">
+        <span className="whitespace-nowrap">
         추가개수:
+        </span>
         <input
           min={1}
           max={99}

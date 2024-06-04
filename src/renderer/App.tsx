@@ -92,7 +92,8 @@ export default function App() {
         const sess = await sessionService.get(json.name);
         if (!sess) {
           await sessionService.createFrom(json.name, json);
-          setCurSession(await sessionService.get(json.name));
+          if (taskQueueService.isEmpty())
+            setCurSession(await sessionService.get(json.name));
           pushDialog({
             type: 'yes-only',
             text: '프로젝트를 임포트 했습니다',
