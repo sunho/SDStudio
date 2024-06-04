@@ -70,6 +70,8 @@ jobs:
       - name: Build the application
         run: npm run package
         env:
+          CSC_LINK: file://$(pwd)/certificate.p12
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_PW }}
 
