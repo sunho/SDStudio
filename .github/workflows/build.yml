@@ -11,6 +11,8 @@ jobs:
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
+        with:
+          node-version: '22'
 
       - name: Install dependencies
         run: npm install
@@ -46,6 +48,8 @@ jobs:
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
+        with:
+          node-version: '22'
 
       # - name: Decode and import the certificate
       #   env:
@@ -67,7 +71,7 @@ jobs:
         run: |
           npm install
           cd release/app
-          npm install --include=optional sharp@0.32.6
+          npm install --verbose --include=optional sharp@0.32.6
 
       - name: Build the application
         run: npm run package
