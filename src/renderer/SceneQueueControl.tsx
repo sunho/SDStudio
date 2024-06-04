@@ -432,7 +432,7 @@ const QueueControl = ({ type }: QueueControlProps) => {
     if (type === 'inpaint') return false;
     const scene = displayScene as Scene;
     if (scene.main) {
-      return path.endsWith(scene.main);
+      return path.split('/').pop() === scene.main;
     }
     return false;
   };
@@ -440,7 +440,7 @@ const QueueControl = ({ type }: QueueControlProps) => {
   const onFilenameChange = (path: string) => {
     if (type === 'scene') {
       const scene = displayScene as Scene;
-      if (scene.main && path.endsWith(scene.main)) {
+      if (scene.main && scene.main === path.split('/').pop()) {
         scene.main = undefined;
         updateScenes();
       }
