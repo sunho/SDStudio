@@ -21,10 +21,10 @@ jobs:
       - name: Get version and commit hash
         id: get-version
         run: |
-          version=$(jq -r '.version' release/app/package.json)
-          echo "version=$version" >> $GITHUB_ENV
-          commit_hash=$(git rev-parse --short HEAD)
-          echo "commit_hash=$commit_hash" >> $GITHUB_ENV
+          node get-version.js
+          echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        shell: bash
+
 
       - name: Rename and zip the build
         run: |
@@ -36,6 +36,7 @@ jobs:
         with:
           name: SDStudio-windows-${{ env.version }}-${{ env.commit_hash }}
           path: "SDStudio-${{ env.version }}-${{ env.commit_hash }}.zip"
+
 
   build-mac:
     runs-on: macos-latest
