@@ -46,6 +46,11 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
 
+      - name: Set up environment variables for notarization
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_PW }}
+
       - name: Install dependencies
         run: npm install
 
