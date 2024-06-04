@@ -56,7 +56,6 @@ jobs:
           security create-keychain -p "" build.keychain
           security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
-          rm certificate.p12
 
       - name: Set up environment variables
         env:
