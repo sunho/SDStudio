@@ -58,6 +58,12 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
           rm certificate.p12
 
+      - name: Set up environment variables
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: echo "KEYCHAIN=build.keychain" >> $GITHUB_ENV
+
       - name: Install dependencies
         run: npm install
 
