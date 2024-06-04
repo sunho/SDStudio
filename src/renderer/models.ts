@@ -654,6 +654,30 @@ export class ImageService extends EventTarget {
 
     this.dispatchEvent(new CustomEvent('updated', {}));
   }
+
+  onAddImage(session: Session, scene: string, path: string) {
+    if (!(session.name in this.images)) {
+      this.images[session.name] = {};
+    }
+    if (!(scene in this.images[session.name])) {
+      this.images[session.name][scene] = [];
+    }
+    this.images[session.name][scene] = this.images[session.name][scene].concat([path]);
+    this.images[session.name][scene].sort(naturalSort);
+    this.dispatchEvent(new CustomEvent('updated', {}));
+  }
+
+  onAddInPaint(session: Session, scene: string, path: string) {
+    if (!(session.name in this.inpaints)) {
+      this.inpaints[session.name] = {};
+    }
+    if (!(scene in this.inpaints[session.name])) {
+      this.inpaints[session.name][scene] = [];
+    }
+    this.inpaints[session.name][scene] = this.inpaints[session.name][scene].concat([path]);
+    this.inpaints[session.name][scene].sort(naturalSort);
+    this.dispatchEvent(new CustomEvent('updated', {}));
+  }
 }
 
 export const imageService = new ImageService();
@@ -942,7 +966,7 @@ export class TaskQueueService extends EventTarget {
     );
   }
 
-  async genImage(task: GenerateTask) {
+  async genImage(task: GenerateTask, outPath: string) {
     const prompt = task.preset.prompt.replace(String.fromCharCode(160), ' ');
     const uc = task.preset.uc.replace(String.fromCharCode(160), ' ');
     const arg: ImageGenInput = {
@@ -954,7 +978,7 @@ export class TaskQueueService extends EventTarget {
         : Resolution.Portrait,
       sampling: task.preset.sampling,
       sm: true,
-      outputFilePath: task.outPath + '/' + Date.now().toString() + '.png',
+      outputFilePath: outPath,
       seed: task.preset.seed,
     };
     if (task.preset.vibe !== '') {
@@ -963,7 +987,7 @@ export class TaskQueueService extends EventTarget {
     await invoke('image-gen', arg);
   }
 
-  async inPaintImage(task: InPaintTask) {
+  async inPaintImage(task: InPaintTask, outPath: string) {
     const prompt = task.preset.prompt.replace(String.fromCharCode(160), ' ');
     const uc = task.preset.uc.replace(String.fromCharCode(160), ' ');
     const arg: ImageGenInput = {
@@ -978,7 +1002,7 @@ export class TaskQueueService extends EventTarget {
       sm: false,
       image: task.image,
       mask: task.mask,
-      outputFilePath: task.outPath + '/' + Date.now().toString() + '.png',
+      outputFilePath: outPath,
       seed: task.preset.seed,
     };
     if (task.preset.vibe !== '') {
@@ -1024,10 +1048,12 @@ export class TaskQueueService extends EventTarget {
           await sleep(
             (Math.random() * RANDOM_DELAY_STD + RANDOM_DELAY_BIAS) * 1000,
           );
+
+          const outputFilePath = task.outPath + '/' + Date.now().toString() + '.png';
           if (task.type === 'generate') {
-            await this.genImage(task);
+            await this.genImage(task, outputFilePath);
           } else if (task.type === 'inpaint') {
-            await this.inPaintImage(task);
+            await this.inPaintImage(task, outputFilePath);
           }
           const after = Date.now();
           this.timeEstimator.addSample(after - before);
@@ -1046,7 +1072,11 @@ export class TaskQueueService extends EventTarget {
               this.totalStats.done++;
             }
           }
-          imageService.refresh(task.session);
+          if (task.type === 'generate') {
+            imageService.onAddImage(task.session, task.scene, outputFilePath);
+          } else {
+            imageService.onAddInPaint(task.session, task.scene, outputFilePath);
+          }
           this.dispatchEvent(new CustomEvent('complete', {}));
           this.dispatchProgress();
         } catch (e: any) {
