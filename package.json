@@ -260,5 +260,7 @@
     ],
     "logLevel": "quiet"
   },
-  "extraMetadata": { "version": "1.0.0" }
+  "extraMetadata": {
+    "version": "1.0.0"
+  }
 }
