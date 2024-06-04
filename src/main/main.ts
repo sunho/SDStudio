@@ -273,6 +273,10 @@ const createWindow = async () => {
   // new AppUpdater();
 };
 
+(async () => {
+  await fs.mkdir(APP_DIR, { recursive: true });
+})();
+
 const gotTheLock = app.requestSingleInstanceLock()
 
 if (!gotTheLock) {
@@ -305,10 +309,6 @@ if (!gotTheLock) {
         // On macOS it's common to re-create a window in the app when the
         // dock icon is clicked and there are no other windows open.
         if (mainWindow === null) createWindow();
-
-        (async () => {
-          await fs.mkdir(APP_DIR, { recursive: true });
-        })();
         // APP_DIR = app.getPath('userData');
       });
     })
