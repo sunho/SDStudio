@@ -194,19 +194,18 @@
     ],
     "afterSign": ".erb/scripts/notarize.js",
     "mac": {
-      "target": {
-        "target": "default",
-        "arch": [
-          "arm64",
-          "x64"
-        ]
-      },
       "type": "distribution",
       "hardenedRuntime": true,
       "entitlements": "assets/entitlements.mac.plist",
       "entitlementsInherit": "assets/entitlements.mac.plist",
       "gatekeeperAssess": false,
-      "mergeASARs": false
+      "mergeASARs": false,
+      "target": {
+        "target": "default",
+        "arch": "universal"
+      },
+      "singleArchFiles": "**/sharp-darwin-arm64v8.node",
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
     },
     "dmg": {
       "contents": [
