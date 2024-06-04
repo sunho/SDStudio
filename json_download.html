@@ -1,0 +1,39 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auto Download JSON</title>
+</head>
+<body>
+  <script>
+    function getQueryParameter(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+
+    function downloadFile(url, filename) {
+      fetch(url)
+        .then(response => response.blob())
+        .then(blob => {
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        })
+        .catch(error => console.error('Error downloading file:', error));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const jsonUrl = getQueryParameter('jsonUrl');
+      if (jsonUrl) {
+        const filename = jsonUrl.split('/').pop() || 'download.json';
+        downloadFile(jsonUrl, filename);
+      } else {
+        console.error('No jsonUrl query parameter provided.');
+      }
+    });
+  </script>
+</body>
+</html>
