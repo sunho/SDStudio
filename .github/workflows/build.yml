@@ -71,7 +71,8 @@ jobs:
         run: |
           npm install
           cd release/app
-          npm install --verbose --include=optional sharp@0.32.6
+          npm install --cpu=x64 --os=darwin sharp@0.32.6
+          npm install --cpu=arm64 --os=darwin sharp@0.32.6
 
       - name: Build the application
         run: npm run package
