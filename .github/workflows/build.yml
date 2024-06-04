@@ -87,5 +87,5 @@ jobs:
         with:
           name: SDStudio-mac-${{ env.version }}-${{ env.commit_hash }}
           path: |
-            release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}.dmg
-            release/build/SDStudio-${{ env.version }}-arm-${{ env.commit_hash }}.dmg
+            release/build/SDStudio-${{ env.version }}-mac-${{ env.commit_hash }}.dmg
+            release/build/SDStudio-${{ env.version }}-mac-arm-${{ env.commit_hash }}.dmg
