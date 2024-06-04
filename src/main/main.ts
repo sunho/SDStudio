@@ -277,11 +277,11 @@ const createWindow = async () => {
   await fs.mkdir(APP_DIR, { recursive: true });
 })();
 
-const gotTheLock = app.requestSingleInstanceLock()
+// const gotTheLock = app.requestSingleInstanceLock()
 
-if (!gotTheLock) {
-  app.quit()
-} else {
+// if (!gotTheLock) {
+//   app.quit()
+// } else {
   app.on('second-instance', (event, commandLine, workingDirectory) => {
     // Someone tried to run a second instance, we should focus our window.
     if (mainWindow) {
@@ -313,4 +313,4 @@ if (!gotTheLock) {
       });
     })
     .catch(console.log);
-}
+//}
