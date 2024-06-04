@@ -47,32 +47,27 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
 
-      - name: Decode and import the certificate
-        env:
-          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
-          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
-        run: |
-          echo "$MACOS_CERTIFICATE_P12" | base64 --decode > certificate.p12
-          security create-keychain -p "" build.keychain
-          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
-
-      - name: Set up environment variables
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-        run: echo "KEYCHAIN=build.keychain" >> $GITHUB_ENV
+      # - name: Decode and import the certificate
+      #   env:
+      #     MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+      #     MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      #   run: |
+      #     echo "$MACOS_CERTIFICATE_P12" | base64 --decode > certificate.p12
+      #     security create-keychain -p "" build.keychain
+      #     security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+      #     security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+      #
+      # - name: Set up environment variables
+      #   env:
+      #     APPLE_ID: ${{ secrets.APPLE_ID }}
+      #     APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      #   run: echo "KEYCHAIN=build.keychain" >> $GITHUB_ENV
 
       - name: Install dependencies
         run: npm install
 
       - name: Build the application
         run: npm run package
-        env:
-          CSC_LINK: certificate.p12
-          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_PW }}
 
       - name: Get version and commit hash
         id: get-version
@@ -84,13 +79,13 @@ jobs:
 
       - name: Rename DMG files
         run: |
-          mv "release/build/SDStudio-${{ env.version }}.dmg" "release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}.dmg"
-          mv "release/build/SDStudio-${{ env.version }}-arm.dmg" "release/build/SDStudio-${{ env.version }}-arm-${{ env.commit_hash }}.dmg"
+          mv "release/build/SDStudio-${{ env.version }}.zip" "release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}.zip"
+          mv "release/build/SDStudio-${{ env.version }}-arm.zip" "release/build/SDStudio-${{ env.version }}-arm-${{ env.commit_hash }}.zip"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: SDStudio-mac-${{ env.version }}-${{ env.commit_hash }}
           path: |
-            release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}.dmg
-            release/build/SDStudio-${{ env.version }}-arm-${{ env.commit_hash }}.dmg
+            release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}.zip
+            release/build/SDStudio-${{ env.version }}-arm-${{ env.commit_hash }}.zip
