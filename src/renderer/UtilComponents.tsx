@@ -1,8 +1,9 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, forwardRef, useCallback, useEffect, useRef, useState } from 'react';
 
 import Select from 'react-select';
 import { primaryColor, roundButton } from './styles';
 import { FaFileUpload, FaTimes } from 'react-icons/fa';
+import { Scrollbars } from 'react-custom-scrollbars-2';
 
 export interface Option<T> {
   value: T;
@@ -323,5 +324,25 @@ export const TextAreaWithUndo = ({ value, onChange }) => {
       ref={textAreaRef}
       onChange={handleChange}
     />
+  );
+};
+
+export const CustomScrollbars = ({ onScroll, forwardedRef, style, children }: any) => {
+  const refSetter = useCallback(scrollbarsRef => {
+    if (scrollbarsRef) {
+      forwardedRef(scrollbarsRef.view);
+    } else {
+      forwardedRef(null);
+    }
+  }, []);
+
+  return (
+    <Scrollbars
+      ref={refSetter}
+      style={{ ...style, overflow: "hidden" }}
+      onScroll={onScroll}
+    >
+      {children}
+    </Scrollbars>
   );
 };

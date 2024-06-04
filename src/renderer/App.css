@@ -2,8 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Noto Sans';
+  src: url('../../assets/fonts/NotoSans-Regular.ttf') format('truetype'),
+       url('../../assets/fonts/NotoSans-Bold.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 body {
-  font-family: sans-serif;
+  font-family: 'Noto Sans', sans-serif;
 }
 
 .alert-window {
@@ -131,6 +139,7 @@ body {
   max-height: 100%;
   height: auto;
   width: auto;
+  user-select: none;
 }
 
 .canvas {
@@ -157,6 +166,27 @@ body {
 input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button {
   opacity: 1;
+}
+
+.no-scrollbars{
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+
+  &::-webkit-scrollbar {
+    width: 1px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: transparent;
+  }
+}
+
+.no-scrollbars::-webkit-scrollbar { 
+  display: none;  /* Safari and Chrome */
 }
 
 .image-cell {

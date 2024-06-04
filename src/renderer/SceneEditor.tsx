@@ -18,7 +18,7 @@ import {
   renameScene,
   sessionService,
 } from './models';
-import { TabComponent, TextAreaWithUndo } from './UtilComponents';
+import { CustomScrollbars, TabComponent, TextAreaWithUndo } from './UtilComponents';
 import { FaPlus, FaTimes } from 'react-icons/fa';
 import { FaTrash } from 'react-icons/fa';
 import { AppContext } from './App';
@@ -26,6 +26,7 @@ import Denque from 'denque';
 import { writeFileSync } from 'original-fs';
 import { grayInput, primaryColor, roundButton } from './styles';
 import { windowsStore } from 'process';
+import Scrollbars from 'react-custom-scrollbars-2';
 
 interface Props {
   scene: Scene;
@@ -178,16 +179,19 @@ export const PromptEditTextArea = ({
       setInput(text, getCurPos());
     };
     const cancelEnter = (e: any) => {
+      const redo = () => {
+        if (redoRef.current.length > 0) {
+          const entry = redoRef.current.pop()!;
+          applyHistory(entry);
+          historyRef.current.push(entry);
+        }
+      };
       if (e.key === 'Enter') {
         e.preventDefault();
-      } else if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
+      } else if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         if (e.shiftKey) {
-          if (redoRef.current.length > 0) {
-            const entry = redoRef.current.pop()!;
-            applyHistory(entry);
-            historyRef.current.push(entry);
-          }
+         redo();
         } else {
           if (historyRef.current.length > 1) {
             const entry = historyRef.current.pop()!;
@@ -195,6 +199,8 @@ export const PromptEditTextArea = ({
             applyHistory(historyRef.current.peekBack()!);
           }
         }
+      } else if (e.key === 'y' && (e.ctrlKey || e.metaKey)) {
+        redo();
       }
     };
     const onFetch = () => {
@@ -224,7 +230,7 @@ export const PromptEditTextArea = ({
         contentEditable={true}
       ></div>
     </div>
-  );
+    );
 };
 
 interface PromptHighlighterProps {
