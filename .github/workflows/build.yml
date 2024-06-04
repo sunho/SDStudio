@@ -79,13 +79,13 @@ jobs:
 
       - name: Rename DMG files
         run: |
-          mv "release/build/SDStudio-${{ env.version }}.zip" "release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}.zip"
-          mv "release/build/SDStudio-${{ env.version }}-arm.zip" "release/build/SDStudio-${{ env.version }}-arm-${{ env.commit_hash }}.zip"
+          mv "release/build/SDStudio-${{ env.version }}-mac.dmg" "release/build/SDStudio-${{ env.version }}-mac-${{ env.commit_hash }}.dmg"
+          mv "release/build/SDStudio-${{ env.version }}-mac-arm.dmg" "release/build/SDStudio-${{ env.version }}-mac-arm-${{ env.commit_hash }}.dmg"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: SDStudio-mac-${{ env.version }}-${{ env.commit_hash }}
           path: |
-            release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}.zip
-            release/build/SDStudio-${{ env.version }}-arm-${{ env.commit_hash }}.zip
+            release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}.dmg
+            release/build/SDStudio-${{ env.version }}-arm-${{ env.commit_hash }}.dmg
