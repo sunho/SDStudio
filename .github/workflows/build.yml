@@ -71,8 +71,10 @@ jobs:
         run: |
           npm install
           cd release/app
-          npm install --cpu=x64 --os=darwin sharp@0.32.6
-          npm install --cpu=arm64 --os=darwin sharp@0.32.6
+          npm uninstall sharp
+          npm install --platform=darwin --arch=x64 sharp@0.32.6
+          npm rebuild --platform=darwin --arch=arm64 sharp@0.32.6
+
 
       - name: Build the application
         run: npm run package
