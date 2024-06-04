@@ -1,0 +1,74 @@
+name: Build Electron Application
+
+on: [push, pull_request]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build the application
+        run: npm run package
+
+      - name: Get version and commit hash
+        id: get-version
+        run: |
+          version=$(jq -r '.version' release/app/package.json)
+          echo "version=$version" >> $GITHUB_ENV
+          commit_hash=$(git rev-parse --short HEAD)
+          echo "commit_hash=$commit_hash" >> $GITHUB_ENV
+
+      - name: Rename and zip the build
+        run: |
+          mv release/build/win-unpacked "SDStudio-${{ env.version }}-${{ env.commit_hash }}"
+          7z a "SDStudio-${{ env.version }}-${{ env.commit_hash }}.zip" "SDStudio-${{ env.version }}-${{ env.commit_hash }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: SDStudio-windows-${{ env.version }}-${{ env.commit_hash }}
+          path: "SDStudio-${{ env.version }}-${{ env.commit_hash }}.zip"
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build the application
+        run: npm run package
+
+      - name: Get version and commit hash
+        id: get-version
+        run: |
+          version=$(jq -r '.version' release/app/package.json)
+          echo "version=$version" >> $GITHUB_ENV
+          commit_hash=$(git rev-parse --short HEAD)
+          echo "commit_hash=$commit_hash" >> $GITHUB_ENV
+
+      - name: Rename DMG files
+        run: |
+          mv "release/build/SDStudio-${{ env.version }}.dmg" "release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}.dmg"
+          mv "release/build/SDStudio-${{ env.version }}-arm.dmg" "release/build/SDStudio-${{ env.version }}-arm-${{ env.commit_hash }}.dmg"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: SDStudio-mac-${{ env.version }}-${{ env.commit_hash }}
+          path: |
+            release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}.dmg
+            release/build/SDStudio-${{ env.version }}-arm-${{ env.commit_hash }}.dmg
