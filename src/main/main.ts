@@ -11,7 +11,6 @@
 import path from 'path';
 import { ImageGenInput, ImageGenService } from './imageGen';
 import { app, BrowserWindow, shell, ipcMain, screen } from 'electron';
-import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
@@ -23,14 +22,6 @@ import contextMenu from 'electron-context-menu';
 contextMenu({
 	showSaveImageAs: true
 });
-
-class AppUpdater {
-  constructor() {
-    log.transports.file.level = 'info';
-    autoUpdater.logger = log;
-    autoUpdater.checkForUpdatesAndNotify();
-  }
-}
 
 let mainWindow: BrowserWindow | null = null;
 
