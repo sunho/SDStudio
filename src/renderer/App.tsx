@@ -81,7 +81,7 @@ export default function App() {
   const [selectedPreset, setSelectedPreset] = useState<PreSet | undefined>(
     undefined,
   );
-  const [samples, setSamples] = useState<number>(30);
+  const [samples, setSamples] = useState<number>(10);
   const [messages, setMessages] = useState<string[]>([]);
   const [dialogs, setDialogs] = useState<Dialog[]>([]);
   useEffect(() => {
