@@ -445,7 +445,7 @@ class LRUCache<K, V> {
 }
 
 const naturalSort = (a: string, b: string) => {
-  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  return b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' });
 };
 
 export const supportedImageSizes = [200, 400, 500];
@@ -1531,10 +1531,10 @@ export class GameService extends EventTarget {
         return naturalSort(a[0], b[0]);
       }
       if (a[1] == null) {
-        return 1;
+        return -1;
       }
       if (b[1] == null) {
-        return -1;
+        return 1;
       }
       return a[1] - b[1];
     }
@@ -1755,9 +1755,9 @@ export async function getMainImage(session: Session, scene: Scene, size: number)
     const base64 = await imageService.fetchImageSmall(path, size);
     return base64;
   }
-  const images = imageService.getImages(session, scene);
+  const images = gameService.getOutputs(session, scene);
   if (images.length) {
-    return await imageService.fetchImageSmall(images[images.length - 1], size);
+    return await imageService.fetchImageSmall(images[0], size);
   }
   return undefined;
 }

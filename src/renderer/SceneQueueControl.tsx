@@ -19,6 +19,7 @@ import {
   extractPromptDataFromBase64,
   extractMiddlePrompt,
   getMainImage,
+  gameService,
 } from './models';
 import { AppContext } from './App';
 import { FloatView } from './FloatView';
@@ -388,7 +389,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
                 'copy-file',
                 path,
                 imageService.getImageDir(curSession!, orgScene) +
-                  '/_inpaint_' +
+                  '/' +
                   Date.now().toString() +
                   '.png',
               );
@@ -471,7 +472,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
       } else {
         const images = imageService.getImages(curSession, scene);
         if (images.length) {
-          path = images[images.length - 1];
+          path = images[0];
         }
       }
       if (path) paths.push({ path, name: scene.name });
@@ -491,7 +492,10 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
           priority={2}
           showToolbar
           onEscape={() => {
+            gameService.refreshList(curSession!, displayScene);
+            sessionService.mainImageUpdated();
             setDisplayScene(undefined);
+
           }}
         >
           <ResultViewer
