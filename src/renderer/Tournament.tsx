@@ -98,6 +98,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
   const selectPlayer = (index: any) => {
     if (lock.current)
       return;
+    setWinner(index);
     lock.current = true;
     const goNext= async () => {
       try {
