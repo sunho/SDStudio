@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import React, { createContext, useContext, useState, memo, useEffect, ReactNode, useRef } from 'react';
 import { FaTimes } from 'react-icons/fa';
 
 interface FloatView {
@@ -30,9 +30,10 @@ interface FloatViewProviderProps {
 
 export const FloatViewProvider: React.FC<FloatViewProviderProps> = ({ children }) => {
   const [views, setViews] = useState<FloatView[]>([]);
+  console.log(views)
 
   const registerView = (view: FloatView) => {
-    setViews((prevViews) => [...prevViews, view].sort((a, b) => b.priority - a.priority));
+    setViews((prevViews) => [...prevViews, view].sort((a, b) => b.id - a.id));
   };
 
   const unregisterView = (id: number) => {
@@ -40,7 +41,7 @@ export const FloatViewProvider: React.FC<FloatViewProviderProps> = ({ children }
   };
 
   const closeTopView = () => {
-    const topView = views[views.length-1];
+    const topView = views[0];
     if (topView && topView.onEscape) {
       topView.onEscape();
     }
@@ -62,9 +63,9 @@ export const FloatViewProvider: React.FC<FloatViewProviderProps> = ({ children }
   return (
     <FloatViewContext.Provider value={{ registerView, unregisterView }}>
       {children}
-      {!!views.length && <div className={"top-0 absolute w-full z-10 float-view " + (views[views.length-1].showToolbar ? 'show-toolbar' : 'h-full')}>
+      {!!views.length && <div className={"top-0 absolute w-full z-10 float-view " + (views[0].showToolbar ? 'show-toolbar' : 'h-full')}>
       {views.map((view) => (
-        <div key={view.id} className="bg-white h-full w-full" style={{ position: 'absolute', zIndex: view.priority }}>
+        <div key={view.id} className="bg-white h-full w-full" style={{ position: 'absolute', zIndex: view.id }}>
         <div className="flex flex-col h-full w-full">
             <div className="flex-none border-b border-gray-300">
               <button className="button" onClick={(e) => {
@@ -109,7 +110,7 @@ interface FloatViewProps {
 
 let viewId = 0;
 
-export const FloatView: React.FC<FloatViewProps> = ({ children, priority, showToolbar, onEscape }) => {
+export const FloatView: React.FC<FloatViewProps> = memo(({ children, priority, showToolbar, onEscape }) => {
   const { registerView, unregisterView } = useFloatView();
   const id = useRef(++viewId);
 
@@ -117,9 +118,9 @@ export const FloatView: React.FC<FloatViewProps> = ({ children, priority, showTo
     const view = { id: id.current, component: children, priority, onEscape, showToolbar };
     registerView(view);
     return () => unregisterView(id.current);
-  }, [children, priority, onEscape, registerView, unregisterView]);
+  }, []);
 
   return null;
-};
+});
 
 

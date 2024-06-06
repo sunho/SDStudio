@@ -268,6 +268,7 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
   const { curSession, selectedPreset, pushMessage } = useContext(AppContext)!;
   const [image, setImage] = useState<string | null>(null);
   const [path, setPath] = useState<string | null>(null);
+  const [_, rerender] = useState<{}>({});
   useEffect(() => {
     setPath(null);
     (async () => {
@@ -275,6 +276,19 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
       setImage(dataUri);
     })();
   }, [scene]);
+  useEffect(() => {
+    const handleProgress = () => {
+      rerender({});
+    };
+    taskQueueService.addEventListener('start', handleProgress);
+    taskQueueService.addEventListener('stop', handleProgress);
+    taskQueueService.addEventListener('progress', handleProgress);
+    return () => {
+      taskQueueService.removeEventListener('start', handleProgress);
+      taskQueueService.removeEventListener('stop', handleProgress);
+      taskQueueService.removeEventListener('progress', handleProgress);
+    };
+  });
 
   return <div className="flex h-full">
     <div className="w-1/3 g-full">

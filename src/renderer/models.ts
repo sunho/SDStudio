@@ -11,7 +11,7 @@ const SESSION_SERVICE_INTERVAL = 5000;
 const TASK_TIME_ESTIMATOR_SAMPLE_COUNT = 128;
 const TASK_DEFAULT_ESTIMATE = 15 * 1000;
 const IMAGE_CACHE_SIZE = 256;
-const RANDOM_DELAY_BIAS = 3.3;
+const RANDOM_DELAY_BIAS = 4.3;
 const RANDOM_DELAY_STD = 2.5;
 
 export function assert(condition: any, message?: string): asserts condition {
@@ -480,31 +480,63 @@ export class ImageService extends EventTarget {
     if (resolve) resolve();
   }
 
+  async renameImage(oldPath: string, newPath: string) {
+    try {
+      await this.acquireMutex(oldPath);
+      await this.acquireMutex(newPath);
+      await invoke('rename-file', oldPath, newPath);
+      await this.onRenameFile(oldPath, newPath);
+    } finally {
+      this.releaseMutex(newPath);
+      this.releaseMutex(oldPath);
+    }
+  }
+
   async onRenameFile(oldPath: string, newPath: string) {
     const oldPathParts = oldPath.split('/');
     const newPathParts = newPath.split('/');
     const oldDir = oldPathParts[oldPathParts.length - 2];
     const newDir = newPathParts[newPathParts.length - 2];
     assert(oldDir !== 'fastcache' && newDir !== 'fastcache');
+    const oldPaths = [];
+    const newPaths = [];
     for (const imageSize of supportedImageSizes) {
-      const oldSmallPath = this.getSmallImagePath(oldPath, imageSize);
-      const newSmallPath = this.getSmallImagePath(newPath, imageSize);
-      try {
-        await invoke('rename-file', oldSmallPath, newSmallPath);
-      } catch (e) {
-        console.log(e);
+      oldPaths.push(this.getSmallImagePath(oldPath, imageSize));
+      newPaths.push(this.getSmallImagePath(newPath, imageSize));
+    }
+    for (const path of oldPaths) {
+      await this.acquireMutex(path);
+    }
+    for (const path of newPaths) {
+      await this.acquireMutex(path);
+    }
+    try {
+      for (let i = 0; i < oldPaths.length; i++) {
+        const oldPath = oldPaths[i];
+        const newPath = newPaths[i];
+        try {
+          await invoke('rename-file', oldPath, newPath);
+        } catch (e) {
+        }
       }
-    }
-    if (this.cache.get(oldPath)) {
-      this.cache.set(newPath, this.cache.get(oldPath)!);
-      this.cache.delete(oldPath);
-    }
-    for (const imageSize of supportedImageSizes) {
-      const oldSmallPath = this.getSmallImagePath(oldPath, imageSize);
-      const newSmallPath = this.getSmallImagePath(newPath, imageSize);
-      if (this.cache.get(oldSmallPath)) {
-        this.cache.set(newSmallPath, this.cache.get(oldSmallPath)!);
-        this.cache.delete(oldSmallPath);
+      if (this.cache.cache.get(oldPath)) {
+        this.cache.cache.set(newPath, this.cache.cache.get(oldPath)!);
+        this.cache.cache.delete(oldPath);
+      }
+      for (const imageSize of supportedImageSizes) {
+        const oldSmallPath = this.getSmallImagePath(oldPath, imageSize);
+        const newSmallPath = this.getSmallImagePath(newPath, imageSize);
+        if (this.cache.cache.get(oldSmallPath)) {
+          this.cache.cache.set(newSmallPath, this.cache.cache.get(oldSmallPath)!);
+          this.cache.cache.delete(oldSmallPath);
+        }
+      }
+    } finally {
+      for (const path of oldPaths) {
+        this.releaseMutex(path);
+      }
+      for (const path of newPaths) {
+        this.releaseMutex(path);
       }
     }
   }
@@ -512,16 +544,18 @@ export class ImageService extends EventTarget {
   async fetchImage(path: string, holdMutex = true) {
     if (holdMutex)
       await this.acquireMutex(path);
-    if (this.cache.get(path)) {
+    try {
+      if (this.cache.get(path)) {
+        const res = this.cache.get(path);
+        return res;
+      }
+      const data = await invoke('read-data-file', path);
+      this.cache.set(path, data);
+      return data;
+    } finally {
       if (holdMutex)
         this.releaseMutex(path);
-      return this.cache.get(path);
     }
-    const data = await invoke('read-data-file', path);
-    this.cache.set(path, data);
-    if (holdMutex)
-      this.releaseMutex(path);
-    return data;
   }
 
   async fetchImageSmall(path: string, size: number) {
@@ -531,17 +565,19 @@ export class ImageService extends EventTarget {
     const smallImagePath = this.getSmallImagePath(path, size);
     await this.acquireMutex(smallImagePath);
     try {
-      const resizedImageData = await this.fetchImage(smallImagePath, false);
+      try {
+        const resizedImageData = await this.fetchImage(smallImagePath, false);
+        return resizedImageData;
+      } catch (e) {
+        console.log(e);
+      }
+      await this.resizeImage(path, smallImagePath, size, size);
+      const data = await this.fetchImage(smallImagePath, false);
+      this.cache.set(smallImagePath, data);
+      return data;
+    } finally {
       this.releaseMutex(smallImagePath);
-      return resizedImageData;
-    } catch (e) {
-      console.log(e);
     }
-    await this.resizeImage(path, smallImagePath, size, size);
-    const data = await this.fetchImage(smallImagePath, false);
-    this.cache.set(smallImagePath, data);
-    this.releaseMutex(smallImagePath);
-    return data;
   }
 
   getSmallImagePath(originalPath: string, size: number) {
@@ -558,7 +594,7 @@ export class ImageService extends EventTarget {
     maxWidth: number,
     maxHeight: number,
   ) {
-    const scale = 1.25;
+    const scale = maxWidth <= 200 ? 1.25 : 1.1;
     maxWidth = Math.ceil(scale*maxWidth);
     maxHeight = Math.ceil(scale*maxHeight);
     await invoke('resize-image', {
@@ -570,26 +606,7 @@ export class ImageService extends EventTarget {
   }
 
   async renameScene(session: Session, oldName: string, newName: string) {
-    const oldDir = 'outs/' + session.name + '/' + oldName;
-    const newDir = 'outs/' + session.name + '/' + newName;
-    const cache = this.cache.cache;
-    const keys = cache.keys();
-    const toRename = [];
-    for (const key of keys) {
-      if (key.startsWith(oldDir)) {
-        toRename.push([key, newDir + key.slice(oldDir.length)]);
-      }
-    }
-    for (const [key, newKey] of toRename) {
-      cache.set(newKey, cache.get(key)!);
-      cache.delete(key);
-    }
-    try {
-      await invoke('rename-file', oldDir, newDir);
-    } catch (e: any) {
-      console.error(e);
-    }
-    await this.refresh(session);
+    throw new Error("rename scene is not working now");
   }
 
   async resizeImageBrowser(
@@ -613,6 +630,13 @@ export class ImageService extends EventTarget {
     });
   }
 
+  getOutputs(session: Session, scene: GenericScene) {
+    if (scene.type === 'scene') {
+      return this.getImages(session, scene);
+    }
+    return this.getInPaints(session, scene);
+  }
+
   getImages(session: Session, scene: Scene) {
     if (!(session.name in this.images)) {
       return [];
@@ -633,6 +657,13 @@ export class ImageService extends EventTarget {
     return this.inpaints[session.name][scene.name];
   }
 
+  getOutputDir(session: Session, scene: GenericScene) {
+    if (scene.type === 'scene') {
+      return this.getImageDir(session, scene);
+    }
+    return this.getInPaintDir(session, scene);
+  }
+
   getImageDir(session: Session, scene: Scene) {
     return 'outs/' + session.name + '/' + scene.name;
   }
@@ -641,37 +672,31 @@ export class ImageService extends EventTarget {
     return 'inpaints/' + session.name + '/' + scene.name;
   }
 
-  async refresh(session: Session) {
+  async refresh(session: Session, scene: GenericScene, emitEvent: boolean = true) {
+    const target = scene.type === 'scene' ? this.images : this.inpaints;
+    if (!(session.name in target)) {
+      target[session.name] = {};
+    }
+    let files = await invoke('list-files', this.getOutputDir(session, scene));
+    files = files.filter((x: string) => x.endsWith('.png'));
+    files = files.map(
+      (x: string) => this.getOutputDir(session, scene) + '/' + x,
+    );
+    files.sort(naturalSort);
+    target[session.name][scene.name] = files;
+
+    if (emitEvent)
+      this.dispatchEvent(new CustomEvent('updated', { detail: { batch: false, session, scene } }));
+  }
+
+  async refreshBatch(session: Session) {
     for (const scene of Object.values(session.scenes)) {
-      if (!(session.name in this.images)) {
-        this.images[session.name] = {};
-      }
-      let files = await invoke('list-files', this.getImageDir(session, scene));
-      files = files.filter((x: string) => x.endsWith('.png'));
-      files = files.map(
-        (x: string) => this.getImageDir(session, scene) + '/' + x,
-      );
-      files.sort(naturalSort);
-      this.images[session.name][scene.name] = files;
+      await this.refresh(session, scene, false);
     }
-
     for (const scene of Object.values(session.inpaints)) {
-      if (!(session.name in this.inpaints)) {
-        this.inpaints[session.name] = {};
-      }
-      let files = await invoke(
-        'list-files',
-        this.getInPaintDir(session, scene),
-      );
-      files = files.filter((x: string) => x.endsWith('.png'));
-      files = files.map(
-        (x: string) => this.getInPaintDir(session, scene) + '/' + x,
-      );
-      files.sort(naturalSort);
-      this.inpaints[session.name][scene.name] = files;
+      await this.refresh(session, scene, false);
     }
-
-    this.dispatchEvent(new CustomEvent('updated', {}));
+    this.dispatchEvent(new CustomEvent('updated', { detail: {batch: true, session}}));
   }
 
   onAddImage(session: Session, scene: string, path: string) {
@@ -683,7 +708,7 @@ export class ImageService extends EventTarget {
     }
     this.images[session.name][scene] = this.images[session.name][scene].concat([path]);
     this.images[session.name][scene].sort(naturalSort);
-    this.dispatchEvent(new CustomEvent('updated', {}));
+    this.dispatchEvent(new CustomEvent('updated', { detail: { batch: false, session, scene: session.scenes[scene] }}));
   }
 
   onAddInPaint(session: Session, scene: string, path: string) {
@@ -695,7 +720,7 @@ export class ImageService extends EventTarget {
     }
     this.inpaints[session.name][scene] = this.inpaints[session.name][scene].concat([path]);
     this.inpaints[session.name][scene].sort(naturalSort);
-    this.dispatchEvent(new CustomEvent('updated', {}));
+    this.dispatchEvent(new CustomEvent('updated', { detail: { batch: false, session, scene: session.inpaints[scene] }}));
   }
 }
 
@@ -1433,8 +1458,7 @@ export const sortGame = (game: Game) => {
 };
 
 export const renameImage = async (oldPath: string, newPath: string) => {
-  await invoke('rename-file', oldPath, newPath);
-  imageService.onRenameFile(oldPath, newPath);
+  await imageService.renameImage(oldPath, newPath);
 };
 
 export const swapImages = async (a: string, b: string) => {
@@ -1444,80 +1468,136 @@ export const swapImages = async (a: string, b: string) => {
   await renameImage(tmp, b);
 };
 
-export const exportGame = async (game: Game) => {
-  sortGame(game);
-  let prevRank = -1;
-  let curCnt = 0;
-  for (const player of game) {
-    const newFile = changeFilename(player.path, uuidv4() + '.png');
-    await renameImage(player.path, newFile);
-    player.path = newFile;
-  }
-  for (const player of game) {
-    if (player.rank === prevRank) {
-      curCnt++;
-    } else {
-      prevRank = player.rank;
-      curCnt = 0;
-    }
-    const newFile = changeFilename(player.path, `${player.rank}_${curCnt}.png`);
-    if (newFile === player.path) continue;
-    await renameImage(player.path, newFile);
-    player.path = newFile;
-  }
-};
-
-export const createGame = async (path: string) => {
-  let files = await invoke('list-files', path);
-  files = files.filter((x: string) => x.endsWith('.png'));
-  return files.map((x: string) => ({
-    path: path + '/' + x,
-    rank: files.length - 1,
-  }));
-};
-
 export interface Match {
   players: Player[];
   winRank: number;
   loseRank: number;
 }
 
-export const nextMatch = (game: Game): [number, Match[] | undefined] => {
-  sortGame(game);
-  let matchRank = -1;
-  for (let i = 0; i < game.length - 1; i++) {
-    if (game[i].rank === game[i + 1].rank) {
-      matchRank = game[i].rank;
-      break;
+export type SceneType = 'scene' | 'inpaint';
+
+export class GameService extends EventTarget {
+  outputList: { [type: string]: {[key: string]: {[key2: string]: string[]}}}
+  constructor() {
+    super();
+    this.outputList = {
+      'scene': {},
+      'inpaint': {}
+    };
+    imageService.addEventListener('updated', (e)=>{this.onImageUpdated(e);});
+  }
+
+  gameUpdated(session: Session, scene: GenericScene) {
+    this.refreshList(session, scene);
+    this.dispatchEvent(new CustomEvent('updated', {}));
+  }
+
+  onImageUpdated(e:any) {
+    if (e.detail.batch) {
+      for (const type of ['scene', 'inpaint']) {
+        const session = e.detail.session;
+        for (const scene of Object.values(session[type + 's'])) {
+          this.refreshList(session, scene as GenericScene);
+        }
+      }
+    } else {
+      this.refreshList(e.detail.session, e.detail.scene);
+    }
+    this.dispatchEvent(new CustomEvent('updated', {}));
+  }
+
+  getOutputs(session: Session, scene: GenericScene) {
+    if (!(scene.type in this.outputList)) {
+      return [];
+    }
+    if (!(session.name in this.outputList[scene.type])) {
+      return [];
+    }
+    if (!(scene.name in this.outputList[scene.type][session.name])) {
+      return [];
+    }
+    return this.outputList[scene.type][session.name][scene.name];
+  }
+
+  refreshList(session: Session, scene: GenericScene) {
+    const type = scene.type;
+    const list = this.outputList[type];
+    if (!(session.name in list)) {
+      list[session.name] = {};
+    }
+    list[session.name][scene.name] = imageService.getOutputs(session, scene);
+    const sortByGameAndNatural = (a: [string,number|undefined], b: [string,number|undefined]) => {
+      if (a[1] == null && b[1] == null) {
+        return naturalSort(a[0], b[0]);
+      }
+      if (a[1] == null) {
+        return 1;
+      }
+      if (b[1] == null) {
+        return -1;
+      }
+      return a[1] - b[1];
+    }
+
+    const cvtMap: any = {};
+    if (scene.game) {
+      for (const player of scene.game) {
+        cvtMap[player.path] = player.rank;
+      }
+      const files = list[session.name][scene.name].map((x: string) => [x, cvtMap[x]] as [string, number|undefined]);
+      files.sort(sortByGameAndNatural);
+      list[session.name][scene.name] = files.map((x: [string, number|undefined]) => x[0]);
     }
   }
-  if (matchRank === -1) {
-    return [game.length, undefined];
-  }
-  let matchPlayers = game.filter((x) => x.rank === matchRank);
-  for (let i = matchPlayers.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [matchPlayers[i], matchPlayers[j]] = [matchPlayers[j], matchPlayers[i]];
-  }
-  const winRank = matchRank - (matchPlayers.length >> 1);
-  if (matchPlayers.length % 2 === 1) {
-    matchPlayers[matchPlayers.length - 1].rank = winRank;
-  }
-  const newMatches: Match[] = [];
-  for (let i = 0; i + 1 < matchPlayers.length; i += 2) {
-    newMatches.push({
-      players: [matchPlayers[i], matchPlayers[i + 1]],
-      winRank: winRank,
-      loseRank: matchRank,
-    });
-  }
-  for (let i = 0; i < game.length - 1; i++) {
-    if (game[i].rank != i) {
-      return [i, newMatches];
+
+  async createGame(path: string) {
+    let files = await invoke('list-files', path);
+    files = files.filter((x: string) => x.endsWith('.png'));
+    return files.map((x: string) => ({
+      path: path + '/' + x,
+      rank: files.length - 1,
+    }));
+  };
+
+  nextMatch(game: Game): [number, Match[] | undefined] {
+    sortGame(game);
+    let matchRank = -1;
+    for (let i = 0; i < game.length - 1; i++) {
+      if (game[i].rank === game[i + 1].rank) {
+        matchRank = game[i].rank;
+        break;
+      }
     }
+    if (matchRank === -1) {
+      return [game.length, undefined];
+    }
+    let matchPlayers = game.filter((x) => x.rank === matchRank);
+    for (let i = matchPlayers.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [matchPlayers[i], matchPlayers[j]] = [matchPlayers[j], matchPlayers[i]];
+    }
+    const winRank = matchRank - (matchPlayers.length >> 1);
+    if (matchPlayers.length % 2 === 1) {
+      matchPlayers[matchPlayers.length - 1].rank = winRank;
+    }
+    const newMatches: Match[] = [];
+    for (let i = 0; i + 1 < matchPlayers.length; i += 2) {
+      newMatches.push({
+        players: [matchPlayers[i], matchPlayers[i + 1]],
+        winRank: winRank,
+        loseRank: matchRank,
+      });
+    }
+    for (let i = 0; i < game.length - 1; i++) {
+      if (game[i].rank != i) {
+        return [i, newMatches];
+      }
+    }
+    throw new Error('should not be reached here');
   }
-  throw new Error('should not be reached here');
-};
+}
+
+export const gameService = new GameService();
 
 export const renameScene = async (
   session: Session,

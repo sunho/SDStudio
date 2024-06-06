@@ -3,10 +3,8 @@ import {
   Scene,
   InPaintScene,
   Match,
-  exportGame,
   imageService,
-  nextMatch,
-  createGame,
+  gameService,
   sessionService,
   invoke,
 } from './models';
@@ -25,30 +23,23 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
   const [matches, setMatches] = useState<Match[]>([]);
   const matchRes = useRef<number[]>([]);
   const [winner, setWinner] = useState(-1);
+  const lock = useRef(false);
   const [finalRank, setFinalRank] = useState(-1);
   const [fastmode, setFastmode] = useState(false);
   const [mi, setMi] = useState(0);
   const setNextMatch = () => {
-    const [finalizedRank, newMatches] = nextMatch(scene.game!);
-    imageService
-      .refresh(curSession!)
-      .then(() => {
-        if (newMatches) {
-          setMatches(newMatches);
-          setFinalRank(finalizedRank);
-        } else {
-          setMatches([]);
-          setFinalRank(finalizedRank);
-        }
-        setMi(0);
-      })
-      .catch((e: any) => {
-        pushMessage('Error: ' + e.message);
-        setMatches([]);
-        setMi(0);
-      });
+    const [finalizedRank, newMatches] = gameService.nextMatch(scene.game!);
+    setMi(0);
+    if (newMatches) {
+      setMatches(newMatches);
+      setFinalRank(finalizedRank);
+    } else {
+      setMatches([]);
+      setFinalRank(finalizedRank);
+    }
   };
   const gameUpdated = () => {
+    gameService.gameUpdated(curSession!, scene);
     sessionService.markUpdated(curSession!.name);
   };
   useEffect(() => {
@@ -57,7 +48,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
     (async () => {
       try {
         if (!scene.game) {
-          scene.game = await createGame(path);
+          scene.game = await gameService.createGame(path);
         }
         let files = await invoke('list-files', path);
         files = files.filter((f: string) => f.endsWith('.png'));
@@ -73,7 +64,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
       }
     })();
   }, [scene]);
-  const finalizeMatch = async () => {
+  const finalizeMatch = () => {
     for (let i = 0; i < matches.length; i++) {
       matches[i].players[matchRes.current[i]].rank = matches[i].winRank;
     }
@@ -105,44 +96,42 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
     }
   }, [matches, mi]);
   const selectPlayer = (index: any) => {
-    if (winner === -1) {
-      setWinner(index);
-      setTimeout(
-        () => {
-          (async () => {
-            try {
-              matchRes.current[mi] = index;
-              if (mi == matches.length - 1) {
-                await finalizeMatch();
-                for (const p of scene.game!) {
-                  onFilenameChange(p.path);
-                }
-                await exportGame(scene.game!);
-                gameUpdated();
-                if (matches[mi].winRank === 0) {
-                  pushDialog({
-                    type: 'yes-only',
-                    text: '1위가 결정되었습니다. 여기서 멈춰도 됩니다.',
-                  });
-                }
-                setNextMatch();
-                setWinner(-1);
-              } else {
-                setMi(mi + 1);
-                setWinner(-1);
-              }
-            } catch (e: any) {
-              pushMessage('Error: ' + e.message);
-            }
-          })();
-        },
-        fastmode ? 0 : 1000,
-      );
+    if (lock.current)
+      return;
+    lock.current = true;
+    const goNext= async () => {
+      try {
+        matchRes.current[mi] = index;
+        if (mi == matches.length - 1) {
+          finalizeMatch();
+          gameUpdated();
+          if (matches[mi].winRank === 0) {
+            pushDialog({
+              type: 'yes-only',
+              text: '1위가 결정되었습니다. 여기서 멈춰도 됩니다.',
+            });
+          }
+          setNextMatch();
+          setWinner(-1);
+        } else {
+          setMi(mi + 1);
+          setWinner(-1);
+        }
+      } catch (e: any) {
+        pushMessage('Error: ' + e.message);
+      } finally {
+        lock.current = false;
+      }
+    };
+    if (fastmode) {
+      goNext();
+    } else {
+      setTimeout(goNext, 1000);
     }
   };
   const resetRanks = async () => {
     try {
-      scene.game = await createGame(path);
+      scene.game = await gameService.createGame(path);
       setNextMatch();
     } catch (e: any) {
       pushMessage('Error: ' + e.message);
@@ -178,9 +167,8 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
         </button>
         <button
           onClick={() => {
-            if (winner == -1 && mi !== 0) {
+            if (winner === -1 && !lock.current)
               setMi(mi - 1);
-            }
           }}
           className={`${roundButton} bg-gray-500`}
         >
@@ -204,7 +192,8 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
             <div className="flex-1 justify-center items-center flex">
               <img
                 onClick={() => {
-                  selectPlayer(0);
+                  if (winner === -1)
+                    selectPlayer(0);
                 }}
                 className={
                   'active:brightness-90 hover:brightness-95 cursor-pointer imageSmall ' +
@@ -217,7 +206,8 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
             <div className="flex-1 justify-center items-cetner flex">
               <img
                 onClick={() => {
-                  selectPlayer(1);
+                  if (winner === -1)
+                    selectPlayer(1);
                 }}
                 className={
                   'active:brightness-90 hover:brightness-95 cursor-pointer imageSmall flex-1 ' +
@@ -236,9 +226,6 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
         ) && (
           <div className="h-full w-full">
             <img
-              onClick={() => {
-                selectPlayer(0);
-              }}
               className="imageSmall"
               src={images[0]}
             />
