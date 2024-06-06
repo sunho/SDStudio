@@ -26,6 +26,7 @@ import PromptTooltip from './PromptTooltip';
 import ConfirmWindow, { Dialog } from './ConfirmWindow';
 import QueueControl from './SceneQueueControl';
 import { convertDenDenData, isValidDenDenDataFormat } from './compat';
+import { FloatViewProvider } from './FloatView';
 
 export interface Context {
   curSession: Session | undefined;
@@ -218,37 +219,44 @@ export default function App() {
   };
 
   const tabs = [
-    { label: '이미지생성', content: <QueueControl type="scene" /> },
-    { label: '인페인팅', content: <QueueControl type="inpaint" /> },
+    { label: '이미지생성', content: <QueueControl type="scene" showPannel/> },
+    { label: '인페인팅', content: <QueueControl type="inpaint" showPannel/> },
     { label: '프롬프트조각', content: <PieceEditor /> },
   ];
 
   return (
     <AppContext.Provider value={ctx}>
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col relative h-screen">
         <ErrorBoundary
           onErr={(error, errorInfo) => {
             pushMessage(`${error.message}`);
           }}
         >
-          <div className="grow-0">
-            <NAILogin />
-          </div>
-          <div className="flex-1 flex overflow-hidden">
-            {curSession && (
-              <>
-                <div className="flex-1 overflow-hidden">
-                  <PreSetEditor
-                    key={curSession.name}
-                    setSelectedPreset={setSelectedPreset}
-                  />
+            <FloatViewProvider>
+            <div className="flex flex-col flex-1 overflow-hidden">
+              <div className="grow-0">
+                <NAILogin />
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <div className="flex w-full h-full overflow-hidden">
+                {curSession && (
+                  <>
+                    <div className="flex-1 overflow-hidden">
+                      <PreSetEditor
+                        key={curSession.name}
+                        middlePromptMode={false}
+                        setSelectedPreset={setSelectedPreset}
+                      />
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                      <TabComponent key={curSession.name} tabs={tabs} />
+                    </div>
+                  </>
+                )}
                 </div>
-                <div className="flex-1 overflow-hidden">
-                  <TabComponent key={curSession.name} tabs={tabs} />
-                </div>
-              </>
-            )}
-          </div>
+              </div>
+            </div>
+            </FloatViewProvider>
           <div className="grow-0">
             <SessionSelect
               setCurSession={setCurSession}

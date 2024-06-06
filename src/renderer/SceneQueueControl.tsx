@@ -16,11 +16,12 @@ import {
   removeTaskFromGenericScene,
   statsGenericSceneTasks,
   InPaintScene,
-  extractPromptFromBase64,
+  extractPromptDataFromBase64,
   extractMiddlePrompt,
+  getMainImage,
 } from './models';
 import { AppContext } from './App';
-import { FloatView, ToggleFloat } from './UtilComponents';
+import { FloatView } from './FloatView';
 import SceneEditor from './SceneEditor';
 import { primaryColor, roundButton } from './styles';
 import {
@@ -46,7 +47,9 @@ interface SceneCellProps {
   draggingScene: GenericScene | undefined;
   curSession: Session;
   refreshSceneImageFuncs: { [key: string]: () => void };
+  cellSize: number;
 }
+
 
 const SceneCell = ({
   scene,
@@ -58,9 +61,12 @@ const SceneCell = ({
   rerender,
   draggingScene,
   curSession,
+  cellSize
 }: SceneCellProps) => {
   const ctx = useContext(AppContext)!;
   const [image, setImage] = useState<string | undefined>(undefined);
+
+  const cellSizes = ['w-48 h-48', 'w-64 h-64', 'w-96 h-96']
 
   const handleDragStart = (scene: GenericScene) => {
     setDraggingScene(scene);
@@ -132,16 +138,18 @@ const SceneCell = ({
     };
     refreshImage();
     imageService.addEventListener('updated', refreshImage);
+    sessionService.addEventListener('main-image-updated', refreshImage);
     refreshSceneImageFuncs[scene.name] = refreshImage;
     return () => {
       imageService.removeEventListener('updated', refreshImage);
+      sessionService.removeEventListener('main-image-updated', refreshImage);
       delete refreshSceneImageFuncs[scene.name];
     };
   }, [scene]);
 
   return (
     <div
-      className="active:brightness-90 hover:brightness-95 cursor-pointer relative m-2 p-4 w-48 h-48 bg-white border border-gray-300 "
+      className={"active:brightness-90 hover:brightness-95 cursor-pointer relative m-2 p-4 bg-white border border-gray-300 " + (cellSizes[cellSize])}
       draggable
       onDragStart={() => handleDragStart(scene)}
       onDragOver={handleDragOver}
@@ -200,9 +208,12 @@ const SceneCell = ({
 
 interface QueueControlProps {
   type: 'scene' | 'inpaint';
+  filterFunc?: (scene: GenericScene) => boolean;
+  showPannel?: boolean;
+  className?: string;
 }
 
-const QueueControl = ({ type }: QueueControlProps) => {
+const QueueControl = ({ type, className, showPannel, filterFunc }: QueueControlProps) => {
   const ctx = useContext(AppContext)!;
   const curSession = ctx.curSession!;
   const [_, rerender] = useState<{}>({});
@@ -219,6 +230,7 @@ const QueueControl = ({ type }: QueueControlProps) => {
     undefined,
   );
   const refreshSceneImageFuncs = useRef<{ [key: string]: () => void }>({});
+  const [cellSize, setCellSize] = useState(1);
   const updateScenes = () => {
     sessionService.markUpdated(curSession.name);
     rerender({});
@@ -300,21 +312,16 @@ const QueueControl = ({ type }: QueueControlProps) => {
 
   const getImage = async (scene: GenericScene) => {
     if (scene.type === 'scene') {
-      if (scene.main) {
-        const path =
-          imageService.getImageDir(curSession!, scene) + '/' + scene.main;
-        const base64 = await imageService.fetchImage(path);
-        return base64;
-      }
-      const images = imageService.getImages(curSession, scene);
-      if (images.length) {
-        return await imageService.fetchImage(images[images.length - 1]);
-      }
-      throw new Error('No image available');
+      const image = await getMainImage(curSession!, scene as Scene, 400);
+      if (!image)
+        throw new Error('No image available');
+      return image;
     } else {
       return base64ToDataUri(scene.image);
     }
   };
+
+  const cellSizes = ['스몰뷰', '미디엄뷰', '라지뷰'];
 
   const buttons =
     type === 'scene'
@@ -329,7 +336,7 @@ const QueueControl = ({ type }: QueueControlProps) => {
                 scene.name +
                 '_inpaint_' +
                 (Number.MAX_SAFE_INTEGER - Date.now()).toString();
-              const prompt = await extractPromptFromBase64(image);
+              const [prompt, seed] = await extractPromptDataFromBase64(image);
               const middle = await extractMiddlePrompt(
                 ctx.selectedPreset!,
                 prompt,
@@ -396,20 +403,24 @@ const QueueControl = ({ type }: QueueControlProps) => {
     panel = (
       <>
         {inpaintEditScene && (
-          <InPaintEditor
-            editingScene={inpaintEditScene}
-            onConfirm={() => {
-              setInpaintEditScene(undefined);
-            }}
-          />
+          <FloatView priority={3} onEscape={() => setInpaintEditScene(undefined)}>
+            <InPaintEditor
+              editingScene={inpaintEditScene}
+              onConfirm={() => {
+                setInpaintEditScene(undefined);
+              }}
+            />
+          </FloatView>
         )}
         {editingScene && (
-          <SceneEditor
-            scene={editingScene as Scene}
-            onClosed={() => {
-              setEditingScene(undefined);
-            }}
-          />
+          <FloatView priority={2} onEscape={() => setEditingScene(undefined)}>
+            <SceneEditor
+              scene={editingScene as Scene}
+              onClosed={() => {
+                setEditingScene(undefined);
+              }}
+            />
+          </FloatView>
         )}
       </>
     );
@@ -417,13 +428,15 @@ const QueueControl = ({ type }: QueueControlProps) => {
     panel = (
       <>
         {(editingScene || adding) && (
-          <InPaintEditor
-            editingScene={editingScene as InPaintScene}
-            onConfirm={() => {
-              setEditingScene(undefined);
-              setAdding(false);
-            }}
-          />
+          <FloatView priority={2} onEscape={() => setEditingScene(undefined)}>
+            <InPaintEditor
+              editingScene={editingScene as InPaintScene}
+              onConfirm={() => {
+                setEditingScene(undefined);
+                setAdding(false);
+              }}
+            />
+          </FloatView>
         )}
       </>
     );
@@ -470,10 +483,12 @@ const QueueControl = ({ type }: QueueControlProps) => {
     await invoke('show-file', outFilePath);
   };
   return (
-    <div className="flex flex-col h-full">
+    <div className={"flex flex-col h-full " + (className ?? '')}>
       {displayScene && (
         <FloatView
-          onClose={() => {
+          priority={2}
+          showToolbar
+          onEscape={() => {
             setDisplayScene(undefined);
           }}
         >
@@ -486,29 +501,42 @@ const QueueControl = ({ type }: QueueControlProps) => {
         </FloatView>
       )}
       {panel}
-      <div className="flex flex-none pb-2 gap-2">
-        <button className={`${roundButton} ${primaryColor}`} onClick={addScene}>
-          씬 추가
-        </button>
-        <button
-          className={`${roundButton} ${primaryColor}`}
-          onClick={addAllToQueue}
-        >
-          모든 씬 예약추가
-        </button>
-        {type === 'scene' && (
+      {!!showPannel &&
+      <div className="flex flex-none pb-2">
+        <div className="flex gap-2">
+          <button className={`${roundButton} ${primaryColor}`} onClick={addScene}>
+            씬 추가
+          </button>
           <button
             className={`${roundButton} ${primaryColor}`}
-            onClick={exportPackage}
+            onClick={addAllToQueue}
           >
-            모든 메인 이미지 내보내기
+            모든 씬 예약추가
           </button>
-        )}
+          {type === 'scene' && (
+            <button
+              className={`${roundButton} ${primaryColor}`}
+              onClick={exportPackage}
+            >
+              모든 메인 이미지 내보내기
+            </button>
+          )}
+        </div>
+        <div className="ml-auto mr-2">
+          <button onClick={() => setCellSize((cellSize + 1) % 3)} className={`${roundButton} bg-gray-400`}>
+            {cellSizes[cellSize]}
+          </button>
+        </div>
       </div>
+      }
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-wrap overflow-auto justify-start items-start content-start">
-          {Object.values(getCollection(curSession!, type)).map((scene) => (
+          {Object.values(getCollection(curSession!, type)).filter(x => {
+            if (!filterFunc) return true;
+            return filterFunc(x);
+          }).map((scene) => (
             <SceneCell
+              cellSize={showPannel ? cellSize : 2}
               key={scene.name}
               scene={scene}
               getImage={getImage}

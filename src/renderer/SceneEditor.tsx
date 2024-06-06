@@ -12,14 +12,17 @@ import {
   Scene,
   Session,
   createPrompts,
+  getMainImage,
   highlightPrompt,
   imageService,
   promptService,
+  queueScenePrompt,
   renameScene,
   sessionService,
+  taskQueueService,
 } from './models';
 import { CustomScrollbars, TabComponent, TextAreaWithUndo } from './UtilComponents';
-import { FaPlus, FaTimes } from 'react-icons/fa';
+import { FaPlay, FaPlus, FaStop, FaTimes } from 'react-icons/fa';
 import { FaTrash } from 'react-icons/fa';
 import { AppContext } from './App';
 import Denque from 'denque';
@@ -27,6 +30,8 @@ import { writeFileSync } from 'original-fs';
 import { grayInput, primaryColor, roundButton } from './styles';
 import { windowsStore } from 'process';
 import Scrollbars from 'react-custom-scrollbars-2';
+import PreSetEditor from './PreSetEdtior';
+import { TaskProgressBar } from './TaskQueueControl';
 
 interface Props {
   scene: Scene;
@@ -37,6 +42,7 @@ interface PromptEditTextAreaProps {
   value: string;
   className?: string;
   innerRef?: any;
+  disabled?: boolean;
   onChange: (value: string) => void;
 }
 
@@ -50,6 +56,7 @@ interface HistoryEntry {
 export const PromptEditTextArea = ({
   value,
   onChange,
+  disabled,
   className,
   innerRef,
 }: PromptEditTextAreaProps) => {
@@ -227,7 +234,7 @@ export const PromptEditTextArea = ({
       <div
         className={'w-full h-full focus:outline-0 break-words'}
         ref={editorRef}
-        contentEditable={true}
+        contentEditable={disabled ? 'false' : 'true'}
       ></div>
     </div>
     );
@@ -256,6 +263,84 @@ interface SlotEditorProps {
   big?: boolean;
   onChanged?: () => void;
 }
+
+const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
+  const { curSession, selectedPreset, pushMessage } = useContext(AppContext)!;
+  const [image, setImage] = useState<string | null>(null);
+  const [path, setPath] = useState<string | null>(null);
+  useEffect(() => {
+    setPath(null);
+    (async () => {
+      const dataUri = await getMainImage(curSession!, scene, -1);
+      setImage(dataUri);
+    })();
+  }, [scene]);
+
+  return <div className="flex h-full">
+    <div className="w-1/3 g-full">
+      <PreSetEditor
+        middlePromptMode={true}
+        getMiddlePrompt={() => scene.slots[0][0].prompt}
+        onMiddlePromptChange={(txt) => {
+          scene.slots[0][0].prompt = txt;
+          onChanged && onChanged();
+        }}
+        setSelectedPreset={() => {}} />
+    </div>
+    <div className="w-2/3 h-full">
+      <div className="flex flex-col h-full">
+        <div className="flex-1 overflow-hidden">
+      {image && <img className="w-full h-full object-contain"
+        src={image} />}
+        </div>
+        <div className="ml-auto flex-none flex gap-4 pt-2">
+        <TaskProgressBar/>
+        {!taskQueueService.isRunning() ? (
+          <button
+            className={`${roundButton} bg-green-500 h-8 w-36 flex items-center justify-center`}
+            onClick={() => {
+              (async () => {
+                try {
+                  const prompts = await createPrompts(curSession!, selectedPreset!, scene);
+                  queueScenePrompt(curSession!, selectedPreset!, scene, prompts[0], 1, async (path: string) => {
+                    const dataUri = await imageService.fetchImage(path);
+                    setPath(path);
+                    setImage(dataUri);
+                  });
+                  taskQueueService.run();
+                } catch (e: any) {
+                  pushMessage(e.message);
+                  return;
+                }
+              })();
+            }}
+          >
+            <FaPlay size={15} />
+          </button>
+        ) : (
+          <button
+            className={`${roundButton} bg-red-500 h-8 w-36 flex items-center justify-center`}
+            onClick={() => {
+              taskQueueService.removeAllTasks();
+              taskQueueService.stop();
+            }}
+          >
+            <FaStop size={15} />
+          </button>
+        )}
+        {path && <button className={`${roundButton} bg-orange-400 h-8 w-36 flex items-center justify-center`}
+          onClick={()=>{
+            scene.main = path.split('/').pop()!;
+            sessionService.mainImageUpdated();
+            onChanged && onChanged();
+          }}
+        >메인이미지 지정
+        </button>}
+        </div>
+      </div>
+    </div>
+  </div>
+};
 
 const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
   const textAreaRef = useRef<any>([]);
@@ -442,106 +527,98 @@ const SceneEditor = ({ scene, onClosed }: Props) => {
     </div>
   );
 
-  const BigSlotEditor = (
-    <SlotEditor scene={scene} big={true} onChanged={updateScene} />
-  );
   const SmallSlotEditor = (
     <SlotEditor scene={scene} big={false} onChanged={updateScene} />
   );
 
+  const BigEditor = (
+    <BigPromptEditor scene={scene} onChanged={updateScene} />
+  );
+
   return (
-    <div className="toggle-container">
-      <div className="floating-component">
-        <div className="flex flex-col content">
-          <div>
-            <button className="button" onClick={onClosed}>
-              <FaTimes size={20} />
-            </button>
-          </div>
-          <div className="flex flex-col overflow-hidden flex-1">
-            <div className="grow-0 px-3 flex gap-3 items-center">
-              <label>씬 이름:</label>
-              <input
-                className={grayInput}
-                type="text"
-                value={curName}
-                onChange={(e) => {
-                  setCurName(e.currentTarget.value);
-                }}
-              />
-              <label>가로해상도:</label>
-              <input
-                type="checkbox"
-                checked={scene.landscape}
-                onChange={(e) => {
-                  scene.landscape = e.currentTarget.checked;
-                  updateScene();
-                }}
-              />
-              <button
-                className={`${roundButton} ${primaryColor}`}
-                onClick={async () => {
-                  if (curName in curSession!.scenes) {
-                    pushMessage('해당 이름의 씬이 이미 존재합니다');
-                    return;
+    <div className="w-full h-full overflow-hidden">
+      <div className="flex flex-col overflow-hidden flex-1 h-full">
+      <div className="grow-0 pt-2 px-3 flex gap-3 items-center">
+        <label>씬 이름:</label>
+        <input
+          className={grayInput}
+          type="text"
+          value={curName}
+          onChange={(e) => {
+            setCurName(e.currentTarget.value);
+          }}
+        />
+        <label>가로해상도:</label>
+        <input
+          type="checkbox"
+          checked={scene.landscape}
+          onChange={(e) => {
+            scene.landscape = e.currentTarget.checked;
+            updateScene();
+          }}
+        />
+        <button
+          className={`${roundButton} ${primaryColor}`}
+          onClick={async () => {
+            if (curName in curSession!.scenes) {
+              pushMessage('해당 이름의 씬이 이미 존재합니다');
+              return;
+            }
+            const oldName = scene.name;
+            await renameScene(curSession!, scene.name, curName);
+            delete curSession!.scenes[oldName];
+            curSession!.scenes[curName] = scene;
+            updateScene();
+          }}
+        >
+          이름 변경
+        </button>
+        <button
+          className={`${roundButton} bg-red-500`}
+          onClick={() => {
+            pushDialog({
+              type: 'confirm',
+              text: '정말로 해당 씬을 삭제하시겠습니까?',
+              callback: () => {
+                delete curSession!.scenes[scene.name];
+                updateScene();
+                onClosed();
+              },
+            });
+          }}
+        >
+          삭제
+        </button>
+      </div>
+      <div className="flex-1 overflow-hidden">
+        <TabComponent
+          left
+          tabs={[
+            { label: '프롬프트 에디터', content: BigEditor},
+            { label: '조합 에디터', content: SmallSlotEditor },
+            {
+              label: '최종 프롬프트 미리보기',
+              content: PromptPreview,
+              onClick: () => {
+                (async () => {
+                  try {
+                    const prompts = await createPrompts(
+                      curSession!,
+                      selectedPreset!,
+                      scene,
+                    );
+                    setPreviews(prompts);
+                  } catch (e: any) {
+                    setPreviewError(e.message);
                   }
-                  const oldName = scene.name;
-                  await renameScene(curSession!, scene.name, curName);
-                  delete curSession!.scenes[oldName];
-                  curSession!.scenes[curName] = scene;
-                  updateScene();
-                }}
-              >
-                이름 변경
-              </button>
-              <button
-                className={`${roundButton} bg-red-500`}
-                onClick={() => {
-                  pushDialog({
-                    type: 'confirm',
-                    text: '정말로 해당 씬을 삭제하시겠습니까?',
-                    callback: () => {
-                      delete curSession!.scenes[scene.name];
-                      updateScene();
-                      onClosed();
-                    },
-                  });
-                }}
-              >
-                삭제
-              </button>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <TabComponent
-                left
-                tabs={[
-                  { label: '조합 에디터', content: BigSlotEditor },
-                  { label: '조합 에디터 (축소모드)', content: SmallSlotEditor },
-                  {
-                    label: '최종 프롬프트 미리보기',
-                    content: PromptPreview,
-                    onClick: () => {
-                      (async () => {
-                        try {
-                          const prompts = await createPrompts(
-                            curSession!,
-                            selectedPreset!,
-                            scene,
-                          );
-                          setPreviews(prompts);
-                        } catch (e: any) {
-                          setPreviewError(e.message);
-                        }
-                      })();
-                    },
-                  },
-                ]}
-              />
-            </div>
-          </div>
-        </div>
+                })();
+              },
+            },
+          ]}
+        />
       </div>
     </div>
+  </div>
   );
 };
 

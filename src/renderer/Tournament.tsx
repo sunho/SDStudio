@@ -162,7 +162,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
   };
   return (
     <div className="flex flex-col w-full h-full">
-      <div className="p-2 flex flex-none gap-2 items-center mb-2">
+      <div className="p-4 flex flex-none gap-2 items-center">
         {!!matches.length ? (
           <span className="font-bold text-xl">
             {finalRank + 1}위 결정 이상형 월드컵 {getCurWinRank()} ({mi + 1}/
@@ -172,7 +172,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
           <span className="font-bold text-xl">모든 순위가 확정되었습니다</span>
         )}
       </div>
-      <div className="px-2 mb-2 flex flex-none gap-2 w-full border-b border-gray-300 pb-2">
+      <div className="px-4 pb-4 flex flex-none gap-2 w-full border-b border-gray-300 pb-2">
         <button className={`${roundButton} bg-sky-500`} onClick={showFolder}>
           결과 폴더 열기
         </button>

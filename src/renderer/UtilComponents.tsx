@@ -16,6 +16,7 @@ interface DropdownSelectProps<T> {
   className?: string;
   menuPlacement?: 'top' | 'bottom';
   onSelect: (option: Option<T>) => void;
+  disabled?: boolean;
 }
 
 export const DropdownSelect = <T,>({
@@ -23,6 +24,7 @@ export const DropdownSelect = <T,>({
   menuPlacement,
   selectedOption,
   options,
+  disabled,
   onSelect,
 }: DropdownSelectProps<T>) => {
   const handleChange = (selected: Option<T> | null) => {
@@ -37,6 +39,7 @@ export const DropdownSelect = <T,>({
       options={options}
       onChange={handleChange}
       menuPlacement={menuPlacement}
+      isDisabled={disabled}
       className="w-full"
       theme={(theme) => ({
         ...theme,
@@ -52,30 +55,35 @@ export const DropdownSelect = <T,>({
 
 export const FileUploadBase64: React.FC<{
   onFileSelect: (file: string) => void;
-}> = ({ onFileSelect }) => {
+  disabled?: boolean;
+}> = ({ onFileSelect, disabled }) => {
   const [dragging, setDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef(null);
 
   const handleDragEnter = (e) => {
+    if (disabled) return;
     e.preventDefault();
     e.stopPropagation();
     setDragging(true);
   };
 
   const handleDragLeave = (e) => {
+    if (disabled) return;
     e.preventDefault();
     e.stopPropagation();
     setDragging(false);
   };
 
   const handleDragOver = (e) => {
+    if (disabled) return;
     e.preventDefault();
     e.stopPropagation();
     setDragging(true);
   };
 
   const handleDrop = (e) => {
+    if (disabled) return;
     e.preventDefault();
     e.stopPropagation();
     setDragging(false);
@@ -95,6 +103,7 @@ export const FileUploadBase64: React.FC<{
   };
 
   const handleClick = () => {
+    if (disabled) return;
     fileInputRef.current.click();
   };
 
@@ -186,84 +195,6 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs }) => {
           </div>
         ))}
       </div>
-    </div>
-  );
-};
-
-interface ToggleFloatProps {
-  title: string;
-  component?: ReactNode;
-  preserveContent?: boolean;
-  children: React.ReactNode;
-}
-
-export const FloatView = ({
-  children,
-  className,
-  onClose,
-}: {
-  children: React.ReactNode;
-  className?: string | undefined;
-  onClose: () => void;
-}) => {
-  return (
-    <div className={className ?? 'floating-component'}>
-      <div className="content flex flex-col">
-        <div className="flex-none">
-          <button className="button" onClick={onClose}>
-            <FaTimes size={20} />
-          </button>
-        </div>
-        <div className="w-full flex-1 flex flex-col overflow-hidden">
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export const ToggleFloat = ({
-  title,
-  component,
-  children,
-  preserveContent,
-}: ToggleFloatProps) => {
-  const [isVisible, setIsVisible] = useState(false);
-
-  const toggleVisibility = () => {
-    setIsVisible(!isVisible);
-  };
-  useEffect(() => {
-    const html = document.getElementsByTagName('html')[0];
-
-    if (isVisible) {
-      html.classList.add('lock-scroll');
-    } else {
-      html.classList.remove('lock-scroll');
-    }
-    return (): void => {
-      html.classList.remove('lock-scroll');
-    };
-  }, [isVisible]);
-
-  return (
-    <div className="toggle-container">
-      {component ? (
-        <button onClick={toggleVisibility}>{component}</button>
-      ) : (
-        <button
-          className={`${roundButton} bg-gray-500`}
-          onClick={toggleVisibility}
-        >
-          {isVisible ? 'Close' : title}
-        </button>
-      )}
-      <FloatView
-        className={isVisible ? undefined : 'hidden'}
-        onClose={toggleVisibility}
-      >
-        {(preserveContent || isVisible) && children}
-      </FloatView>
     </div>
   );
 };

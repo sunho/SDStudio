@@ -20,6 +20,7 @@ node_modules
 .DS_Store
 
 release/app/dist
+release/app/package-lock.json
 release/build
 .erb/dll
 

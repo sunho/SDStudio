@@ -55,17 +55,39 @@ const ProgressBar = ({ duration, isError, text, key }: ProgressBarProps) => {
   );
 };
 
-const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
-  const ctx = useContext(AppContext)!;
-  const curSession = ctx.curSession!;
-  const [_, rerender] = useState<{}>({});
+interface TaskProgressBarProps {
+}
+export const TaskProgressBar = ({}: TaskProgressBarProps) => {
+  const { pushMessage } = useContext(AppContext)!;
+  const key = useRef<number>(0);
   const [duration, setDuration] = useState(0);
   const [isError, setIsError] = useState(false);
   const [error, setError] = useState<string>('');
-  const key = useRef<number>(0);
+  const [_, rerender] = useState<{}>({});
+  const formatTime = (ms: number) => {
+    const seconds = ms / 1000;
+    const minutes = seconds / 60;
+    const hours = minutes / 60;
+
+    if (seconds < 60) {
+      return `${Math.round(seconds)}초`;
+    } else if (minutes < 60) {
+      return `${Math.round(minutes)}분`;
+    } else {
+      return `${Math.round(hours)}시간`;
+    }
+  };
+  const getProgressText = () => {
+    const stats = taskQueueService.totalStats;
+    const remain = stats.total - stats.done;
+    const timeEstimate = formatTime(
+      remain * taskQueueService.timeEstimator.estimateMedian()!,
+    );
+    return `${remain}개 남음 (예상 ${timeEstimate})`;
+  };
+
   useEffect(() => {
     const nextKey = () => {
-      console.log(key);
       key.current = key.current + 1;
       rerender({});
     };
@@ -114,27 +136,42 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
     };
   }, []);
 
-  const formatTime = (ms: number) => {
-    const seconds = ms / 1000;
-    const minutes = seconds / 60;
-    const hours = minutes / 60;
+  return <div
+      onClick={() => {
+        if (error !== '') {
+          pushMessage('Error: ' + error);
+        }
+      }}
+    >
+      <ProgressBar
+        key={key.current}
+        isError={isError}
+        duration={duration}
+        text={getProgressText()}
+      />
+    </div>
+}
 
-    if (seconds < 60) {
-      return `${Math.round(seconds)}초`;
-    } else if (minutes < 60) {
-      return `${Math.round(minutes)}분`;
-    } else {
-      return `${Math.round(hours)}시간`;
-    }
-  };
-  const getProgressText = () => {
-    const stats = taskQueueService.totalStats;
-    const remain = stats.total - stats.done;
-    const timeEstimate = formatTime(
-      remain * taskQueueService.timeEstimator.estimateMedian()!,
-    );
-    return `${remain}개 남음 (예상 ${timeEstimate})`;
-  };
+const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
+  const ctx = useContext(AppContext)!;
+  const [_, rerender] = useState<{}>({});
+  useEffect(() => {
+    const onChange = () => {
+      rerender({});
+    };
+    taskQueueService.addEventListener('start', onChange);
+    taskQueueService.addEventListener('stop', onChange);
+    taskQueueService.addEventListener('progress', onChange);
+    taskQueueService.addEventListener('complete', onChange);
+    taskQueueService.addEventListener('error', onChange);
+    return () => {
+      taskQueueService.removeEventListener('start', onChange);
+      taskQueueService.removeEventListener('stop', onChange);
+      taskQueueService.removeEventListener('progress', onChange);
+      taskQueueService.removeEventListener('complete', onChange);
+      taskQueueService.removeEventListener('error', onChange);
+    };
+  }, []);
 
   return (
     <div className="flex gap-4 items-center">
@@ -158,20 +195,7 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
           }}
         />
       </div>
-      <div
-        onClick={() => {
-          if (error !== '') {
-            ctx.pushMessage('Error: ' + error);
-          }
-        }}
-      >
-        <ProgressBar
-          key={key.current}
-          isError={isError}
-          duration={duration}
-          text={getProgressText()}
-        />
-      </div>
+      <TaskProgressBar />
       <button
         className={`${roundButton} bg-gray-500 h-8 px-6`}
         onClick={() => {

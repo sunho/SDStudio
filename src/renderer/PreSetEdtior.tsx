@@ -15,15 +15,20 @@ import { base64ToDataUri } from './BrushTool';
 import { grayInput, primaryColor, roundButton } from './styles';
 import { PromptEditTextArea } from './SceneEditor';
 import { FaImage } from 'react-icons/fa';
+import { FloatView } from './FloatView';
 
 interface Props {
   setSelectedPreset: (preset: PreSet) => void;
+  middlePromptMode: boolean;
+  getMiddlePrompt?: () => string;
+  onMiddlePromptChange?: (txt: string) => void;
 }
 
 const PreSetEditor: React.FC<Props> = (props: Props) => {
   const ctx = useContext(AppContext)!;
   const curSession = ctx.curSession!;
   const [_, rerender] = useState<{}>({});
+  const [presetEditLock, setPresetEditLock] = useState(true);
   const updatePresets = () => {
     sessionService.markUpdated(curSession.name);
     rerender({});
@@ -57,6 +62,8 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
     rerender({});
   }, [curSession]);
 
+
+  const [isVibeImageShow, setIsVibeImageShow] = useState(false);
   const vibeImageShow = (
     <button className={`${roundButton} bg-gray-500 h-8`}>
       <FaImage size={18} />{' '}
@@ -67,7 +74,13 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
       key={selectedPreset ? getPresetName(selectedPreset) : ''}
       className="p-3 flex flex-col h-full"
     >
-      <p className="text-xl font-bold mb-3">이미지 생성 프리셋</p>
+      {props.middlePromptMode && (
+        <span className="font-bold">프리셋 편집 잠금: {' '}<input type="checkbox" checked={presetEditLock} onChange={() => setPresetEditLock(!presetEditLock)}></input></span>
+      )}
+      {!props.middlePromptMode && (
+        <p className="text-xl font-bold mb-3">이미지 생성 프리셋</p>
+      )}
+      {!props.middlePromptMode && (
       <div className="flex gap-2 pr-2">
         <DropdownSelect
           selectedOption={selectedPreset}
@@ -121,7 +134,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
         >
           삭제
         </button>
-      </div>
+      </div>)}
       <div className="py-2">
         <b> 상위 프롬프트:</b>
       </div>
@@ -129,9 +142,25 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
         <PromptEditTextArea
           className="w-full h-full bg-gray-200"
           value={selectedPreset.frontPrompt}
+          disabled={props.middlePromptMode && presetEditLock}
           onChange={frontPromptChange}
         ></PromptEditTextArea>
       </div>
+      {props.middlePromptMode && ( <>
+        <div className="py-2">
+          <b> 중위 프롬프트 (이 씬에만 적용됨):</b>
+        </div>
+        <div className="flex-1 min-h-0">
+          <PromptEditTextArea
+            className="w-full h-full bg-gray-200"
+            value={props.getMiddlePrompt ? props.getMiddlePrompt() : ''}
+            onChange={(txt) => {
+              if (props.onMiddlePromptChange) props.onMiddlePromptChange(txt);
+            }}
+          ></PromptEditTextArea>
+        </div>
+        </>
+      )}
       <div className="py-2">
         <b> 하위 프롬프트:</b>
       </div>
@@ -139,6 +168,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
         <PromptEditTextArea
           className="w-full h-full bg-gray-200"
           value={selectedPreset.backPrompt}
+          disabled={props.middlePromptMode && presetEditLock}
           onChange={backPromptChange}
         ></PromptEditTextArea>
       </div>
@@ -149,6 +179,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
         <PromptEditTextArea
           className="w-full h-full bg-gray-200"
           value={selectedPreset.uc}
+          disabled={props.middlePromptMode && presetEditLock}
           onChange={ucPromptChange}
         ></PromptEditTextArea>
       </div>
@@ -156,6 +187,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
         <span className="font-bold flex-none">시드: </span>
         <input
           className={`w-full ${grayInput}`}
+          disabled={props.middlePromptMode && presetEditLock}
           value={selectedPreset.seed ?? ''}
           onChange={(e) => {
             try {
@@ -177,6 +209,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
         <span className="font-bold flex-none">샘플링: </span>
         <DropdownSelect
           selectedOption={selectedPreset.sampling}
+          disabled={props.middlePromptMode && presetEditLock}
           menuPlacement="top"
           options={Object.values(Sampling).map((x) => ({ label: x, value: x }))}
           onSelect={(opt) => {
@@ -188,15 +221,18 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
       <div className="mt-auto flex-none pt-2 flex gap-2 items-center">
         <span className="font-bold flex-none">바이브: </span>
         <div className="flex-1 overflow-hidden">
-          <FileUploadBase64 onFileSelect={vibeChange}></FileUploadBase64>
+          <FileUploadBase64 disabled={props.middlePromptMode && presetEditLock} onFileSelect={vibeChange}></FileUploadBase64>
         </div>
         <span className="flex-none ml-auto">
-          <ToggleFloat title="바이브 이미지 보기" component={vibeImageShow}>
+          <button className={`${roundButton} bg-gray-500 h-8`} onClick={() => setIsVibeImageShow(!isVibeImageShow)}>
+            보기
+          </button>
+          {isVibeImageShow && <FloatView priority={3} onEscape={() => setIsVibeImageShow(false)}>
             <img
               className="imageSmall"
               src={base64ToDataUri(selectedPreset.vibe)}
             />
-          </ToggleFloat>
+          </FloatView>}
         </span>
       </div>
     </div>
