@@ -10,28 +10,39 @@ import React, {
 } from 'react';
 import {
   GenericScene,
+  InPaintScene,
   Scene,
+  dataUriToBase64,
+  extractExifFromBase64,
+  extractMiddlePrompt,
+  extractPromptDataFromBase64,
   getResultDirectory,
   getResultImages,
   imageService,
   invoke,
+  queueGenericScene,
   swapImages,
 } from './models';
 import { FixedSizeGrid as Grid, GridChildComponentProps } from 'react-window';
 import ResizeObserver from 'resize-observer-polyfill';
 import { AppContext } from './App';
 import { userInfo } from 'os';
-import { CustomScrollbars, FloatView } from './UtilComponents';
+import { CustomScrollbars } from './UtilComponents';
 import Tournament from './Tournament';
 import { roundButton } from './styles';
 import { FaStar } from 'react-icons/fa';
+import { PromptHighlighter } from './SceneEditor';
+import QueueControl from './SceneQueueControl';
+import { FloatView } from './FloatView';
 
 interface ImageGalleryProps {
   filePaths: string[];
-  onSelected?: (path: string) => void;
+  imageSize: number;
+  onSelected?: (index: number) => void;
   isMainImage?: (path: string) => boolean;
   onFilenameChange?: (path: string) => void;
   pageSize?: number;
+  isHidden?: boolean;
 }
 
 interface ImageGalleryRef {
@@ -52,6 +63,7 @@ const Cell = ({
     draggedIndex,
     isMainImage,
     onFilenameChange,
+    imageSize,
   } = data as any;
 
   const index = rowIndex * columnCount + columnIndex;
@@ -91,7 +103,7 @@ const Cell = ({
     }
     const refreshImage = async () => {
       try {
-        const base64Image = await imageService.fetchImageSmall(path)!;
+        const base64Image = await imageService.fetchImageSmall(path, imageSize)!;
         setImage(base64Image);
       } catch (e: any) {
         console.log(e);
@@ -103,20 +115,20 @@ const Cell = ({
     return () => {
       refreshImageFuncs.current.delete(path);
     };
-  }, [path]);
+  }, [path, imageSize]);
 
   const isMain = !!(isMainImage && path && isMainImage(path));
 
   return (
     <div
-      key={index}
+      key={index.toString() + path + imageSize.toString()}
       style={style}
       className="image-cell relative"
       draggable
       onClick={() => {
         if (path) {
           if (onSelected) {
-            onSelected(path);
+            onSelected(index);
           }
         }
       }}
@@ -151,7 +163,7 @@ const CustomScrollbarsVirtualGrid = forwardRef((props, ref) => (
 
 
 const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
-  ({ filePaths, isMainImage, onSelected, onFilenameChange }, ref) => {
+  ({ isHidden, imageSize, filePaths, isMainImage, onSelected, onFilenameChange }, ref) => {
     const { curSession } = useContext(AppContext)!;
     const [containerWidth, setContainerWidth] = useState(0);
     const [containerHeight, setContainerHeight] = useState(0);
@@ -178,21 +190,21 @@ const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
       return () => resizeObserver.disconnect();
     }, []);
 
-    const columnWidth = 200; // Adjust this value as needed
-    const rowHeight = (columnWidth * 4) / 4; // 4x3 aspect ratio
+    const columnWidth = imageSize;
+    const rowHeight = imageSize;
     const columnCount = Math.max(1, Math.floor(containerWidth / columnWidth));
 
     return (
       <div
         ref={containerRef}
-        style={{ width: '100%', height: '100%' }}
-        className="flex justify-center"
+        style={{ width: '100%', height: '100%'}}
+        className={"flex justify-center " + (isHidden ? 'hidden' : '')}
       >
         <Grid
           columnCount={columnCount}
           columnWidth={columnWidth}
           height={containerHeight}
-          className="bg-gray-100"
+          className={"bg-gray-100 " + (isHidden ? 'hidden' : '')}
           rowCount={Math.ceil(filePaths.length / columnCount)}
           rowHeight={rowHeight}
           width={columnCount * columnWidth}
@@ -205,6 +217,7 @@ const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
             draggedIndex,
             isMainImage,
             onFilenameChange,
+            imageSize
           }}
         >
           {Cell}
@@ -225,22 +238,34 @@ interface ResultDetailViewProps {
   path: string;
   buttons: ResultDetailViewButton[];
   onClose: () => void;
+  onNext: () => void;
+  onPrev: () => void;
 }
 const ResultDetailView = ({
   scene,
   buttons,
   path,
   onClose,
+  onNext,
+  onPrev
 }: ResultDetailViewProps) => {
+  const { selectedPreset } = useContext(AppContext)!;
+  const [middlePrompt, setMiddlePrompt] = useState<string>('');
+  const [seed, setSeed] = useState<string>('');
   const [image, setImage] = useState<string | undefined>(undefined);
   useEffect(() => {
     const fetchImage = async () => {
       try {
         const base64Image = await imageService.fetchImage(path)!;
+        const [prompt, seed] = await extractPromptDataFromBase64(dataUriToBase64(base64Image));
         setImage(base64Image);
+        setMiddlePrompt(prompt);
+        setSeed(seed.toString());
       } catch (e: any) {
         console.log(e);
         setImage(undefined);
+        setMiddlePrompt('');
+        setSeed('');
       }
     };
     fetchImage();
@@ -248,15 +273,9 @@ const ResultDetailView = ({
 
   return (
     <div className="absolute top-0 left-0 flex w-full h-full overflow-hidden justify-center items-center">
-      <div className="z-10 bg-white w-5/6 h-5/6 flex shadow-lg overflow-hidden">
-        <div className="flex-none w-1/3 p-8">
-          <div className="flex flex-col">
-            <span>
-              <span className="font-bold">파일 이름: </span>
-              {path}
-            </span>
-          </div>
-          <div className="flex gap-3 mt-4 flex-wrap w-full">
+      <div className="z-10 bg-white w-full h-full flex shadow-lg overflow-hidden">
+        <div className="flex-none w-1/3 p-4">
+          <div className="flex gap-3 mb-6 flex-wrap w-full">
             <button
               className={`${roundButton} bg-gray-500`}
               onClick={() => {
@@ -285,6 +304,18 @@ const ResultDetailView = ({
               </button>
             ))}
           </div>
+          <div className="w-full mb-2">
+            <div className="font-bold">프롬프트: </div>
+            <PromptHighlighter text={middlePrompt} className="w-full h-24 overflow-auto"/>
+          </div>
+          <div className="w-full mb-2">
+            <span className="font-bold">시드: </span>
+            {seed}
+          </div>
+          <div className="max-w-full">
+            <span className="font-bold">파일이름: </span>
+            <span>{path.split('/').pop()}</span>
+          </div>
         </div>
         <div className="flex-1 overflow-hidden">
           {image && (
@@ -294,6 +325,24 @@ const ResultDetailView = ({
               className="w-full h-full object-contain"
             />
           )}
+          <div className="absolute top-0 right-0 flex gap-3 p-4">
+            <button
+              className={`${roundButton} bg-gray-500`}
+              onClick={() => {
+                onPrev();
+              }}
+            >
+              이전
+            </button>
+            <button
+              className={`${roundButton} bg-gray-500`}
+              onClick={() => {
+                onNext();
+              }}
+            >
+              다음
+            </button>
+          </div>
         </div>
       </div>
       <div className="absolute w-full top-0 h-full bg-black opacity-50"></div>
@@ -316,12 +365,15 @@ const ResultViewer = ({
   isMainImage,
   buttons,
 }: ResultViewerProps) => {
-  const { curSession } = useContext(AppContext)!;
+  const { curSession, selectedPreset, samples } = useContext(AppContext)!;
   const [_, forceUpdate] = useState<{}>({});
   const [tournament, setTournament] = useState<boolean>(false);
-  const [selectedImage, setSelectedImage] = useState<string | undefined>(
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | undefined>(
     undefined,
   );
+  const imagesSizes = [{ name: '스몰', size: 200 }, { name: '미디엄', size: 400 }, { name: '라지', size: 500}]
+  const [imageSize, setImageSize] = useState<number>(1);
+  const [isInpaintList, setIsInpaintList] = useState<boolean>(false);
 
   useEffect(() => {
     const onUpdated = () => {
@@ -335,12 +387,16 @@ const ResultViewer = ({
   }, []);
 
   const paths = getResultImages(curSession!, scene);
+  const onSelected = useCallback((index) => {
+    setSelectedImageIndex(index);
+  },[]);
 
   return (
     <div className="w-full h-full flex flex-col">
       {tournament && (
         <FloatView
-          onClose={() => {
+          priority={2}
+          onEscape={() => {
             setTournament(false);
           }}
         >
@@ -357,40 +413,79 @@ const ResultViewer = ({
             씬 {scene.name}의 생성된 이미지
           </span>
         </div>
-        <div className="flex gap-3">
-          <button
-            className={`${roundButton} bg-sky-500`}
-            onClick={() => setTournament(true)}
-          >
-            이상형 월드컵
-          </button>
-          <button
-            className={`${roundButton} bg-sky-500`}
-            onClick={async () => {
-              await invoke('show-file', getResultDirectory(curSession!, scene));
-            }}
-          >
-            결과 폴더 열기
-          </button>
+        <div className="flex justify-between items-center mt-4">
+          <div className="flex gap-3">
+            <button
+              className={`${roundButton} bg-sky-500`}
+              onClick={() => setTournament(true)}
+            >
+              이상형 월드컵
+            </button>
+            <button
+              className={`${roundButton} bg-sky-500`}
+              onClick={async () => {
+                await invoke('show-file', getResultDirectory(curSession!, scene));
+              }}
+            >
+              결과 폴더 열기
+            </button>
+            <button
+              className={`${roundButton} bg-sky-500`}
+              onClick={async () => {
+                await queueGenericScene(curSession!, selectedPreset!, scene, samples);
+              }}>
+              예약 추가
+            </button>
+          </div>
+          <div className="flex gap-3">
+            {!isInpaintList && imagesSizes.map((size, index) => (
+              <button
+                key={index}
+                className={`${roundButton} ${
+                  imageSize === index ? 'bg-sky-500' : 'bg-gray-400'
+                }`}
+                onClick={() => {
+                  setImageSize(index);
+                }}
+              >
+                {size.name}
+              </button>
+            ))}
+            {scene.type === 'scene' && <button className={`${roundButton} bg-sky-500`} onClick={() => setIsInpaintList(!isInpaintList)}>
+              {!isInpaintList ? '인페인트 리스트' : '이미지 리스트'}
+            </button>}
+          </div>
         </div>
       </div>
-      <div className="flex-1 pt-8 pb-8 relative overflow-hidden">
+      <div className="flex-1 pt-4 pb-4 relative h-full overflow-hidden">
+        <QueueControl type='inpaint' className={isInpaintList ? 'px-4 ' : 'hidden'}
+          filterFunc={(x: InPaintScene) => {
+            return x.sceneRef && x.sceneRef === scene.name;
+          }}
+        >
+        </QueueControl>
         <ImageGallery
           onFilenameChange={onFilenameChange}
           isMainImage={isMainImage}
           filePaths={paths}
-          onSelected={(path) => {
-            setSelectedImage(path);
-          }}
+          imageSize={imagesSizes[imageSize].size}
+          isHidden={isInpaintList}
+          onSelected={onSelected}
         />
-        {selectedImage && (
+        {selectedImageIndex != null && (
           <ResultDetailView
             buttons={buttons}
             onClose={() => {
-              setSelectedImage(undefined);
+              setSelectedImageIndex(undefined);
             }}
             scene={scene}
-            path={selectedImage}
+            path={paths[selectedImageIndex]}
+            onNext={() => {
+              setSelectedImageIndex((selectedImageIndex + 1) % paths.length);
+            }}
+            onPrev={() => {
+              setSelectedImageIndex((selectedImageIndex - 1 + paths.length) % paths.length);
+            }}
           />
         )}
       </div>

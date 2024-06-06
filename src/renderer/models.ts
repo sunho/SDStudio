@@ -14,6 +14,12 @@ const IMAGE_CACHE_SIZE = 256;
 const RANDOM_DELAY_BIAS = 3.3;
 const RANDOM_DELAY_STD = 2.5;
 
+export function assert(condition: any, message?: string): asserts condition {
+  if (!condition) {
+    throw new Error(message);
+  }
+}
+
 export const invoke = window.electron.ipcRenderer.invoke;
 
 export const defaultFPrompt = `1girl, {artist:ixy}`;
@@ -179,6 +185,7 @@ export interface GenerateTask {
   outPath: string;
   done: number;
   total: number;
+  onComplete?: (path: string) => void;
 }
 
 export interface InPaintTask {
@@ -192,6 +199,7 @@ export interface InPaintTask {
   outPath: string;
   done: number;
   total: number;
+  onComplete?: (path: string) => void;
 }
 
 function getRandomInt(min: number, max: number): number {
@@ -390,6 +398,10 @@ export class SessionService extends ResourceSyncService<Session> {
     this.dispatchEvent(new CustomEvent('inpaint-updated', {}));
   }
 
+  mainImageUpdated(): void {
+    this.dispatchEvent(new CustomEvent('main-image-updated', {}));
+  }
+
   pieceLibraryImported(): void {
     this.dispatchEvent(new CustomEvent('piece-library-imported', {}));
   }
@@ -436,11 +448,12 @@ const naturalSort = (a: string, b: string) => {
   return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 };
 
+export const supportedImageSizes = [200, 400, 500];
+
 export class ImageService extends EventTarget {
   images: { [key: string]: { [key: string]: string[] } };
   inpaints: { [key: string]: { [key: string]: string[] } };
   cache: LRUCache<string, string>;
-  smallCache: LRUCache<string, string>;
   mutexes: { [key: string]: Promise<void> };
 
   constructor() {
@@ -448,7 +461,6 @@ export class ImageService extends EventTarget {
     this.images = {};
     this.inpaints = {};
     this.cache = new LRUCache(IMAGE_CACHE_SIZE);
-    this.smallCache = new LRUCache(IMAGE_CACHE_SIZE >> 1);
     this.mutexes = {};
   }
 
@@ -473,11 +485,12 @@ export class ImageService extends EventTarget {
     const newPathParts = newPath.split('/');
     const oldDir = oldPathParts[oldPathParts.length - 2];
     const newDir = newPathParts[newPathParts.length - 2];
-    if (oldDir != 'fastcache' && newDir != 'fastcache') {
-      const oldSmallPath = this.getSmallImagePath(oldPath);
-      const newSmallPath = this.getSmallImagePath(newPath);
+    assert(oldDir !== 'fastcache' && newDir !== 'fastcache');
+    for (const imageSize of supportedImageSizes) {
+      const oldSmallPath = this.getSmallImagePath(oldPath, imageSize);
+      const newSmallPath = this.getSmallImagePath(newPath, imageSize);
       try {
-        await renameImage(oldSmallPath, newSmallPath);
+        await invoke('rename-file', oldSmallPath, newSmallPath);
       } catch (e) {
         console.log(e);
       }
@@ -486,48 +499,54 @@ export class ImageService extends EventTarget {
       this.cache.set(newPath, this.cache.get(oldPath)!);
       this.cache.delete(oldPath);
     }
-    if (this.smallCache.get(oldPath)) {
-      this.smallCache.set(newPath, this.smallCache.get(oldPath)!);
-      this.smallCache.delete(oldPath);
+    for (const imageSize of supportedImageSizes) {
+      const oldSmallPath = this.getSmallImagePath(oldPath, imageSize);
+      const newSmallPath = this.getSmallImagePath(newPath, imageSize);
+      if (this.cache.get(oldSmallPath)) {
+        this.cache.set(newSmallPath, this.cache.get(oldSmallPath)!);
+        this.cache.delete(oldSmallPath);
+      }
     }
   }
 
-  async fetchImage(path: string) {
+  async fetchImage(path: string, holdMutex = true) {
+    if (holdMutex)
+      await this.acquireMutex(path);
     if (this.cache.get(path)) {
+      if (holdMutex)
+        this.releaseMutex(path);
       return this.cache.get(path);
     }
     const data = await invoke('read-data-file', path);
     this.cache.set(path, data);
+    if (holdMutex)
+      this.releaseMutex(path);
     return data;
   }
 
-  async fetchImageSmall(path: string) {
-    const maxWidth = 300;
-    const maxHeight = 300;
-    await this.acquireMutex(path);
-    if (this.smallCache.get(path)) {
-      this.releaseMutex(path);
-      return this.smallCache.get(path);
+  async fetchImageSmall(path: string, size: number) {
+    if (size === -1) {
+      return this.fetchImage(path);
     }
-    const smallImagePath = this.getSmallImagePath(path);
+    const smallImagePath = this.getSmallImagePath(path, size);
+    await this.acquireMutex(smallImagePath);
     try {
-      const resizedImageData = await this.fetchImage(smallImagePath);
-      this.smallCache.set(path, resizedImageData);
-      this.releaseMutex(path);
+      const resizedImageData = await this.fetchImage(smallImagePath, false);
+      this.releaseMutex(smallImagePath);
       return resizedImageData;
     } catch (e) {
       console.log(e);
     }
-    await this.resizeImage(path, smallImagePath, maxWidth, maxHeight);
-    const data = await this.fetchImage(smallImagePath);
-    this.smallCache.set(path, data);
-    this.releaseMutex(path);
+    await this.resizeImage(path, smallImagePath, size, size);
+    const data = await this.fetchImage(smallImagePath, false);
+    this.cache.set(smallImagePath, data);
+    this.releaseMutex(smallImagePath);
     return data;
   }
 
-  getSmallImagePath(originalPath: string) {
+  getSmallImagePath(originalPath: string, size: number) {
     const pathParts = originalPath.split('/');
-    const fileName = pathParts.pop();
+    const fileName = size.toString() + "_" + pathParts.pop();
     pathParts.push('fastcache');
     pathParts.push(fileName!);
     return pathParts.join('/');
@@ -539,6 +558,9 @@ export class ImageService extends EventTarget {
     maxWidth: number,
     maxHeight: number,
   ) {
+    const scale = 1.25;
+    maxWidth = Math.ceil(scale*maxWidth);
+    maxHeight = Math.ceil(scale*maxHeight);
     await invoke('resize-image', {
       inputPath,
       outputPath,
@@ -550,18 +572,17 @@ export class ImageService extends EventTarget {
   async renameScene(session: Session, oldName: string, newName: string) {
     const oldDir = 'outs/' + session.name + '/' + oldName;
     const newDir = 'outs/' + session.name + '/' + newName;
-    for (const cache of [this.cache.cache, this.smallCache.cache]) {
-      const keys = cache.keys();
-      const toRename = [];
-      for (const key of keys) {
-        if (key.startsWith(oldDir)) {
-          toRename.push([key, newDir + key.slice(oldDir.length)]);
-        }
+    const cache = this.cache.cache;
+    const keys = cache.keys();
+    const toRename = [];
+    for (const key of keys) {
+      if (key.startsWith(oldDir)) {
+        toRename.push([key, newDir + key.slice(oldDir.length)]);
       }
-      for (const [key, newKey] of toRename) {
-        cache.set(newKey, cache.get(key)!);
-        cache.delete(key);
-      }
+    }
+    for (const [key, newKey] of toRename) {
+      cache.set(newKey, cache.get(key)!);
+      cache.delete(key);
     }
     try {
       await invoke('rename-file', oldDir, newDir);
@@ -583,9 +604,7 @@ export class ImageService extends EventTarget {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
-        const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
+        let scale = Math.max(maxWidth / img.width, maxHeight / img.height);
 
         ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
         resolve(canvas.toDataURL('image/png'));
@@ -1077,6 +1096,9 @@ export class TaskQueueService extends EventTarget {
           } else {
             imageService.onAddInPaint(task.session, task.scene, outputFilePath);
           }
+          if (task.onComplete) {
+            task.onComplete(outputFilePath);
+          }
           this.dispatchEvent(new CustomEvent('complete', {}));
           this.dispatchProgress();
         } catch (e: any) {
@@ -1284,6 +1306,34 @@ export const highlightPrompt = (session: Session, text: string) => {
   return `${words}`;
 };
 
+export const queueScenePrompt = (
+  session: Session,
+  preset: PreSet,
+  scene: Scene,
+  prompt: string,
+  samples: number,
+  onComplete: ((path: string) => void) | undefined = undefined,
+) => {
+  taskQueueService.addTask({
+    type: 'generate',
+    session: session,
+    scene: scene.name,
+    preset: {
+      prompt,
+      uc: preset.uc,
+      vibe: preset.vibe,
+      landscape: scene.landscape,
+      sampling: preset.sampling ?? Sampling.KEulerAncestral,
+      seed: preset.seed,
+    },
+    outPath: imageService.getImageDir(session, scene),
+    done: 0,
+    total: samples,
+    id: undefined,
+    onComplete,
+  });
+};
+
 export const queueScene = async (
   session: Session,
   preset: PreSet,
@@ -1292,23 +1342,7 @@ export const queueScene = async (
 ) => {
   const prompts = await createPrompts(session, preset, scene);
   for (const prompt of prompts) {
-    taskQueueService.addTask({
-      type: 'generate',
-      session: session,
-      scene: scene.name,
-      preset: {
-        prompt,
-        uc: preset.uc,
-        vibe: preset.vibe,
-        landscape: scene.landscape,
-        sampling: preset.sampling ?? Sampling.KEulerAncestral,
-        seed: preset.seed,
-      },
-      outPath: imageService.getImageDir(session, scene),
-      done: 0,
-      total: samples,
-      id: undefined,
-    });
+    queueScenePrompt(session, preset, scene, prompt, samples);
   }
 };
 
@@ -1595,23 +1629,24 @@ export async function extractExifFromBase64(base64: string) {
   return exif;
 }
 
-export async function extractPromptFromBase64(base64: string) {
+export async function extractPromptDataFromBase64(base64: string) {
   const exif = await extractExifFromBase64(base64);
   const comment = exif['Comment'];
   if (comment && comment.value) {
     try {
       const data = JSON.parse(comment.value as string);
       if (data['prompt']) {
-        return data['prompt'];
+        return [data['prompt'], data['seed']];
       }
     } catch (e) {
-      return undefined;
+      return ['', -1];
     }
   }
-  return undefined;
+  return ['', -1];
 }
 
 export async function extractMiddlePrompt(preset: PreSet, prompt: string) {
+  if (!prompt) return '';
   const fprompt = toPARR(preset.frontPrompt).join(', ');
   const bprompt = toPARR(preset.backPrompt).join(', ');
   let last = toPARR(prompt).join(', ') ?? '';
@@ -1624,3 +1659,26 @@ export async function extractMiddlePrompt(preset: PreSet, prompt: string) {
   last = toPARR(last).join(', ');
   return last;
 }
+
+export function base64ToDataUri(data: string) {
+  return 'data:image/png;base64,' + data;
+}
+
+export function dataUriToBase64(dataUri: string) {
+  return dataUri.split(',')[1];
+}
+
+export async function getMainImage(session: Session, scene: Scene, size: number) {
+  if (scene.main) {
+    const path =
+      imageService.getImageDir(session, scene) + '/' + scene.main;
+    const base64 = await imageService.fetchImageSmall(path, size);
+    return base64;
+  }
+  const images = imageService.getImages(session, scene);
+  if (images.length) {
+    return await imageService.fetchImageSmall(images[images.length - 1], size);
+  }
+  return undefined;
+}
+

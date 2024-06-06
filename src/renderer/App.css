@@ -36,12 +36,8 @@ body {
   width: 32rem;
 }
 
-.float-view-comp {
-  height: calc(95vh - 44px);
-}
-
-.float-view-comp-width {
-  width: 95vw;
+.show-toolbar {
+  height: calc(100% - 55px);
 }
 
 .clear-textarea {
@@ -103,16 +99,7 @@ body {
 }
 
 .floating-component {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
   background-color: rgba(0, 0, 0, 0.8);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
 }
 
 .content {
@@ -185,7 +172,7 @@ input[type='number']::-webkit-outer-spin-button {
   }
 }
 
-.no-scrollbars::-webkit-scrollbar { 
+.no-scrollbars::-webkit-scrollbar {
   display: none;  /* Safari and Chrome */
 }
 
