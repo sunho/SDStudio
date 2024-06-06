@@ -5,6 +5,7 @@ import React, {
   useContext,
   useRef,
   useMemo,
+  memo,
   useImperativeHandle,
   forwardRef,
 } from 'react';
@@ -16,14 +17,16 @@ import {
   extractExifFromBase64,
   extractMiddlePrompt,
   extractPromptDataFromBase64,
+  gameService,
   getResultDirectory,
   getResultImages,
   imageService,
   invoke,
   queueGenericScene,
+  sessionService,
   swapImages,
 } from './models';
-import { FixedSizeGrid as Grid, GridChildComponentProps } from 'react-window';
+import { FixedSizeGrid as Grid, GridChildComponentProps, areEqual } from 'react-window';
 import ResizeObserver from 'resize-observer-polyfill';
 import { AppContext } from './App';
 import { userInfo } from 'os';
@@ -34,6 +37,7 @@ import { FaStar } from 'react-icons/fa';
 import { PromptHighlighter } from './SceneEditor';
 import QueueControl from './SceneQueueControl';
 import { FloatView } from './FloatView';
+import memoizeOne from 'memoize-one';
 
 interface ImageGalleryProps {
   filePaths: string[];
@@ -49,7 +53,7 @@ interface ImageGalleryRef {
   refresh: () => void;
 }
 
-const Cell = ({
+const Cell = memo(({
   columnIndex,
   rowIndex,
   style,
@@ -96,6 +100,7 @@ const Cell = ({
   };
 
   const [image, setImage] = useState<string | undefined>(undefined);
+  const [_, forceUpdate] = useState<{}>({});
   useEffect(() => {
     if (!path) {
       setImage(undefined);
@@ -106,16 +111,21 @@ const Cell = ({
         const base64Image = await imageService.fetchImageSmall(path, imageSize)!;
         setImage(base64Image);
       } catch (e: any) {
-        console.log(e);
         setImage(undefined);
       }
     };
+    const refreshMainImage = () => {
+      forceUpdate({});
+    };
     refreshImageFuncs.current.set(path, refreshImage);
+
+    sessionService.addEventListener('main-image-updated', refreshMainImage);
     refreshImage();
     return () => {
       refreshImageFuncs.current.delete(path);
+      sessionService.removeEventListener('main-image-updated', refreshMainImage);
     };
-  }, [path, imageSize]);
+  }, [data, imageSize]);
 
   const isMain = !!(isMainImage && path && isMainImage(path));
 
@@ -155,12 +165,31 @@ const Cell = ({
       )}
     </div>
   );
-};
+}, areEqual);
 
-const CustomScrollbarsVirtualGrid = forwardRef((props, ref) => (
+const CustomScrollbarsVirtualGrid = memo(forwardRef((props, ref) => (
   <CustomScrollbars {...props} forwardedRef={ref} />
-));
+)));
 
+const createItemData = memoizeOne((filePaths,
+            onSelected,
+            columnCount,
+            refreshImageFuncs,
+            draggedIndex,
+            isMainImage,
+            onFilenameChange,
+            imageSize) => {
+    return {
+      filePaths,
+      onSelected,
+      columnCount,
+      refreshImageFuncs,
+      draggedIndex,
+      isMainImage,
+      onFilenameChange,
+      imageSize
+    };
+});
 
 const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
   ({ isHidden, imageSize, filePaths, isMainImage, onSelected, onFilenameChange }, ref) => {
@@ -193,6 +222,8 @@ const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
     const columnWidth = imageSize;
     const rowHeight = imageSize;
     const columnCount = Math.max(1, Math.floor(containerWidth / columnWidth));
+    // preload 4 pages
+    const overcountCounts = [32, 16, 8];
 
     return (
       <div
@@ -208,8 +239,7 @@ const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
           rowCount={Math.ceil(filePaths.length / columnCount)}
           rowHeight={rowHeight}
           width={columnCount * columnWidth}
-          outerElementType={CustomScrollbarsVirtualGrid}
-          itemData={{
+          itemData={createItemData(
             filePaths,
             onSelected,
             columnCount,
@@ -218,7 +248,9 @@ const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
             isMainImage,
             onFilenameChange,
             imageSize
-          }}
+          )}
+          outerElementType={CustomScrollbarsVirtualGrid}
+          overscanRowCount={overcountCounts[Math.ceil(imageSize/200)-1]}
         >
           {Cell}
         </Grid>
@@ -376,17 +408,21 @@ const ResultViewer = ({
   const [isInpaintList, setIsInpaintList] = useState<boolean>(false);
 
   useEffect(() => {
-    const onUpdated = () => {
-      forceUpdate({});
-    };
-    imageService.refresh(curSession!);
-    imageService.addEventListener('updated', onUpdated);
-    return () => {
-      imageService.removeEventListener('updated', onUpdated);
-    };
+    imageService.refresh(curSession!, scene);
   }, []);
 
-  const paths = getResultImages(curSession!, scene);
+  useEffect(() => {
+    const handleGameChanged = () => {
+      if (!tournament)
+        forceUpdate({});
+    };
+    gameService.addEventListener('updated', handleGameChanged);
+    return () => {
+      gameService.removeEventListener('updated', handleGameChanged);
+    };
+  }, [tournament]);
+
+  const paths = gameService.getOutputs(curSession!, scene);
   const onSelected = useCallback((index) => {
     setSelectedImageIndex(index);
   },[]);

@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from 'react';
+import { memo, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Session,
   Scene,
@@ -213,7 +213,7 @@ interface QueueControlProps {
   className?: string;
 }
 
-const QueueControl = ({ type, className, showPannel, filterFunc }: QueueControlProps) => {
+const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueControlProps) => {
   const ctx = useContext(AppContext)!;
   const curSession = ctx.curSession!;
   const [_, rerender] = useState<{}>({});
@@ -256,7 +256,7 @@ const QueueControl = ({ type, className, showPannel, filterFunc }: QueueControlP
     };
   }, []);
   useEffect(() => {
-    imageService.refresh(curSession);
+    imageService.refreshBatch(curSession!);
   }, [curSession]);
   const addAllToQueue = async () => {
     try {
@@ -352,8 +352,8 @@ const QueueControl = ({ type, className, showPannel, filterFunc }: QueueControlP
                 game: undefined,
               };
               curSession!.inpaints[name] = newScene;
-              updateScenes();
               close();
+              updateScenes();
               setInpaintEditScene(newScene);
               sessionService.inPaintHook();
             },
@@ -365,6 +365,7 @@ const QueueControl = ({ type, className, showPannel, filterFunc }: QueueControlP
               scene.main = path.split('/').pop();
               updateScenes();
               refreshSceneImageFuncs.current[scene.name]();
+              sessionService.mainImageUpdated();
               close();
             },
           },
@@ -391,56 +392,58 @@ const QueueControl = ({ type, className, showPannel, filterFunc }: QueueControlP
                   Date.now().toString() +
                   '.png',
               );
-              imageService.refresh(curSession);
+              imageService.refresh(curSession!, orgScene);
               close();
             },
           },
         ];
 
   const [adding, setAdding] = useState<boolean>(false);
-  let panel = <div></div>;
-  if (type === 'scene') {
-    panel = (
-      <>
-        {inpaintEditScene && (
-          <FloatView priority={3} onEscape={() => setInpaintEditScene(undefined)}>
-            <InPaintEditor
-              editingScene={inpaintEditScene}
-              onConfirm={() => {
-                setInpaintEditScene(undefined);
-              }}
-            />
-          </FloatView>
-        )}
-        {editingScene && (
-          <FloatView priority={2} onEscape={() => setEditingScene(undefined)}>
-            <SceneEditor
-              scene={editingScene as Scene}
-              onClosed={() => {
-                setEditingScene(undefined);
-              }}
-            />
-          </FloatView>
-        )}
-      </>
-    );
-  } else {
-    panel = (
-      <>
-        {(editingScene || adding) && (
-          <FloatView priority={2} onEscape={() => setEditingScene(undefined)}>
-            <InPaintEditor
-              editingScene={editingScene as InPaintScene}
-              onConfirm={() => {
-                setEditingScene(undefined);
-                setAdding(false);
-              }}
-            />
-          </FloatView>
-        )}
-      </>
-    );
-  }
+  const panel = useMemo(() => {
+    if (type === 'scene') {
+      return (
+        <>
+          {inpaintEditScene && (
+            <FloatView priority={3} onEscape={() => setInpaintEditScene(undefined)}>
+              <InPaintEditor
+                editingScene={inpaintEditScene}
+                onConfirm={() => {
+                  setInpaintEditScene(undefined);
+                }}
+              />
+            </FloatView>
+          )}
+          {editingScene && (
+            <FloatView priority={2} onEscape={() => setEditingScene(undefined)}>
+              <SceneEditor
+                scene={editingScene as Scene}
+                onClosed={() => {
+                  setEditingScene(undefined);
+                }}
+              />
+            </FloatView>
+          )}
+        </>
+      );
+    } else {
+      return (
+        <>
+          {(editingScene || adding) && (
+            <FloatView priority={2} onEscape={() => setEditingScene(undefined)}>
+              <InPaintEditor
+                editingScene={editingScene as InPaintScene}
+                onConfirm={() => {
+                  setEditingScene(undefined);
+                  setAdding(false);
+                }}
+              />
+            </FloatView>
+          )}
+        </>
+      );
+    }
+  }, [editingScene, inpaintEditScene, adding]);
+
   const isMainImage = (path: string) => {
     if (type === 'inpaint') return false;
     const scene = displayScene as Scene;
@@ -482,10 +485,9 @@ const QueueControl = ({ type, className, showPannel, filterFunc }: QueueControlP
     await invoke('zip-files', paths, outFilePath);
     await invoke('show-file', outFilePath);
   };
-  return (
-    <div className={"flex flex-col h-full " + (className ?? '')}>
-      {displayScene && (
-        <FloatView
+
+  const resultViewer = useMemo(() => {
+    if (displayScene) return <FloatView
           priority={2}
           showToolbar
           onEscape={() => {
@@ -499,7 +501,12 @@ const QueueControl = ({ type, className, showPannel, filterFunc }: QueueControlP
             buttons={buttons}
           />
         </FloatView>
-      )}
+    return <></>
+  },[displayScene]);
+
+  return (
+    <div className={"flex flex-col h-full " + (className ?? '')}>
+      {resultViewer}
       {panel}
       {!!showPannel &&
       <div className="flex flex-none pb-2">
@@ -553,6 +560,6 @@ const QueueControl = ({ type, className, showPannel, filterFunc }: QueueControlP
       </div>
     </div>
   );
-};
+});
 
 export default QueueControl;
