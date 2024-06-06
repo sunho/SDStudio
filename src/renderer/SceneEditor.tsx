@@ -280,8 +280,16 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
     <div className="w-1/3 g-full">
       <PreSetEditor
         middlePromptMode={true}
-        getMiddlePrompt={() => scene.slots[0][0].prompt}
+        getMiddlePrompt={() => {
+          if (scene.slots.length === 0 || scene.slots[0].length === 0) {
+            return '';
+          }
+          return scene.slots[0][0].prompt
+        }}
         onMiddlePromptChange={(txt) => {
+          if (scene.slots.length === 0 || scene.slots[0].length === 0) {
+            return;
+          }
           scene.slots[0][0].prompt = txt;
           onChanged && onChanged();
         }}
