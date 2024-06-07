@@ -1055,8 +1055,8 @@ export class TaskQueueService extends EventTarget {
         ? Resolution.Landscape
         : Resolution.Portrait,
       sampling: task.preset.sampling,
-      sm: task.preset.smea,
-      dyn: task.preset.dyn,
+      sm: false,
+      dyn: false,
       steps: task.preset.steps,
       promptGuidance: task.preset.promptGuidance,
       imageStrength: 0.7,
