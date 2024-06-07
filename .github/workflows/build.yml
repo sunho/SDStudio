@@ -99,7 +99,7 @@ jobs:
           path: "release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}-mac-universal.dmg"
           if-no-files-found: error
 
-create-release:
+  create-release:
     needs: [build-windows, build-mac]
     runs-on: ubuntu-latest
     steps:
