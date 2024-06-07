@@ -33,6 +33,8 @@ export function getDefaultPreset(): PreSet {
     uc: defaultUC,
     vibe: '',
     sampling: Sampling.KEulerAncestral,
+    promptGuidance: 5.0,
+    steps: 28,
   };
 }
 
@@ -41,6 +43,10 @@ export interface PreSet {
   backPrompt: string;
   uc: string;
   vibe: string;
+  steps?: number;
+  promptGuidance?: number;
+  smeaOff?: boolean;
+  dynOn?: boolean;
   sampling?: Sampling;
   seed?: number;
 }
@@ -173,6 +179,10 @@ export interface BakedPreSet {
   uc: string;
   vibe: string;
   sampling: Sampling;
+  smea: boolean;
+  dyn: boolean;
+  steps: number;
+  promptGuidance: number;
   seed?: number;
 }
 
@@ -1015,13 +1025,16 @@ export class TaskQueueService extends EventTarget {
     const uc = task.preset.uc.replace(String.fromCharCode(160), ' ');
     const arg: ImageGenInput = {
       prompt: prompt,
-      uc: task.preset.uc,
+      uc: uc,
       model: Model.Anime,
       resolution: task.preset.landscape
         ? Resolution.Landscape
         : Resolution.Portrait,
       sampling: task.preset.sampling,
-      sm: true,
+      sm: task.preset.smea,
+      dyn: task.preset.dyn,
+      steps: task.preset.steps,
+      promptGuidance: task.preset.promptGuidance,
       outputFilePath: outPath,
       seed: task.preset.seed,
     };
@@ -1042,8 +1055,11 @@ export class TaskQueueService extends EventTarget {
         ? Resolution.Landscape
         : Resolution.Portrait,
       sampling: task.preset.sampling,
+      sm: task.preset.smea,
+      dyn: task.preset.dyn,
+      steps: task.preset.steps,
+      promptGuidance: task.preset.promptGuidance,
       imageStrength: 0.7,
-      sm: false,
       image: task.image,
       mask: task.mask,
       outputFilePath: outPath,
@@ -1348,6 +1364,10 @@ export const queueScenePrompt = (
       uc: preset.uc,
       vibe: preset.vibe,
       landscape: scene.landscape,
+      smea: preset.smeaOff ? false : true,
+      dyn: preset.dynOn ? true : false,
+      steps: preset.steps ?? 28,
+      promptGuidance: preset.promptGuidance ?? 5,
       sampling: preset.sampling ?? Sampling.KEulerAncestral,
       seed: preset.seed,
     },
@@ -1399,6 +1419,10 @@ export const queueInPaint = async (
       uc: preset.uc,
       vibe: preset.vibe,
       landscape: scene.landscape,
+      smea: preset.smeaOff ? false : true,
+      dyn: preset.dynOn ? true : false,
+      steps: preset.steps ?? 28,
+      promptGuidance: preset.promptGuidance ?? 5,
       sampling: preset.sampling ?? Sampling.KEulerAncestral,
       seed: preset.seed,
     },

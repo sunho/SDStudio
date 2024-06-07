@@ -26,6 +26,9 @@ export interface ImageGenInput {
   sampling: Sampling;
   outputFilePath: string;
   sm: boolean;
+  dyn: boolean;
+  steps: number;
+  promptGuidance: number;
   vibe?: string;
   image?: string;
   mask?: string;
