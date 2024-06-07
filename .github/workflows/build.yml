@@ -106,15 +106,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Download Windows artifact
+      - name: Download Windows build artifact
         uses: actions/download-artifact@v3
         with:
           name: windows-build
+          path: ./dist
 
-      - name: Download Mac artifact
+      - name: Download macOS build artifact
         uses: actions/download-artifact@v3
         with:
           name: mac-build
+          path: ./dist
 
       - name: Get version and commit hash
         id: get-version
@@ -136,22 +138,18 @@ jobs:
           draft: true
           prerelease: false
 
-      - name: Upload Windows build to release
+      - name: Upload Windows build to Release
         uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: "SDStudio-${{ env.version }}-${{ env.commit_hash }}-windows.zip"
-          asset_name: "SDStudio-${{ env.version }}-${{ env.commit_hash }}-windows.zip"
+          asset_path: ./dist/SDStudio-${{ env.version }}-${{ env.commit_hash }}-windows.zip
+          asset_name: SDStudio-${{ env.version }}-${{ env.commit_hash }}-windows.zip
           asset_content_type: application/zip
 
-      - name: Upload Mac build to release
+      - name: Upload macOS build to Release
         uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: "release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}-mac-universal.dmg"
-          asset_name: "SDStudio-${{ env.version }}-${{ env.commit_hash }}-mac-universal.dmg"
+          asset_path: ./dist/SDStudio-${{ env.version }}-${{ env.commit_hash }}-mac-universal.dmg
+          asset_name: SDStudio-${{ env.version }}-${{ env.commit_hash }}-mac-universal.dmg
           asset_content_type: application/x-apple-diskimage
