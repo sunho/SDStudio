@@ -64,6 +64,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
 
 
   const [isVibeImageShow, setIsVibeImageShow] = useState(false);
+  const [samplerSetting, setSamplerSetting] = useState(false);
   const vibeImageShow = (
     <button className={`${roundButton} bg-gray-500 h-8`}>
       <FaImage size={18} />{' '}
@@ -72,7 +73,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
   return (
     <div
       key={selectedPreset ? getPresetName(selectedPreset) : ''}
-      className="p-3 flex flex-col h-full"
+      className="p-3 flex flex-col h-full relative"
     >
       {props.middlePromptMode && (
         <span className="font-bold">프리셋 편집 잠금: {' '}<input type="checkbox" checked={presetEditLock} onChange={() => setPresetEditLock(!presetEditLock)}></input></span>
@@ -183,7 +184,9 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
           onChange={ucPromptChange}
         ></PromptEditTextArea>
       </div>
-      <div className="mt-auto flex-none pt-2 flex gap-2 items-center">
+      {!samplerSetting &&
+        <div className="flex-none">
+      <div className="mt-auto pt-2 flex gap-2 items-center">
         <span className="font-bold flex-none">시드: </span>
         <input
           className={`w-full ${grayInput}`}
@@ -205,20 +208,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
           }}
         />
       </div>
-      <div className="mt-auto flex-none pt-2 flex gap-2 items-center">
-        <span className="font-bold flex-none">샘플링: </span>
-        <DropdownSelect
-          selectedOption={selectedPreset.sampling}
-          disabled={props.middlePromptMode && presetEditLock}
-          menuPlacement="top"
-          options={Object.values(Sampling).map((x) => ({ label: x, value: x }))}
-          onSelect={(opt) => {
-            selectedPreset.sampling = opt.value;
-            updatePresets();
-          }}
-        />
-      </div>
-      <div className="mt-auto flex-none pt-2 flex gap-2 items-center">
+      <div className="mt-auto pt-2 flex gap-2 items-center">
         <span className="font-bold flex-none">바이브: </span>
         <div className="flex-1 overflow-hidden">
           <FileUploadBase64 disabled={props.middlePromptMode && presetEditLock} onFileSelect={vibeChange}></FileUploadBase64>
@@ -235,6 +225,79 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
           </FloatView>}
         </span>
       </div>
+      <div className="mt-auto pt-2 flex gap-2 items-center">
+        <button className={`${roundButton} bg-gray-500 h-8 w-full`} onClick={() => setSamplerSetting(true)}>
+          샘플링 설정 열기
+        </button>
+      </div>
+      </div>}
+      {samplerSetting &&
+       <div className="flex-none">
+      <div className="mt-auto pt-2 flex gap-2 items-center">
+        <span className="font-bold flex-none">샘플러 </span>
+        <DropdownSelect
+          selectedOption={selectedPreset.sampling}
+          disabled={props.middlePromptMode && presetEditLock}
+          menuPlacement="top"
+          options={Object.values(Sampling).map((x) => ({ label: x, value: x }))}
+          onSelect={(opt) => {
+            selectedPreset.sampling = opt.value;
+            updatePresets();
+          }}
+        />
+      </div>
+      <div className="mt-auto pt-2 flex gap-2 items-center pr-1">
+        <span className="font-bold flex-none">SMEA: </span>
+        <input type="checkbox" checked={!selectedPreset.smeaOff} onChange={(e) => {
+          selectedPreset.smeaOff = !e.target.checked;
+          updatePresets();
+        }} />
+        <span className="font-bold flex-none">DYN: </span>
+        <input type="checkbox" checked={selectedPreset.dynOn} onChange={(e) => {
+          selectedPreset.dynOn = e.target.checked;
+          updatePresets();
+        }} />
+      </div>
+      <div className="mt-auto pt-2 flex gap-2 items-center pr-1">
+        <span className="font-bold flex-none">프롬프트 가이던스: </span>
+        <span className="flex-none w-6">{selectedPreset.promptGuidance ?? 5}</span>
+        <input
+        className="flex-1"
+          type="range"
+          step="0.1"
+          min="0"
+          max="10"
+          value={selectedPreset.promptGuidance ?? 5}
+          onChange={(e) => {
+            selectedPreset.promptGuidance = parseFloat(e.target.value);
+            updatePresets();
+          }}
+        />
+      </div>
+      <div className="relative mt-auto pt-2 flex gap-2 items-center pr-1">
+        <span className="font-bold flex-none">스탭: </span>
+        {selectedPreset!.steps && selectedPreset!.steps > 28 &&<span className="absolute text-white bg-red-700 right-0 bottom-16 px-4">Anlas가 소모되는 세팅입니다 (유료임)</span>}
+        <span className="flex-none w-6">{selectedPreset!.steps ?? 28}</span>
+        <input
+        className="flex-1"
+          type="range"
+          step="1"
+          min="1"
+          max="50"
+          value={selectedPreset.steps ?? 28}
+          onChange={(e) => {
+            selectedPreset.steps = parseInt(e.target.value);
+            updatePresets();
+          }}
+        />
+      </div>
+      <div className="mt-auto pt-2 flex gap-2 items-center">
+        <button className={`${roundButton} bg-gray-500 h-8 w-full`} onClick={() => setSamplerSetting(false)}>
+          샘플링 설정 닫기
+        </button>
+      </div>
+      </div>
+      }
     </div>
   );
 };
