@@ -30,14 +30,15 @@ jobs:
 
       - name: Rename and zip the build
         run: |
-          mv release/build/win-unpacked "SDStudio-${{ env.version }}-${{ env.commit_hash }}"
-          7z a "SDStudio-${{ env.version }}-${{ env.commit_hash }}.zip" "SDStudio-${{ env.version }}-${{ env.commit_hash }}"
+          mv release/build/win-unpacked "SDStudio-${{ env.version }}-${{ env.commit_hash }}-windows"
+          7z a "SDStudio-${{ env.version }}-${{ env.commit_hash }}-windows.zip" "SDStudio-${{ env.version }}-${{ env.commit_hash }}-windows"
 
-      - name: Upload artifact
+      - name: Upload Windows build
         uses: actions/upload-artifact@v3
         with:
-          name: SDStudio-windows-${{ env.version }}-${{ env.commit_hash }}
-          path: "SDStudio-${{ env.version }}-${{ env.commit_hash }}.zip"
+          name: windows-build
+          path: "SDStudio-${{ env.version }}-${{ env.commit_hash }}-windows.zip"
+          if-no-files-found: error
 
 
   build-mac:
@@ -91,9 +92,57 @@ jobs:
         run: |
           mv "release/build/SDStudio-${{ env.version }}-mac-universal.dmg" "release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}-mac-universal.dmg"
 
-      - name: Upload artifacts
+      - name: Upload Mac build
         uses: actions/upload-artifact@v3
         with:
-          name: SDStudio-mac-${{ env.version }}-${{ env.commit_hash }}
-          path: |
-            release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}-mac-universal.dmg
+          name: mac-build
+          path: "release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}-mac-universal.dmg"
+          if-no-files-found: error
+
+create-release:
+    needs: [build-windows, build-mac]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: windows-build
+
+      - name: Download Mac artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: mac-build
+
+      - name: Create GitHub release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: "v${{ env.version }}"
+          release_name: "v${{ env.version }}-pre"
+          draft: false
+          prerelease: true
+
+      - name: Upload Windows build to release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: "SDStudio-${{ env.version }}-${{ env.commit_hash }}-windows.zip"
+          asset_name: "SDStudio-${{ env.version }}-${{ env.commit_hash }}-windows.zip"
+          asset_content_type: application/zip
+
+      - name: Upload Mac build to release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: "release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}-mac-universal.dmg"
+          asset_name: "SDStudio-${{ env.version }}-${{ env.commit_hash }}-mac-universal.dmg"
+          asset_content_type: application/x-apple-diskimage
