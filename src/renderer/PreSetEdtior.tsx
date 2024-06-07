@@ -248,15 +248,18 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
       </div>
       <div className="mt-auto pt-2 flex gap-2 items-center pr-1">
         <span className="font-bold flex-none">SMEA: </span>
-        <input type="checkbox" checked={!selectedPreset.smeaOff} onChange={(e) => {
+        <input  type="checkbox" checked={!selectedPreset.smeaOff} onChange={(e) => {
           selectedPreset.smeaOff = !e.target.checked;
           updatePresets();
-        }} />
+        }} disabled={props.middlePromptMode && presetEditLock}
+            />
         <span className="font-bold flex-none">DYN: </span>
         <input type="checkbox" checked={selectedPreset.dynOn} onChange={(e) => {
           selectedPreset.dynOn = e.target.checked;
           updatePresets();
-        }} />
+        }}
+              disabled={props.middlePromptMode && presetEditLock}
+            />
       </div>
       <div className="mt-auto pt-2 flex gap-2 items-center pr-1">
         <span className="font-bold flex-none">프롬프트 가이던스: </span>
@@ -267,6 +270,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
           step="0.1"
           min="0"
           max="10"
+          disabled={props.middlePromptMode && presetEditLock}
           value={selectedPreset.promptGuidance ?? 5}
           onChange={(e) => {
             selectedPreset.promptGuidance = parseFloat(e.target.value);
@@ -284,6 +288,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
           step="1"
           min="1"
           max="50"
+          disabled={props.middlePromptMode && presetEditLock}
           value={selectedPreset.steps ?? 28}
           onChange={(e) => {
             selectedPreset.steps = parseInt(e.target.value);
