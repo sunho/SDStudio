@@ -56,6 +56,7 @@ export interface ImageGenInput {
   mask?: string;
   imageStrength?: number;
   seed?: number;
+  originalImage?: boolean;
 }
 
 export interface ImageGenService {

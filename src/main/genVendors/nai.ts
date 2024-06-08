@@ -144,7 +144,7 @@ export class NovelAiImageGenService implements ImageGenService {
           legacy: false,
           legacy_v3_extend: false,
           cfg_rescale: 0,
-          add_original_image: false,
+          add_original_image: params.originalImage ? true : false,
         },
       };
       if (params.vibe) {
