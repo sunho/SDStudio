@@ -25,6 +25,7 @@ import {
   queueGenericScene,
   sessionService,
   swapImages,
+  taskQueueService,
 } from './models';
 import { FixedSizeGrid as Grid, GridChildComponentProps, areEqual } from 'react-window';
 import ResizeObserver from 'resize-observer-polyfill';
@@ -267,59 +268,65 @@ interface ResultDetailViewButton {
 
 interface ResultDetailViewProps {
   scene: GenericScene;
-  path: string;
+  paths: string[];
+  initialSelectedIndex: number;
   buttons: ResultDetailViewButton[];
   onClose: () => void;
-  onNext: () => void;
-  onPrev: () => void;
 }
 const ResultDetailView = ({
   scene,
   buttons,
-  path,
+  paths,
+  initialSelectedIndex,
   onClose,
-  onNext,
-  onPrev
 }: ResultDetailViewProps) => {
   const { selectedPreset } = useContext(AppContext)!;
+  const [selectedIndex, setSelectedIndex] = useState<number>(initialSelectedIndex);
+  const [filename, setFilename] = useState<string>(paths[selectedIndex].split('/').pop()!);
+  const [image, setImage] = useState<string | undefined>(undefined);
   const [middlePrompt, setMiddlePrompt] = useState<string>('');
   const [seed, setSeed] = useState<string>('');
-  const [image, setImage] = useState<string | undefined>(undefined);
+  const [scale, setScale] = useState<string>('');
+  const [sampler, setSampler] = useState<string>('');
+  const [steps, setSteps] = useState<string>('');
+  const [uc, setUc] = useState<string>('');
   useEffect(() => {
     const fetchImage = async () => {
       try {
-        const base64Image = await imageService.fetchImage(path)!;
-        const [prompt, seed] = await extractPromptDataFromBase64(dataUriToBase64(base64Image));
+        let base64Image = await imageService.fetchImage(paths[selectedIndex])!;
         setImage(base64Image);
+        base64Image = dataUriToBase64(base64Image);
+        const [prompt, seed, scale, sampler, steps, uc] = await extractPromptDataFromBase64(base64Image);
         setMiddlePrompt(prompt);
         setSeed(seed.toString());
+        setScale(scale.toString());
+        setSampler(sampler);
+        setSteps(steps.toString());
+        setUc(uc);
+        setFilename(paths[selectedIndex].split('/').pop()!);
       } catch (e: any) {
         console.log(e);
         setImage(undefined);
         setMiddlePrompt('');
         setSeed('');
+        setScale('');
+        setSampler('');
+        setSteps('');
+        setUc('');
+        setFilename('');
       }
     };
     fetchImage();
-  }, [path]);
+  }, [selectedIndex]);
 
   return (
-    <div className="absolute top-0 left-0 flex w-full h-full overflow-hidden justify-center items-center">
-      <div className="z-10 bg-white w-full h-full flex shadow-lg overflow-hidden">
+      <div className="z-10 bg-white w-full h-full flex overflow-hidden">
         <div className="flex-none w-1/3 p-4">
           <div className="flex gap-3 mb-6 flex-wrap w-full">
             <button
-              className={`${roundButton} bg-gray-500`}
-              onClick={() => {
-                onClose();
-              }}
-            >
-              닫기
-            </button>
-            <button
               className={`${roundButton} bg-sky-500`}
               onClick={async () => {
-                await invoke('show-file', path);
+                await invoke('show-file', paths[selectedIndex]);
               }}
             >
               파일 위치 열기
@@ -329,7 +336,7 @@ const ResultDetailView = ({
                 key={index}
                 className={`${roundButton} ${button.className}`}
                 onClick={() => {
-                  button.onClick(scene, path, onClose);
+                  button.onClick(scene, paths[selectedIndex], onClose);
                 }}
               >
                 {button.text}
@@ -346,7 +353,23 @@ const ResultDetailView = ({
           </div>
           <div className="max-w-full">
             <span className="font-bold">파일이름: </span>
-            <span>{path.split('/').pop()}</span>
+            <span>{filename}</span>
+          </div>
+          <div className="w-full mb-2">
+            <div className="font-bold">네거티브 프롬프트: </div>
+            <PromptHighlighter text={uc} className="w-full h-24 overflow-auto"/>
+          </div>
+          <div className="w-full mb-2">
+            <span className="font-bold">프롬프트 가이던스: </span>
+            {scale}
+          </div>
+          <div className="w-full mb-2">
+            <span className="font-bold">샘플러: </span>
+            {sampler}
+          </div>
+          <div className="w-full mb-2">
+            <span className="font-bold">스텝: </span>
+            {steps}
           </div>
         </div>
         <div className="flex-1 overflow-hidden">
@@ -357,11 +380,11 @@ const ResultDetailView = ({
               className="w-full h-full object-contain"
             />
           )}
-          <div className="absolute top-0 right-0 flex gap-3 p-4">
+          <div className="absolute top-10 right-0 flex gap-3 p-4">
             <button
               className={`${roundButton} bg-gray-500`}
               onClick={() => {
-                onPrev();
+                setSelectedIndex((selectedIndex - 1 + paths.length) % paths.length);
               }}
             >
               이전
@@ -369,7 +392,7 @@ const ResultDetailView = ({
             <button
               className={`${roundButton} bg-gray-500`}
               onClick={() => {
-                onNext();
+                setSelectedIndex((selectedIndex + 1) % paths.length);
               }}
             >
               다음
@@ -377,8 +400,6 @@ const ResultDetailView = ({
           </div>
         </div>
       </div>
-      <div className="absolute w-full top-0 h-full bg-black opacity-50"></div>
-    </div>
   );
 };
 
@@ -386,6 +407,7 @@ interface ResultViewerProps {
   scene: GenericScene;
   buttons: ResultDetailViewButton[];
   onFilenameChange: (path: string) => void;
+  onEdit: (scene: GenericScene) => void;
   isMainImage?: (path: string) => boolean;
   starScene?: Scene;
 }
@@ -393,6 +415,7 @@ interface ResultViewerProps {
 const ResultViewer = ({
   scene,
   onFilenameChange,
+  onEdit,
   starScene,
   isMainImage,
   buttons,
@@ -446,7 +469,7 @@ const ResultViewer = ({
       <div className="flex-none p-4 border-b border-gray-300">
         <div className="mb-4">
           <span className="font-bold text-xl">
-            씬 {scene.name}의 생성된 이미지
+            {scene.type === "inpaint" ? "인페인트 " : "일반 "} 씬 {scene.name}의 생성된 이미지
           </span>
         </div>
         <div className="flex justify-between items-center mt-4">
@@ -466,11 +489,25 @@ const ResultViewer = ({
               결과 폴더 열기
             </button>
             <button
-              className={`${roundButton} bg-sky-500`}
+              className={`${roundButton} bg-green-500`}
               onClick={async () => {
                 await queueGenericScene(curSession!, selectedPreset!, scene, samples);
               }}>
               예약 추가
+            </button>
+            <button
+              className={`${roundButton} bg-gray-500`}
+              onClick={() => {
+                taskQueueService.removeTaskFromGenericScene(scene);
+              }}>
+              예약 제거
+            </button>
+            <button
+              className={`${roundButton} bg-orange-400`}
+              onClick={() => {
+                onEdit(scene);
+              }}>
+              씬 편집
             </button>
           </div>
           <div className="flex gap-3">
@@ -509,20 +546,17 @@ const ResultViewer = ({
           onSelected={onSelected}
         />
         {selectedImageIndex != null && (
-          <ResultDetailView
-            buttons={buttons}
-            onClose={() => {
-              setSelectedImageIndex(undefined);
-            }}
-            scene={scene}
-            path={paths[selectedImageIndex]}
-            onNext={() => {
-              setSelectedImageIndex((selectedImageIndex + 1) % paths.length);
-            }}
-            onPrev={() => {
-              setSelectedImageIndex((selectedImageIndex - 1 + paths.length) % paths.length);
-            }}
-          />
+          <FloatView priority={1} onEscape={() => setSelectedImageIndex(undefined)}>
+            <ResultDetailView
+              buttons={buttons}
+              onClose={() => {
+                setSelectedImageIndex(undefined);
+              }}
+              scene={scene}
+              paths={paths}
+              initialSelectedIndex={selectedImageIndex}
+            />
+          </FloatView>
         )}
       </div>
     </div>

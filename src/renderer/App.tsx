@@ -13,6 +13,8 @@ import {
   isValidSession,
   isValidPieceLibrary,
   sessionService,
+  appUpdateNoticeService,
+  invoke,
 } from './models';
 import SessionSelect from './SessionSelect';
 import PreSetEditor from './PreSetEdtior';
@@ -84,6 +86,25 @@ export default function App() {
   const [samples, setSamples] = useState<number>(10);
   const [messages, setMessages] = useState<string[]>([]);
   const [dialogs, setDialogs] = useState<Dialog[]>([]);
+  useEffect(() => {
+    const handleUpdate = () => {
+      if (appUpdateNoticeService.outdated) {
+        pushDialog({
+          type: 'confirm',
+          text: '새로운 버전이 있습니다. 새로 다운 받으시겠습니까?',
+          green: true,
+          callback: () => {
+            invoke('open-web-page', 'https://github.com/sunho/SDStudio/releases');
+          },
+        })
+      }
+    };
+    handleUpdate();
+    appUpdateNoticeService.addEventListener('updated', handleUpdate);
+    return () => {
+      appUpdateNoticeService.removeEventListener('updated', handleUpdate);
+    };
+  },[]);
   useEffect(() => {
     const handleJSONContent = async (name: string, json: any) => {
       if (name.endsWith('.json')) {

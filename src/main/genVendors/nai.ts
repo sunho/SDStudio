@@ -29,9 +29,17 @@ export class NovelAiImageGenService implements ImageGenService {
     width: number;
   } {
     const resolutionMap = {
+      small_landscape: { height: 512, width: 768 },
+      small_portrait: { height: 768, width: 512 },
+      small_square: { height: 640, width: 640},
       landscape: { height: 832, width: 1216 },
       portrait: { height: 1216, width: 832 },
       square: { height: 1024, width: 1024 },
+      large_landscape: { height: 1024, width: 1536 },
+      large_portrait: { height: 1536, width: 1024 },
+      large_square: { height: 1472, width: 1472},
+      wallpaper_portrait: { height: 1088, width: 1920 },
+      wallpaper_landscape: { height: 1920, width: 1088 },
     } as const;
     return resolutionMap[resolution];
   }

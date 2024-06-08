@@ -56,8 +56,9 @@ const ProgressBar = ({ duration, isError, text, key }: ProgressBarProps) => {
 };
 
 interface TaskProgressBarProps {
+  fast?: boolean;
 }
-export const TaskProgressBar = ({}: TaskProgressBarProps) => {
+export const TaskProgressBar = ({fast}: TaskProgressBarProps) => {
   const { pushMessage } = useContext(AppContext)!;
   const key = useRef<number>(0);
   const [duration, setDuration] = useState(0);
@@ -80,9 +81,9 @@ export const TaskProgressBar = ({}: TaskProgressBarProps) => {
   const getProgressText = () => {
     const stats = taskQueueService.totalStats;
     const remain = stats.total - stats.done;
-    const timeEstimate = formatTime(
-      remain * taskQueueService.timeEstimator.estimateMedian()!,
-    );
+    const est = (fast && remain === 1) ? taskQueueService.fastTimeEstimator.estimateMean()! : taskQueueService.timeEstimator.estimateMedian()!;
+    let ms = remain * est;
+    const timeEstimate = formatTime(ms);
     return `${remain}개 남음 (예상 ${timeEstimate})`;
   };
 

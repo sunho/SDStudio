@@ -7,6 +7,7 @@ export interface Dialog {
   callback?: (value?: string) => void;
   type: 'confirm' | 'yes-only' | 'input-confirm';
   inputValue?: string;
+  green?: boolean;
 }
 
 interface Props {
@@ -60,7 +61,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
               {dialogs[dialogs.length - 1].type === 'confirm' && (
                 <>
                   <button
-                    className="mr-2 px-4 py-2 rounded bg-red-500 text-white"
+                    className={"mr-2 px-4 py-2 rounded text-white " + (dialogs[dialogs.length-1].green ? "bg-sky-500" : "bg-red-500")}
                     onClick={handleConfirm}
                   >
                     확인
