@@ -1772,10 +1772,7 @@ export class GameService extends EventTarget {
       return [game.length, undefined];
     }
     let matchPlayers = game.filter((x) => x.rank === matchRank);
-    for (let i = matchPlayers.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [matchPlayers[i], matchPlayers[j]] = [matchPlayers[j], matchPlayers[i]];
-    }
+    shuffleArray(matchPlayers);
     const winRank = matchRank - (matchPlayers.length >> 1);
     if (matchPlayers.length % 2 === 1) {
       matchPlayers[matchPlayers.length - 1].rank = winRank;
@@ -1794,6 +1791,13 @@ export class GameService extends EventTarget {
       }
     }
     throw new Error('should not be reached here');
+  }
+}
+
+export function shuffleArray<T>(arr: T[]) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
 }
 
