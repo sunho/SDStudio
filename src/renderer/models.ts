@@ -433,7 +433,7 @@ export class SessionService extends ResourceSyncService<Session> {
         await invoke('write-data-file', path, inpaint.mask);
         inpaint.mask = undefined;
       }
-      if ((inpaint as any).middlePrompt) {
+      if ((inpaint as any).middlePrompt != null) {
         inpaint.prompt = '';
         try {
           const image = dataUriToBase64(await imageService.fetchImage(this.getInpaintOrgPath(session, inpaint)));
