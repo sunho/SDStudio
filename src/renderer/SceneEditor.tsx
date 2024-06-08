@@ -21,7 +21,7 @@ import {
   sessionService,
   taskQueueService,
 } from './models';
-import { CustomScrollbars, TabComponent, TextAreaWithUndo } from './UtilComponents';
+import { CustomScrollbars, DropdownSelect, TabComponent, TextAreaWithUndo } from './UtilComponents';
 import { FaPlay, FaPlus, FaStop, FaTimes } from 'react-icons/fa';
 import { FaTrash } from 'react-icons/fa';
 import { AppContext } from './App';
@@ -32,10 +32,12 @@ import { windowsStore } from 'process';
 import Scrollbars from 'react-custom-scrollbars-2';
 import PreSetEditor from './PreSetEdtior';
 import { TaskProgressBar } from './TaskQueueControl';
+import { Resolution, resolutionMap } from '../main/imageGen';
 
 interface Props {
   scene: Scene;
   onClosed: () => void;
+  onDeleted?: () => void;
 }
 
 interface PromptEditTextAreaProps {
@@ -271,6 +273,7 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
   const [_, rerender] = useState<{}>({});
   useEffect(() => {
     setPath(null);
+    setImage(null);
     (async () => {
       const dataUri = await getMainImage(curSession!, scene, -1);
       setImage(dataUri);
@@ -316,7 +319,15 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
         src={image} />}
         </div>
         <div className="ml-auto flex-none flex gap-4 pt-2">
-        <TaskProgressBar/>
+        {path && <button className={`${roundButton} bg-orange-400 h-8 w-36 flex items-center justify-center`}
+          onClick={()=>{
+            scene.main = path.split('/').pop()!;
+            sessionService.mainImageUpdated();
+            onChanged && onChanged();
+          }}
+        >메인이미지 지정
+        </button>}
+        <TaskProgressBar fast/>
         {!taskQueueService.isRunning() ? (
           <button
             className={`${roundButton} bg-green-500 h-8 w-36 flex items-center justify-center`}
@@ -324,7 +335,7 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
               (async () => {
                 try {
                   const prompts = await createPrompts(curSession!, selectedPreset!, scene);
-                  queueScenePrompt(curSession!, selectedPreset!, scene, prompts[0], 1, async (path: string) => {
+                  queueScenePrompt(curSession!, selectedPreset!, scene, prompts[0], 1, true, async (path: string) => {
                     const dataUri = await imageService.fetchImage(path);
                     setPath(path);
                     setImage(dataUri);
@@ -350,14 +361,6 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
             <FaStop size={15} />
           </button>
         )}
-        {path && <button className={`${roundButton} bg-orange-400 h-8 w-36 flex items-center justify-center`}
-          onClick={()=>{
-            scene.main = path.split('/').pop()!;
-            sessionService.mainImageUpdated();
-            onChanged && onChanged();
-          }}
-        >메인이미지 지정
-        </button>}
         </div>
       </div>
     </div>
@@ -518,7 +521,7 @@ const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
   );
 };
 
-const SceneEditor = ({ scene, onClosed }: Props) => {
+const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
   const [_, rerender] = useState<{}>({});
   const { curSession, selectedPreset, pushMessage, pushDialog } =
     useContext(AppContext)!;
@@ -557,6 +560,11 @@ const SceneEditor = ({ scene, onClosed }: Props) => {
     <BigPromptEditor scene={scene} onChanged={updateScene} />
   );
 
+  const resolutionOptions = Object.entries(resolutionMap).map(([key, value]) => {
+    return { label: `${value.width}x${value.height}`, value: key};
+  }).filter(x=>(!x.value.startsWith('small')));
+
+  console.log(scene.resolution);
   return (
     <div className="w-full h-full overflow-hidden">
       <div className="flex flex-col overflow-hidden flex-1 h-full">
@@ -570,15 +578,30 @@ const SceneEditor = ({ scene, onClosed }: Props) => {
             setCurName(e.currentTarget.value);
           }}
         />
-        <label>가로해상도:</label>
-        <input
-          type="checkbox"
-          checked={scene.landscape}
-          onChange={(e) => {
-            scene.landscape = e.currentTarget.checked;
-            updateScene();
-          }}
-        />
+        <label>해상도:</label>
+        <div className="w-36">
+          <DropdownSelect
+            options={resolutionOptions}
+            menuPlacement='bottom'
+            selectedOption={scene.resolution}
+            onSelect={(opt) => {
+              if (opt.value.startsWith('large') || opt.value.startsWith('wallpaper')) {
+                pushDialog({
+                  type: 'confirm',
+                  text: '해당 해상도는 Anlas를 소모합니다 (유로임) 계속하시겠습니까?',
+                  callback: () => {
+                    scene.resolution = opt.value as Resolution;
+                    updateScene();
+                  },
+                });
+              } else {
+                scene.resolution = opt.value as Resolution;
+                updateScene();
+              }
+            }}
+          />
+        </div>
+
         <button
           className={`${roundButton} ${primaryColor}`}
           onClick={async () => {
@@ -605,6 +628,9 @@ const SceneEditor = ({ scene, onClosed }: Props) => {
                 delete curSession!.scenes[scene.name];
                 updateScene();
                 onClosed();
+                if (onDeleted) {
+                  onDeleted();
+                }
               },
             });
           }}

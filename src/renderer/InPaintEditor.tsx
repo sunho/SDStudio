@@ -4,12 +4,14 @@ import BrushTool, {
   base64ToDataUri,
   getImageDimensions,
 } from './BrushTool';
-import { FileUploadBase64 } from './UtilComponents';
+import { DropdownSelect, FileUploadBase64 } from './UtilComponents';
 import {
   InPaintScene,
   createInPaintPrompt,
+  dataUriToBase64,
   extractMiddlePrompt,
   extractPromptDataFromBase64,
+  imageService,
   promptService,
   sessionService,
   toPARR,
@@ -17,38 +19,58 @@ import {
 import { AppContext } from './App';
 import { grayInput, primaryColor, roundButton } from './styles';
 import { PromptEditTextArea, PromptHighlighter } from './SceneEditor';
+import { Resolution, resolutionMap } from '../main/imageGen';
 
 interface Props {
   editingScene: InPaintScene | undefined;
   onConfirm: () => void;
+  onDelete: () => void;
 }
 
-const InPaintEditor = ({ editingScene, onConfirm }: Props) => {
+const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
   const { pushMessage, curSession, selectedPreset, pushDialog } =
     useContext(AppContext)!;
+
+  const resolutionOptions = Object.entries(resolutionMap).map(([key, value]) => {
+    return { label: `${value.width}x${value.height}`, value: key};
+  }).filter(x=>(!x.value.startsWith('small')));
 
   const [image, setImage] = useState('');
   const [width, setWidth] = useState(0);
   const [height, setHeight] = useState(0);
   const [mask, setMask] = useState<string | undefined>(undefined);
-  const [isLandscape, setIsLandscape] = useState(false);
+  const [resolution, setResolution] = useState('portrait');
   const [taskName, setTaskName] = useState('');
   const [brushSize, setBrushSize] = useState(10);
   const [middlePrompt, setMiddlePrompt] = useState('');
   const [preview, setPreview] = useState('');
   useEffect(() => {
     if (editingScene) {
-      setImage(editingScene.image);
+      setImage('');
+      setMask(undefined);
       setTaskName(editingScene.name);
-      setIsLandscape(editingScene.landscape);
+      setResolution(editingScene.resolution);
       setMiddlePrompt(editingScene.middlePrompt);
-      setMask(editingScene.mask);
+      async function loadImage() {
+        try {
+          const data = await imageService.fetchImage(sessionService.getInpaintOrgPath(curSession!, editingScene as InPaintScene));
+          setImage(dataUriToBase64(data));
+        } catch (e) {
+          pushMessage('인페인트 이미지를 불러오는데 실패했습니다.');
+        }
+        try {
+          const data = await imageService.fetchImage(sessionService.getInpaintMaskPath(curSession!, editingScene as InPaintScene));
+          setMask(dataUriToBase64(data));
+        } catch (e) {
+        }
+      }
+      loadImage();
     } else {
       setImage('');
+      setMask(undefined);
       setTaskName('');
       setMiddlePrompt('');
-      setIsLandscape(false);
-      setMask(undefined);
+      setResolution('portrait');
     }
   }, [editingScene]);
   useEffect(() => {
@@ -59,10 +81,6 @@ const InPaintEditor = ({ editingScene, onConfirm }: Props) => {
       })
       .catch(() => {});
   }, [image]);
-
-  const handleLandscapeChange = (event) => {
-    setIsLandscape(event.target.checked);
-  };
 
   const handleTaskNameChange = (event) => {
     setTaskName(event.target.value);
@@ -76,16 +94,21 @@ const InPaintEditor = ({ editingScene, onConfirm }: Props) => {
         delete curSession!.inpaints[editingScene!.name];
         sessionService.markUpdated(curSession!.name);
         onConfirm();
+        onDelete();
       },
     });
   };
 
   const confirm = async () => {
+    if (image === '') {
+      pushMessage('이미지를 넣어주세요.');
+      return;
+    }
+    const mask = brushTool.current!.getMaskBase64();
     if (editingScene) {
-      editingScene.image = image;
-      editingScene.landscape = isLandscape;
+      editingScene.resolution = resolution;
       editingScene.middlePrompt = middlePrompt;
-      editingScene.mask = brushTool.current!.getMaskBase64();
+      await sessionService.saveInpaintImages(curSession!, editingScene, image, mask);
       sessionService.markUpdated(curSession!.name);
     } else {
       if (!taskName || taskName === '') return;
@@ -97,13 +120,12 @@ const InPaintEditor = ({ editingScene, onConfirm }: Props) => {
       const newScene: InPaintScene = {
         type: 'inpaint',
         name: taskName,
-        image: image,
         middlePrompt: '',
-        landscape: isLandscape,
-        mask: brushTool.current!.getMaskBase64(),
+        resolution: resolution,
         game: undefined,
       };
       curSession!.inpaints[taskName] = newScene;
+      await sessionService.saveInpaintImages(curSession!, newScene, image, mask);
       sessionService.markUpdated(curSession!.name);
     }
     onConfirm();
@@ -112,7 +134,7 @@ const InPaintEditor = ({ editingScene, onConfirm }: Props) => {
     let prompt = toPARR(selectedPreset!.frontPrompt);
     prompt = prompt.concat(toPARR(middlePrompt));
     prompt = prompt.concat(toPARR(selectedPreset!.backPrompt));
-    const expanded = await promptService.expandPARR(
+    const expanded = promptService.expandPARR(
       prompt,
       curSession!,
       editingScene,
@@ -134,7 +156,7 @@ const InPaintEditor = ({ editingScene, onConfirm }: Props) => {
   return (
     <div className="flex py-4 h-full w-full">
       <div className="px-3 flex flex-col grow-0 w-1/2 xl:w-1/3 gap-2">
-        <div className="mb-2 flex items-center gap-3 flex-none">
+        <div className="mb-1 flex items-center gap-3 flex-none">
           <label>
             씬 이름:{' '}
             <input
@@ -145,7 +167,6 @@ const InPaintEditor = ({ editingScene, onConfirm }: Props) => {
               onChange={handleTaskNameChange}
             />
           </label>
-
           {editingScene && (
             <button
               className={`${roundButton} bg-red-500`}
@@ -161,30 +182,43 @@ const InPaintEditor = ({ editingScene, onConfirm }: Props) => {
             저장
           </button>
         </div>
-        <div className="flex gap-3 items-center flex-none text-eplsis overflow-hidden ">
-          <div className="flex gap-2 items-center">
-            <span>이미지: </span>
-            <div className="w-48">
-              <FileUploadBase64
-                onFileSelect={async (file: string) => {
-                  const [prompt, seed] = await extractPromptDataFromBase64(file);
-                  const middle = await extractMiddlePrompt(
-                    selectedPreset!,
-                    prompt,
-                  );
-                  setImage(file);
-                  setMiddlePrompt(middle);
-                }}
-              ></FileUploadBase64>
-            </div>
-            <span className="ml-3">
-              가로해상도:{' '}
-              <input
-                type="checkbox"
-                checked={isLandscape}
-                onChange={handleLandscapeChange}
-              />
-            </span>
+        <div className="flex gap-3 items-center flex-none text-eplsis overflow-hidden gap-3 mb-1">
+          <span>이미지: </span>
+          <div className="w-48">
+            <FileUploadBase64
+              onFileSelect={async (file: string) => {
+                const [prompt, seed, scale, sampler, steps, uc] = await extractPromptDataFromBase64(image);
+                const middle = await extractMiddlePrompt(
+                  selectedPreset!,
+                  prompt,
+                );
+                setImage(file);
+                setMiddlePrompt(middle);
+              }}
+            ></FileUploadBase64>
+          </div>
+        </div>
+        <div className="flex-none flex whitespace-nowrap gap-3 items-center">
+          <span>해상도:</span>
+          <div className="w-36">
+          <DropdownSelect
+            options={resolutionOptions}
+            menuPlacement='bottom'
+            selectedOption={resolution}
+            onSelect={(opt) => {
+              if (opt.value.startsWith('large') || opt.value.startsWith('wallpaper')) {
+                pushDialog({
+                  type: 'confirm',
+                  text: '해당 해상도는 Anlas를 소모합니다 (유로임) 계속하시겠습니까?',
+                  callback: () => {
+                    setResolution(opt.value as Resolution);
+                  },
+                });
+              } else {
+                setResolution(opt.value as Resolution);
+              }
+            }}
+          />
           </div>
         </div>
         <div className="mt-auto flex-none">

@@ -80,6 +80,14 @@ const APP_DIR = app.getPath('userData') + '/' + 'SDStudio';
 
 let saveCompleted = false;
 
+ipcMain.handle('get-version', async (event) => {
+  return app.getVersion();
+});
+
+ipcMain.handle('open-web-page', async (event, url) => {
+  await shell.openExternal(url);
+});
+
 ipcMain.handle('image-gen', async (event, arg: ImageGenInput) => {
   const token = await fs.readFile(APP_DIR + '/TOKEN.txt', 'utf-8');
   arg.outputFilePath = APP_DIR + '/' + arg.outputFilePath;
@@ -129,7 +137,7 @@ ipcMain.handle('read-file', async (event, filename) => {
 ipcMain.handle('write-file', async (event, filename, data) => {
   const dir = path.dirname(APP_DIR + '/' + filename);
   await fs.mkdir(dir, { recursive: true });
-  const tmpFile = APP_DIR + '/' + filename + '.tmp.' + uuidv4();
+  const tmpFile = APP_DIR + '/' + uuidv4();
   await fs.writeFile(tmpFile, data, 'utf-8');
   await fs.rename(tmpFile, APP_DIR + '/' + filename, { recursive: true });
 });
@@ -144,8 +152,25 @@ ipcMain.handle('read-data-file', async (event, arg) => {
   return await readFileAsDataURL(APP_DIR + '/' + arg);
 });
 
+ipcMain.handle('write-data-file', async (event, filename, data) => {
+  const binaryData = Buffer.from(data, 'base64');
+  const dir = path.dirname(APP_DIR + '/' + filename);
+  await fs.mkdir(dir, { recursive: true });
+  const tmpFile = APP_DIR + '/' + uuidv4();
+  await fs.writeFile(tmpFile, binaryData);
+  await fs.rename(tmpFile, APP_DIR + '/' + filename, { recursive: true });
+});
+
 ipcMain.handle('rename-file', async (event, oldfile, newfile) => {
   return await fs.rename(APP_DIR + '/' + oldfile, APP_DIR + '/' + newfile);
+});
+
+ipcMain.handle('rename-dir', async (event, oldfile, newfile) => {
+  return await fs.rename(APP_DIR + '/' + oldfile, APP_DIR + '/' + newfile);
+});
+
+ipcMain.handle('delete-file', async (event, filename) => {
+  return await fs.unlink(APP_DIR + '/' + filename);
 });
 
 ipcMain.handle('close', async (event) => {

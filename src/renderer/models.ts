@@ -7,12 +7,15 @@ import ExifReader from 'exifreader';
 import { watch } from 'fs/promises';
 
 const PROMPT_SERVICE_INTERVAL = 5000;
+const UPDATE_SERVICE_INTERVAL = 60*1000;
 const SESSION_SERVICE_INTERVAL = 5000;
+const FAST_TASK_TIME_ESTIMATOR_SAMPLE_COUNT = 16;
 const TASK_TIME_ESTIMATOR_SAMPLE_COUNT = 128;
-const TASK_DEFAULT_ESTIMATE = 15 * 1000;
 const IMAGE_CACHE_SIZE = 256;
-const RANDOM_DELAY_BIAS = 4.3;
+const RANDOM_DELAY_BIAS = 5.3;
+const TASK_DEFAULT_ESTIMATE = 19 * 1000;
 const RANDOM_DELAY_STD = 2.5;
+const FAST_TASK_DEFAULT_ESTIMATE = TASK_DEFAULT_ESTIMATE - RANDOM_DELAY_BIAS * 1000 - RANDOM_DELAY_STD * 1000 / 2 + 1000;
 
 export function assert(condition: any, message?: string): asserts condition {
   if (!condition) {
@@ -73,22 +76,24 @@ export interface Player {
 export interface Scene {
   type: 'scene';
   name: string;
-  landscape: boolean;
+  resolution: string;
   locked: boolean;
   slots: PromptPieceSlot[];
   game: Game | undefined;
+  landscape?: boolean;
   main?: string;
 }
 
 export interface InPaintScene {
   type: 'inpaint';
   name: string;
-  landscape: boolean;
+  resolution: string;
   middlePrompt: string;
-  image: string;
-  mask: string;
   game: Game | undefined;
+  landscape?: boolean;
   sceneRef?: string;
+  image?: string;
+  mask?: string;
 }
 
 export interface Session {
@@ -129,7 +134,6 @@ export const isValidScene = (scene: any) => {
   return (
     scene.type === 'scene' &&
     typeof scene.name === 'string' &&
-    typeof scene.landscape === 'boolean' &&
     typeof scene.locked === 'boolean' &&
     Array.isArray(scene.slots) &&
     scene.slots.every(isValidPromptPieceSlot) &&
@@ -142,10 +146,7 @@ export const isValidInPaintScene = (inpaint: any) => {
   return (
     inpaint.type === 'inpaint' &&
     typeof inpaint.name === 'string' &&
-    typeof inpaint.landscape === 'boolean' &&
     typeof inpaint.middlePrompt === 'string' &&
-    typeof inpaint.image === 'string' &&
-    typeof inpaint.mask === 'string' &&
     (inpaint.game === undefined || isValidGame(inpaint.game)) &&
     (inpaint.sceneRef === undefined || typeof inpaint.sceneRef === 'string')
   );
@@ -175,7 +176,7 @@ export const isValidSession = (session: any) => {
 
 export interface BakedPreSet {
   prompt: string;
-  landscape: boolean;
+  resolution: Resolution;
   uc: string;
   vibe: string;
   sampling: Sampling;
@@ -195,6 +196,7 @@ export interface GenerateTask {
   outPath: string;
   done: number;
   total: number;
+  nodelay?: boolean;
   onComplete?: (path: string) => void;
 }
 
@@ -209,6 +211,7 @@ export interface InPaintTask {
   outPath: string;
   done: number;
   total: number;
+  nodelay?: boolean;
   onComplete?: (path: string) => void;
 }
 
@@ -265,14 +268,14 @@ abstract class ResourceSyncService<T> extends EventTarget {
   }
 
   abstract createDefault(name: string): T;
-  abstract getHook(rc: T, name: string): void;
+  abstract getHook(rc: T, name: string): Promise<void>;
 
   async add(name: string) {
     if (name in this.resources) {
       throw new Error('Resource already exists');
     }
     this.resources[name] = this.createDefault(name);
-    this.getHook(this.resources[name], name);
+    await this.getHook(this.resources[name], name);
     this.markUpdated(name);
     await this.update();
   }
@@ -313,7 +316,7 @@ abstract class ResourceSyncService<T> extends EventTarget {
           this.resourceDir + '/' + name + '.json',
         );
         this.resources[name] = JSON.parse(str);
-        this.getHook(this.resources[name], name);
+        await this.getHook(this.resources[name], name);
         this.dispatchEvent(
           new CustomEvent<{ name: string }>('fetched', { detail: { name } }),
         );
@@ -356,7 +359,7 @@ abstract class ResourceSyncService<T> extends EventTarget {
       throw new Error('Resource already exists');
     }
     this.resources[name] = value;
-    this.getHook(this.resources[name], name);
+    await this.getHook(this.resources[name], name);
     this.markUpdated(name);
     await this.update();
   }
@@ -388,8 +391,9 @@ export class SessionService extends ResourceSyncService<Session> {
     super('projects', SESSION_SERVICE_INTERVAL);
   }
 
-  getHook(rc: Session, name: string): void {
+  async getHook(rc: Session, name: string) {
     rc.name = name;
+    await this.migrateSession(rc);
   }
 
   createDefault(name: string): Session {
@@ -402,6 +406,62 @@ export class SessionService extends ResourceSyncService<Session> {
       scenes: {},
       library: {},
     };
+  }
+
+  getInpaintOrgPath(session: Session, inpaint: InPaintScene) {
+    return (
+      'inpaint_orgs/' + session.name + '/' + inpaint.name + '.png'
+    );
+  }
+
+  getInpaintMaskPath(session: Session, inpaint: InPaintScene) {
+    return (
+      'inpaint_masks/' + session.name + '/' + inpaint.name + '.png'
+    );
+  }
+
+  async migrateSession(session: Session) {
+    for (const inpaint of Object.values(session.inpaints)) {
+      if (inpaint.image) {
+        const path = "inpaint_orgs/" + session.name + "/" + inpaint.name + ".png";
+        await invoke('write-data-file', path, inpaint.image);
+        inpaint.image = undefined;
+      }
+      if (inpaint.mask) {
+        const path = "inpaint_masks/" + session.name + "/" + inpaint.name + ".png";
+        await invoke('write-data-file', path, inpaint.mask);
+        inpaint.mask = undefined;
+      }
+    }
+
+    for (const scene of Object.values(session.scenes)) {
+      if (scene.landscape != null) {
+        if (scene.landscape) {
+          scene.resolution = 'landscape';
+        } else {
+          scene.resolution = 'portrait';
+        }
+        scene.landscape = undefined;
+      }
+    }
+
+    for (const inpaint of Object.values(session.inpaints)) {
+      if (inpaint.landscape != null) {
+        if (inpaint.landscape) {
+          inpaint.resolution = 'landscape';
+        } else {
+          inpaint.resolution = 'portrait';
+        }
+        inpaint.landscape = undefined;
+      }
+    }
+  }
+
+  async saveInpaintImages(seesion: Session, inpaint: InPaintScene, image: string, mask: string) {
+    await invoke('write-data-file', this.getInpaintOrgPath(seesion, inpaint), image);
+    await invoke('write-data-file', this.getInpaintMaskPath(seesion, inpaint), mask);
+    await imageService.invalidateCache(this.getInpaintOrgPath(seesion, inpaint));
+    await imageService.invalidateCache(this.getInpaintMaskPath(seesion, inpaint));
   }
 
   inPaintHook(): void {
@@ -459,6 +519,8 @@ const naturalSort = (a: string, b: string) => {
 };
 
 export const supportedImageSizes = [200, 400, 500];
+const imageDirList = ['outs', 'inpaints'];
+const maskDirList = ['inpaint_masks', 'inpaint_orgs'];
 
 export class ImageService extends EventTarget {
   images: { [key: string]: { [key: string]: string[] } };
@@ -551,6 +613,31 @@ export class ImageService extends EventTarget {
     }
   }
 
+  async invalidateCache(path: string) {
+    await this.acquireMutex(path);
+    for (const imageSize of supportedImageSizes) {
+      const smallPath = this.getSmallImagePath(path, imageSize);
+      await this.acquireMutex(smallPath);
+    }
+    try {
+      this.cache.delete(path);
+      for (const imageSize of supportedImageSizes) {
+        const smallPath = this.getSmallImagePath(path, imageSize);
+        this.cache.delete(smallPath);
+        try {
+          await invoke('delete-file', smallPath);
+        } catch(e) {
+        }
+      }
+    } finally {
+      for (const imageSize of supportedImageSizes) {
+        const smallPath = this.getSmallImagePath(path, imageSize);
+        this.releaseMutex(smallPath);
+      }
+      this.releaseMutex(path);
+    }
+  }
+
   async fetchImage(path: string, holdMutex = true) {
     if (holdMutex)
       await this.acquireMutex(path);
@@ -615,8 +702,43 @@ export class ImageService extends EventTarget {
     });
   }
 
-  async renameScene(session: Session, oldName: string, newName: string) {
-    throw new Error("rename scene is not working now");
+  // NOTE there is race condition here
+  // when deleted resource is being loaded up by somebody
+  // we can end up with invalid cache
+  // trikcy to handle without global lock
+  // but only happens when "swap of scene names" is the case
+  // let's just keep it simple; this is probably not common use case
+  async onRenameScene(session: Session, oldName: string, newName: string) {
+    const cache = this.cache.cache;
+    const toDelete = [];
+    for (const key of cache.keys()) {
+      for (const imgDir of imageDirList.concat(maskDirList)) {
+        if (key.startsWith(imgDir + '/' + session.name + '/' + oldName)) {
+          toDelete.push(key);
+        }
+      }
+    }
+    for (const key of toDelete) {
+      cache.delete(key);
+    }
+    for (const imgDir of imageDirList) {
+      const oldPath = imgDir + '/' + session.name + '/' + oldName;
+      const newPath = imgDir + '/' + session.name + '/' + newName;
+      try {
+        await invoke('rename-dir', oldPath, newPath);
+      } catch (e) {
+        console.error('rename scene error:', e);
+      }
+    }
+    for (const imgDir of maskDirList) {
+      const oldPath = imgDir + '/' + session.name + '/' + oldName + '.png';
+      const newPath = imgDir + '/' + session.name + '/' + newName + '.png';
+      try {
+        await invoke('rename-file', oldPath, newPath);
+      } catch (e) {
+        console.error('rename scene error:', e);
+      }
+    }
   }
 
   async resizeImageBrowser(
@@ -743,7 +865,7 @@ export class PromptService extends ResourceSyncService<PieceLibrary> {
     this.running = true;
   }
 
-  getHook(rc: PieceLibrary, name: string): void {}
+  async getHook(rc: PieceLibrary, name: string) {}
 
   createDefault(name: string): PieceLibrary {
     return {
@@ -763,7 +885,7 @@ export class PromptService extends ResourceSyncService<PieceLibrary> {
       ', scene:' +
       (scene?.name ?? '') +
       '[' +
-      (scene?.middlePrompt ? 'inpaint' : '') +
+      (scene?.type === 'inpaint' ? 'inpaint' : '') +
       ']';
     if (p.charAt(0) === '<' && p.charAt(p.length - 1) === '>') {
       p = p.substring(1, p.length - 1);
@@ -858,10 +980,12 @@ class TaskTimeEstimator {
   samples: (number | undefined)[];
   cursor: number;
   maxSamples: number;
-  constructor(maxSamples: number) {
+  defaultEstimate: number;
+  constructor(maxSamples: number, defaultEstimate: number) {
     this.samples = new Array(maxSamples);
     this.maxSamples = maxSamples;
     this.cursor = 0;
+    this.defaultEstimate = defaultEstimate;
   }
 
   addSample(time: number) {
@@ -873,14 +997,14 @@ class TaskTimeEstimator {
     const smp = this.samples.filter((x) => x != undefined);
     smp.sort();
     if (smp.length) return smp[smp.length >> 1];
-    else return TASK_DEFAULT_ESTIMATE;
+    return this.defaultEstimate;
   }
 
   estimateMean() {
     const smp = this.samples.filter((x) => x != undefined);
     smp.sort();
     if (smp.length) return (smp.reduce((x, y) => x! + y!, 0) ?? 0) / smp.length;
-    else return TASK_DEFAULT_ESTIMATE;
+    return this.defaultEstimate;
   }
 }
 
@@ -891,6 +1015,7 @@ interface TaskQueueRun {
 export class TaskQueueService extends EventTarget {
   queue: CircularQueue<Task>;
   timeEstimator: TaskTimeEstimator;
+  fastTimeEstimator: TaskTimeEstimator;
   sceneStats: { [key: string]: TaskStats };
   inpaintStats: { [key: string]: TaskStats };
   totalStats: TaskStats;
@@ -901,6 +1026,11 @@ export class TaskQueueService extends EventTarget {
     this.queue = new CircularQueue();
     this.timeEstimator = new TaskTimeEstimator(
       TASK_TIME_ESTIMATOR_SAMPLE_COUNT,
+      TASK_DEFAULT_ESTIMATE,
+    );
+    this.fastTimeEstimator = new TaskTimeEstimator(
+      FAST_TASK_TIME_ESTIMATOR_SAMPLE_COUNT,
+      FAST_TASK_DEFAULT_ESTIMATE,
     );
     this.sceneStats = {};
     this.inpaintStats = {};
@@ -946,6 +1076,14 @@ export class TaskQueueService extends EventTarget {
       }
     }
     this.dispatchProgress();
+  }
+
+  removeTaskFromGenericScene(scene: GenericScene) {
+    if (scene.type === 'scene') {
+      this.removeTasksFromScene(scene);
+    } else {
+      this.removeTasksFromInPaintScene(scene);
+    }
   }
 
   addTask(task: Task) {
@@ -1027,9 +1165,7 @@ export class TaskQueueService extends EventTarget {
       prompt: prompt,
       uc: uc,
       model: Model.Anime,
-      resolution: task.preset.landscape
-        ? Resolution.Landscape
-        : Resolution.Portrait,
+      resolution: task.preset.resolution,
       sampling: task.preset.sampling,
       sm: task.preset.smea,
       dyn: task.preset.dyn,
@@ -1051,9 +1187,7 @@ export class TaskQueueService extends EventTarget {
       prompt: prompt,
       uc: uc,
       model: Model.Inpaint,
-      resolution: task.preset.landscape
-        ? Resolution.Landscape
-        : Resolution.Portrait,
+      resolution: task.preset.resolution,
       sampling: task.preset.sampling,
       sm: false,
       dyn: false,
@@ -1105,9 +1239,17 @@ export class TaskQueueService extends EventTarget {
           return;
         }
         try {
-          await sleep(
-            (Math.random() * RANDOM_DELAY_STD + RANDOM_DELAY_BIAS) * 1000,
-          );
+          if (i === 0 && task.nodelay) {
+            await sleep(1000);
+          } else if (i <= 2 && task.nodelay) {
+            await sleep(
+              (1 + Math.random() * RANDOM_DELAY_STD) * 1000,
+            );
+          } else {
+            await sleep(
+              (Math.random() * RANDOM_DELAY_STD + RANDOM_DELAY_BIAS) * 1000,
+            );
+          }
 
           const outputFilePath = task.outPath + '/' + Date.now().toString() + '.png';
           if (task.type === 'generate') {
@@ -1116,7 +1258,11 @@ export class TaskQueueService extends EventTarget {
             await this.inPaintImage(task, outputFilePath);
           }
           const after = Date.now();
-          this.timeEstimator.addSample(after - before);
+          if (task.nodelay) {
+            this.fastTimeEstimator.addSample(after - before);
+          } else {
+            this.timeEstimator.addSample(after - before);
+          }
           done = true;
           if (!cur.stopped) {
             task.done++;
@@ -1353,6 +1499,7 @@ export const queueScenePrompt = (
   scene: Scene,
   prompt: string,
   samples: number,
+  nodelay: boolean = false,
   onComplete: ((path: string) => void) | undefined = undefined,
 ) => {
   taskQueueService.addTask({
@@ -1363,7 +1510,7 @@ export const queueScenePrompt = (
       prompt,
       uc: preset.uc,
       vibe: preset.vibe,
-      landscape: scene.landscape,
+      resolution: scene.resolution as Resolution,
       smea: preset.smeaOff ? false : true,
       dyn: preset.dynOn ? true : false,
       steps: preset.steps ?? 28,
@@ -1375,6 +1522,7 @@ export const queueScenePrompt = (
     done: 0,
     total: samples,
     id: undefined,
+    nodelay,
     onComplete,
   });
 };
@@ -1410,6 +1558,10 @@ export const queueInPaint = async (
   samples: number,
 ) => {
   const prompt = await createInPaintPrompt(session, preset, scene);
+  let image = await imageService.fetchImage(sessionService.getInpaintOrgPath(session, scene));
+  image = dataUriToBase64(image);
+  let mask = await imageService.fetchImage(sessionService.getInpaintMaskPath(session, scene));
+  mask = dataUriToBase64(mask);
   taskQueueService.addTask({
     type: 'inpaint',
     session: session,
@@ -1418,7 +1570,7 @@ export const queueInPaint = async (
       prompt,
       uc: preset.uc,
       vibe: preset.vibe,
-      landscape: scene.landscape,
+      resolution: scene.resolution as Resolution,
       smea: preset.smeaOff ? false : true,
       dyn: preset.dynOn ? true : false,
       steps: preset.steps ?? 28,
@@ -1426,8 +1578,8 @@ export const queueInPaint = async (
       sampling: preset.sampling ?? Sampling.KEulerAncestral,
       seed: preset.seed,
     },
-    image: scene.image,
-    mask: scene.mask,
+    image: image,
+    mask: mask,
     outPath: imageService.getInPaintDir(session, scene),
     done: 0,
     total: samples,
@@ -1638,7 +1790,7 @@ export const renameScene = async (
     }
   }
   scene.name = newName;
-  await imageService.renameScene(session, oldName, newName);
+  imageService.onRenameScene(session, oldName, newName);
 };
 
 window.promptService = promptService;
@@ -1740,7 +1892,7 @@ export async function extractPromptDataFromBase64(base64: string) {
     try {
       const data = JSON.parse(comment.value as string);
       if (data['prompt']) {
-        return [data['prompt'], data['seed']];
+        return [data['prompt'], data['seed'], data['scale'], data['sampler'], data['steps'], data['uc']];
       }
     } catch (e) {
       return ['', -1];
@@ -1786,3 +1938,53 @@ export async function getMainImage(session: Session, scene: Scene, size: number)
   return undefined;
 }
 
+class AppUpdateNoticeService extends EventTarget {
+  current: string;
+  outdated: boolean;
+  constructor() {
+    super();
+    this.current = '';
+    this.outdated = false;
+    this.run();
+  }
+  async getLatestRelease(repoOwner: string, repoName: string) {
+    const url = `https://api.github.com/repos/${repoOwner}/${repoName}/releases/latest`;
+
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error fetching release: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.tag_name;
+    } catch (error) {
+      console.error('Failed to fetch latest release:', error);
+    }
+  }
+
+  async run() {
+    while (true) {
+      try {
+        if (this.current === '') this.current = await invoke('get-version');
+
+        const latest = await this.getLatestRelease('sunho', 'SDStudio');
+        if (this.current !== latest) {
+          this.outdated = true;
+          this.current = latest;
+          this.dispatchEvent(new CustomEvent('updated', { detail: { } }));
+        }
+      } catch (e: any) {
+        console.error(e);
+      }
+      await sleep(UPDATE_SERVICE_INTERVAL);
+    }
+  }
+}
+
+export const appUpdateNoticeService = new AppUpdateNoticeService();

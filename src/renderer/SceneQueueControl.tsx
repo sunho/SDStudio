@@ -295,7 +295,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
                 scenes[inputValue] = {
                   type: 'scene',
                   name: inputValue,
-                  landscape: false,
+                  resolution: 'portrait',
                   locked: false,
                   slots: [[{ prompt: '', enabled: true }]],
                   game: undefined,
@@ -313,12 +313,12 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
 
   const getImage = async (scene: GenericScene) => {
     if (scene.type === 'scene') {
-      const image = await getMainImage(curSession!, scene as Scene, 400);
+      const image = await getMainImage(curSession!, scene as Scene, 500);
       if (!image)
         throw new Error('No image available');
       return image;
     } else {
-      return base64ToDataUri(scene.image);
+      return await imageService.fetchImageSmall(sessionService.getInpaintOrgPath(curSession!, scene as InPaintScene), 500);
     }
   };
 
@@ -336,8 +336,8 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
               const name =
                 scene.name +
                 '_inpaint_' +
-                (Number.MAX_SAFE_INTEGER - Date.now()).toString();
-              const [prompt, seed] = await extractPromptDataFromBase64(image);
+                Date.now().toString();
+              const [prompt, seed, scale, sampler, steps, uc] = await extractPromptDataFromBase64(image);
               const middle = await extractMiddlePrompt(
                 ctx.selectedPreset!,
                 prompt,
@@ -345,13 +345,12 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
               const newScene: InPaintScene = {
                 type: 'inpaint',
                 name: name,
-                image: image,
                 middlePrompt: middle,
-                landscape: false,
-                mask: '',
+                resolution: scene.resolution,
                 sceneRef: scene.name,
                 game: undefined,
               };
+              await sessionService.saveInpaintImages(curSession!, newScene, image, '');
               curSession!.inpaints[name] = newScene;
               close();
               updateScenes();
@@ -372,6 +371,38 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
           },
         ]
       : [
+          {
+            text: '인페인팅 씬 생성',
+            className: 'bg-orange-400',
+            onClick: async (scene: InPaintScene, path, close) => {
+              let image = await imageService.fetchImage(path);
+              image = image.replace(/^data:image\/(png|jpeg);base64,/, '');
+              const sceneName = scene.sceneRef ? scene.sceneRef : scene.name;
+              const name =
+                sceneName +
+                '_inpaint_' +
+                Date.now().toString();
+              const [prompt, seed, scale, sampler, steps, uc] = await extractPromptDataFromBase64(image);
+              const middle = await extractMiddlePrompt(
+                ctx.selectedPreset!,
+                prompt,
+              );
+              const newScene: InPaintScene = {
+                type: 'inpaint',
+                name: name,
+                middlePrompt: middle,
+                resolution: scene.resolution,
+                sceneRef: scene.sceneRef ? scene.sceneRef : undefined,
+                game: undefined,
+              };
+              await sessionService.saveInpaintImages(curSession!, newScene, image, '');
+              curSession!.inpaints[name] = newScene;
+              close();
+              updateScenes();
+              setInpaintEditScene(newScene);
+              sessionService.inPaintHook();
+            },
+          },
           {
             text: '원본 씬으로 이미지 복사',
             className: 'bg-green-500',
@@ -394,6 +425,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
                   '.png',
               );
               imageService.refresh(curSession!, orgScene);
+              setDisplayScene(undefined);
               close();
             },
           },
@@ -411,6 +443,8 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
                 onConfirm={() => {
                   setInpaintEditScene(undefined);
                 }}
+                onDelete={() => {
+                }}
               />
             </FloatView>
           )}
@@ -421,6 +455,11 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
                 onClosed={() => {
                   setEditingScene(undefined);
                 }}
+                onDeleted={() => {
+                  if (showPannel) {
+                    setDisplayScene(undefined);
+                  }
+                }}
               />
             </FloatView>
           )}
@@ -429,13 +468,31 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
     } else {
       return (
         <>
+          {inpaintEditScene && (
+            <FloatView priority={3} onEscape={() => setInpaintEditScene(undefined)}>
+              <InPaintEditor
+                editingScene={inpaintEditScene}
+                onConfirm={() => {
+                  setInpaintEditScene(undefined);
+                }}
+                onDelete={() => {
+                }}
+              />
+            </FloatView>
+          )}
           {(editingScene || adding) && (
-            <FloatView priority={2} onEscape={() => setEditingScene(undefined)}>
+            <FloatView priority={2} onEscape={() => {
+              setEditingScene(undefined);
+              setAdding(false);
+            }}>
               <InPaintEditor
                 editingScene={editingScene as InPaintScene}
                 onConfirm={() => {
                   setEditingScene(undefined);
                   setAdding(false);
+                }}
+                onDelete={() => {
+                  setDisplayScene(undefined);
                 }}
               />
             </FloatView>
@@ -444,6 +501,10 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
       );
     }
   }, [editingScene, inpaintEditScene, adding]);
+
+  const onEdit = async (scene: GenericScene) => {
+    setEditingScene(scene);
+  };
 
   const isMainImage = (path: string) => {
     if (type === 'inpaint') return false;
@@ -495,13 +556,13 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
             gameService.refreshList(curSession!, displayScene);
             sessionService.mainImageUpdated();
             setDisplayScene(undefined);
-
           }}
         >
           <ResultViewer
             scene={displayScene}
             isMainImage={isMainImage}
             onFilenameChange={onFilenameChange}
+            onEdit={onEdit}
             buttons={buttons}
           />
         </FloatView>

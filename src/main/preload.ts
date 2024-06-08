@@ -5,17 +5,22 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 export type Channels =
   | 'write-file'
   | 'read-file'
+  | 'delete-file'
   | 'image-gen'
   | 'inpaint-image'
   | 'list-files'
   | 'prompt'
   | 'login'
   | 'rename-file'
+  | 'rename-dir'
+  | 'write-data-file'
   | 'read-data-file'
   | 'copy-file'
   | 'close'
   | 'show-file'
-  | 'zip-files';
+  | 'zip-files'
+  | 'get-version'
+  | 'open-web-page';
 
 const electronHandler = {
   ipcRenderer: {
