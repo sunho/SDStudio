@@ -180,7 +180,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
             <FileUploadBase64
               onFileSelect={async (file: string) => {
                 try {
-                  const [prompt, seed, scale, sampler, steps, uc] = await extractPromptDataFromBase64(image);
+                  const [prompt, seed, scale, sampler, steps, uc] = await extractPromptDataFromBase64(file);
                   setImage(file);
                   setCurrentPrompt(prompt);
                   setCurrentUC(uc);
