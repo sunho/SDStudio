@@ -88,7 +88,8 @@ export interface InPaintScene {
   type: 'inpaint';
   name: string;
   resolution: string;
-  middlePrompt: string;
+  prompt: string;
+  uc: string;
   game: Game | undefined;
   landscape?: boolean;
   sceneRef?: string;
@@ -431,6 +432,27 @@ export class SessionService extends ResourceSyncService<Session> {
         const path = "inpaint_masks/" + session.name + "/" + inpaint.name + ".png";
         await invoke('write-data-file', path, inpaint.mask);
         inpaint.mask = undefined;
+      }
+      if ((inpaint as any).middlePrompt) {
+        inpaint.prompt = '';
+        try {
+          const image = dataUriToBase64(await imageService.fetchImage(this.getInpaintOrgPath(session, inpaint)));
+          const [prompt, seed, scale, sampler, steps, uc] = await extractPromptDataFromBase64(image);
+          inpaint.prompt = prompt;
+        } catch (e) {
+          inpaint.prompt = (inpaint as any).middlePrompt;
+        }
+        (inpaint as any).middlePrompt = undefined;
+      }
+      if (!inpaint.uc) {
+        inpaint.uc = '';
+        try {
+          const image = dataUriToBase64(await imageService.fetchImage(this.getInpaintOrgPath(session, inpaint)));
+          const [prompt, seed, scale, sampler, steps, uc] = await extractPromptDataFromBase64(image);
+          inpaint.uc = uc;
+        } catch (e) {
+          inpaint.uc = defaultUC;
+        }
       }
     }
 
@@ -1544,10 +1566,8 @@ export const createInPaintPrompt = async (
   preset: PreSet,
   scene: InPaintScene,
 ) => {
-  let prompt = toPARR(preset.frontPrompt);
-  prompt = prompt.concat(toPARR(scene.middlePrompt));
-  prompt = prompt.concat(toPARR(preset.backPrompt));
-  const expanded = await promptService.expandPARR(prompt, session, scene);
+  let prompt = toPARR(scene.prompt);
+  const expanded = promptService.expandPARR(prompt, session, scene);
   return expanded.join(', ');
 };
 
@@ -1568,7 +1588,7 @@ export const queueInPaint = async (
     scene: scene.name,
     preset: {
       prompt,
-      uc: preset.uc,
+      uc: scene.uc,
       vibe: preset.vibe,
       resolution: scene.resolution as Resolution,
       smea: preset.smeaOff ? false : true,
@@ -1889,16 +1909,12 @@ export async function extractPromptDataFromBase64(base64: string) {
   const exif = await extractExifFromBase64(base64);
   const comment = exif['Comment'];
   if (comment && comment.value) {
-    try {
-      const data = JSON.parse(comment.value as string);
-      if (data['prompt']) {
-        return [data['prompt'], data['seed'], data['scale'], data['sampler'], data['steps'], data['uc']];
-      }
-    } catch (e) {
-      return ['', -1];
+    const data = JSON.parse(comment.value as string);
+    if (data['prompt']) {
+      return [data['prompt'], data['seed'], data['scale'], data['sampler'], data['steps'], data['uc']];
     }
   }
-  return ['', -1];
+  throw new Error("No prompt data found");
 }
 
 export async function extractMiddlePrompt(preset: PreSet, prompt: string) {

@@ -337,15 +337,20 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
                 scene.name +
                 '_inpaint_' +
                 Date.now().toString();
-              const [prompt, seed, scale, sampler, steps, uc] = await extractPromptDataFromBase64(image);
-              const middle = await extractMiddlePrompt(
-                ctx.selectedPreset!,
-                prompt,
-              );
+              let prompt, uc;
+              try {
+                const [prompt_, seed, scale, sampler, steps, uc_] = await extractPromptDataFromBase64(image);
+                prompt = prompt_;
+                uc = uc_;
+              } catch(e) {
+                prompt = '';
+                uc = '';
+              }
               const newScene: InPaintScene = {
                 type: 'inpaint',
                 name: name,
-                middlePrompt: middle,
+                prompt,
+                uc,
                 resolution: scene.resolution,
                 sceneRef: scene.name,
                 game: undefined,
@@ -382,15 +387,20 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
                 sceneName +
                 '_inpaint_' +
                 Date.now().toString();
-              const [prompt, seed, scale, sampler, steps, uc] = await extractPromptDataFromBase64(image);
-              const middle = await extractMiddlePrompt(
-                ctx.selectedPreset!,
-                prompt,
-              );
+              let prompt, uc;
+              try {
+                const [prompt_, seed, scale, sampler, steps, uc_] = await extractPromptDataFromBase64(image);
+                prompt = prompt_;
+                uc = uc_;
+              } catch(e) {
+                prompt = '';
+                uc = '';
+              }
               const newScene: InPaintScene = {
                 type: 'inpaint',
                 name: name,
-                middlePrompt: middle,
+                prompt,
+                uc,
                 resolution: scene.resolution,
                 sceneRef: scene.sceneRef ? scene.sceneRef : undefined,
                 game: undefined,
