@@ -25,7 +25,6 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
   const [winner, setWinner] = useState(-1);
   const lock = useRef(false);
   const [finalRank, setFinalRank] = useState(-1);
-  const [fastmode, setFastmode] = useState(false);
   const [mi, setMi] = useState(0);
   const setNextMatch = () => {
     const [finalizedRank, newMatches] = gameService.nextMatch(scene.game!);
@@ -45,6 +44,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
   useEffect(() => {
     setMatches([]);
     setFinalRank(-1);
+    setWinner(-1);
     (async () => {
       try {
         if (!scene.game) {
@@ -70,15 +70,16 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
     }
   };
   useEffect(() => {
-    setImages([]);
     if (matches.length) {
       (async () => {
         try {
           const p0 = await imageService.fetchImage(matches[mi].players[0].path);
           const p1 = await imageService.fetchImage(matches[mi].players[1].path);
           setImages([p0, p1]);
+          setWinner(-1);
         } catch (e: any) {
           pushMessage('Image load error: ' + e.message);
+          setImages([]);
         }
       })();
     } else if (scene.game && scene.game.length && matches.length === 0) {
@@ -88,11 +89,17 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
           try {
             const p0 = await imageService.fetchImage(first.path);
             setImages([p0]);
+            setWinner(-1);
           } catch (e: any) {
             pushMessage('Image load error: ' + e.message);
+            setImages([]);
           }
         })();
+      } else {
+        setImages([]);
       }
+    } else {
+      setImages([]);
     }
   }, [matches, mi]);
   const selectPlayer = (index: any) => {
@@ -113,10 +120,8 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
             });
           }
           setNextMatch();
-          setWinner(-1);
         } else {
           setMi(mi + 1);
-          setWinner(-1);
         }
       } catch (e: any) {
         pushMessage('Error: ' + e.message);
@@ -124,11 +129,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
         lock.current = false;
       }
     };
-    if (fastmode) {
-      goNext();
-    } else {
-      setTimeout(goNext, 1000);
-    }
+    goNext();
   };
   const resetRanks = async () => {
     try {
@@ -168,7 +169,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
         </button>
         <button
           onClick={() => {
-            if (winner === -1 && !lock.current)
+            if (winner === -1 && !lock.current && mi !== 0)
               setMi(mi - 1);
           }}
           className={`${roundButton} bg-gray-500`}
@@ -178,14 +179,14 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
         <button className={`${roundButton} bg-red-500`} onClick={resetRanks}>
           순위 초기화
         </button>
-        <button
-          className={`${roundButton} ${fastmode ? 'bg-orange-400' : 'bg-green-500'}`}
-          onClick={() => {
-            setFastmode(!fastmode);
-          }}
-        >
-          {fastmode ? '일반모드 켜기' : '페스트모드 켜기'}
-        </button>
+        {/* <button */}
+        {/*   className={`${roundButton} ${fastmode ? 'bg-orange-400' : 'bg-green-500'}`} */}
+        {/*   onClick={() => { */}
+        {/*     setFastmode(!fastmode); */}
+        {/*   }} */}
+        {/* > */}
+        {/*   {fastmode ? '일반모드 켜기' : '페스트모드 켜기'} */}
+        {/* </button> */}
       </div>
       <div className="flex-1 w-full overflow-hidden">
         {!!(matches.length && images.length) && (
@@ -197,8 +198,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
                     selectPlayer(0);
                 }}
                 className={
-                  'active:brightness-90 hover:brightness-95 cursor-pointer imageSmall ' +
-                  (!fastmode && winner !== -1 && winner !== 0 ? 'hidden' : '')
+                  'active:brightness-90 hover:brightness-95 cursor-pointer imageSmall '
                 }
                 src={images[0]}
               />
@@ -211,8 +211,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
                     selectPlayer(1);
                 }}
                 className={
-                  'active:brightness-90 hover:brightness-95 cursor-pointer imageSmall flex-1 ' +
-                  (!fastmode && winner !== -1 && winner !== 1 ? 'hidden' : '')
+                  'active:brightness-90 hover:brightness-95 cursor-pointer imageSmall flex-1 '
                 }
                 src={images[1]}
               />

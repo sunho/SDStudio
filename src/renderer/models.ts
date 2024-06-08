@@ -95,6 +95,7 @@ export interface InPaintScene {
   sceneRef?: string;
   image?: string;
   mask?: string;
+  originalImage?: boolean;
 }
 
 export interface Session {
@@ -214,6 +215,7 @@ export interface InPaintTask {
   total: number;
   nodelay?: boolean;
   onComplete?: (path: string) => void;
+  originalImage?: boolean;
 }
 
 function getRandomInt(min: number, max: number): number {
@@ -1220,6 +1222,7 @@ export class TaskQueueService extends EventTarget {
       mask: task.mask,
       outputFilePath: outPath,
       seed: task.preset.seed,
+      originalImage: task.originalImage,
     };
     if (task.preset.vibe !== '') {
       arg.vibe = task.preset.vibe;
@@ -1601,6 +1604,7 @@ export const queueInPaint = async (
     image: image,
     mask: mask,
     outPath: imageService.getInPaintDir(session, scene),
+    originalImage: scene.originalImage,
     done: 0,
     total: samples,
     id: undefined,

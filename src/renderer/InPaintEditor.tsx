@@ -44,7 +44,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
   const [brushSize, setBrushSize] = useState(10);
   const [currentPrompt, setCurrentPrompt] = useState('');
   const [currentUC, setCurrentUC] = useState('');
-  const [preview, setPreview] = useState('');
+  const [originalImage, setOriginalImage] = useState(false);
   useEffect(() => {
     if (editingScene) {
       setImage('');
@@ -53,6 +53,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
       setResolution(editingScene.resolution);
       setCurrentPrompt(editingScene.prompt);
       setCurrentUC(editingScene.uc);
+      setOriginalImage(editingScene.originalImage ?? false);
       async function loadImage() {
         try {
           const data = await imageService.fetchImage(sessionService.getInpaintOrgPath(curSession!, editingScene as InPaintScene));
@@ -73,6 +74,8 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
       setTaskName('');
       setCurrentPrompt('');
       setResolution('portrait');
+      setCurrentUC('');
+      setOriginalImage(false);
     }
   }, [editingScene]);
   useEffect(() => {
@@ -111,6 +114,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
       editingScene.resolution = resolution;
       editingScene.prompt = currentPrompt;
       editingScene.uc = currentUC;
+      editingScene.originalImage = originalImage;
       await sessionService.saveInpaintImages(curSession!, editingScene, image, mask);
       sessionService.markUpdated(curSession!.name);
     } else {
@@ -217,6 +221,10 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
           />
           </div>
         </div>
+        <div className="flex-none flex whitespace-nowrap gap-3 items-center">
+          <span>비마스크영역 편집 방지:</span>
+          <input type="checkbox" checked={originalImage} onChange={(e) => {setOriginalImage(e.target.checked)}} />
+        </div>
         <div className="mt-auto flex-none">
           <div className="text-xl mb-2">프롬프트:</div>
           <PromptEditTextArea
@@ -266,6 +274,6 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
       </div>
     </div>
   );
-};
+}
 
 export default InPaintEditor;
