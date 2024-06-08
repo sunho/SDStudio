@@ -5,9 +5,10 @@ import { grayInput } from './styles';
 export interface Dialog {
   text: string;
   callback?: (value?: string) => void;
-  type: 'confirm' | 'yes-only' | 'input-confirm';
+  type: 'confirm' | 'yes-only' | 'input-confirm' | 'select';
   inputValue?: string;
   green?: boolean;
+  items?: { text: string; value: string }[];
 }
 
 interface Props {
@@ -57,7 +58,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                 className={`${grayInput} mt-4 mb-4`}
               />
             )}
-            <div className="flex justify-end mt-4">
+            <div className={"justify-end mt-4 " + (dialogs[dialogs.length - 1].type === 'select' ? 'flex flex-col gap-2' : 'flex')}>
               {dialogs[dialogs.length - 1].type === 'confirm' && (
                 <>
                   <button
@@ -98,6 +99,32 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                     onClick={() => {
                       setDialogs(dialogs.slice(0, dialogs.length - 1));
                       setInputValue('');
+                    }}
+                  >
+                    취소
+                  </button>
+                </>
+              )}
+              {dialogs[dialogs.length - 1].type === 'select' && (
+                <>
+                  {dialogs[dialogs.length - 1].items!.map((item, idx) => (
+                    <button
+                      key={idx}
+                      className="w-full px-4 py-2 rounded bg-sky-500 text-white mr-2"
+                      onClick={() => {
+                        if (dialogs[dialogs.length - 1].callback) {
+                          dialogs[dialogs.length - 1].callback!(item.value);
+                        }
+                        setDialogs(dialogs.slice(0, dialogs.length - 1));
+                      }}
+                    >
+                      {item.text}
+                    </button>
+                  ))}
+                  <button
+                    className="w-full px-4 py-2 rounded bg-gray-500 text-white"
+                    onClick={() => {
+                      setDialogs(dialogs.slice(0, dialogs.length - 1));
                     }}
                   >
                     취소

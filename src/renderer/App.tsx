@@ -111,31 +111,66 @@ export default function App() {
         name = name.slice(0, -5);
       }
       const handleAddSession = async (json: Session) => {
-        const sess = await sessionService.get(json.name);
-        if (!sess) {
-          await sessionService.createFrom(json.name, json);
-          if (taskQueueService.isEmpty())
-            setCurSession(await sessionService.get(json.name));
-          pushDialog({
-            type: 'yes-only',
-            text: '프로젝트를 임포트 했습니다',
-          });
+        const importCool = async () => {
+          const sess = await sessionService.get(json.name);
+          if (!sess) {
+            await sessionService.createFrom(json.name, json);
+            if (taskQueueService.isEmpty())
+              setCurSession(await sessionService.get(json.name));
+            pushDialog({
+              type: 'yes-only',
+              text: '프로젝트를 임포트 했습니다',
+            });
+          } else {
+            pushDialog({
+              type: 'input-confirm',
+              text: '프로젝트를 임포트 합니다. 새 프로젝트 이름을 입력하세요.',
+              callback: async (value) => {
+                if (!value || value === '') {
+                  return;
+                }
+                try {
+                  await sessionService.createFrom(value, json);
+                  setCurSession(await sessionService.get(value));
+                } catch (e) {
+                  pushMessage('이미 존재하는 프로젝트 이름입니다.');
+                }
+              },
+            });
+          }
+        }
+        if (!curSession) {
+          await importCool();
         } else {
           pushDialog({
-            type: 'input-confirm',
-            text: '프로젝트를 임포트 합니다. 새 프로젝트 이름을 입력하세요.',
-            callback: async (value) => {
-              if (!value || value === '') {
-                return;
+            type: 'select',
+            text: '프로젝트를 임포트 합니다. 원하시는 방식을 선택해주세요.',
+            items: [{
+                text: '새 프로젝트로 임포트',
+                value: 'new-project'
+              },
+              {
+                text: '현재 프로젝트에 씬만 임포트 (⚠️! 씬이 덮어씌워짐)',
+                value: 'cur-project'
               }
-              try {
-                await sessionService.createFrom(value, json);
-                setCurSession(await sessionService.get(value));
-              } catch (e) {
-                pushMessage('이미 존재하는 프로젝트 이름입니다.');
+            ],
+            callback: async (option: string) => {
+              if (option === 'new-project') {
+                await importCool();
+              } else if (option === 'cur-project') {
+                const cur = curSession!;
+                for (const key in json.scenes) {
+                  cur.scenes[key] = json.scenes[key];
+                }
+                sessionService.markUpdated(cur.name);
+                sessionService.mainImageUpdated();
+                pushDialog({
+                  type: 'yes-only',
+                  text: '씬을 임포트 했습니다',
+                });
               }
             },
-          });
+          })
         }
       };
       if (isValidSession(json)) {
