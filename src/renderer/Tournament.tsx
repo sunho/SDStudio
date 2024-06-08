@@ -7,6 +7,7 @@ import {
   gameService,
   sessionService,
   invoke,
+  shuffleArray,
 } from './models';
 import { AppContext } from './App';
 import { roundButton } from './styles';
@@ -131,13 +132,39 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
     };
     goNext();
   };
-  const resetRanks = async () => {
-    try {
-      scene.game = await gameService.createGame(path);
-      setNextMatch();
-    } catch (e: any) {
-      pushMessage('Error: ' + e.message);
+  const resetRanks = () => {
+    pushDialog({
+      type: 'confirm',
+      text: '정말로 순위를 초기화하시겠습니까?',
+      callback: async () => {
+        setMatches([]);
+        matchRes.current = [];
+        setFinalRank(-1);
+        setWinner(-1);
+        try {
+          scene.game = await gameService.createGame(path);
+          setNextMatch();
+        } catch (e: any) {
+          pushMessage('Error: ' + e.message);
+        }
+      },
+    });
+  };
+  const reroll = () => {
+    if (matches.length <= 1) {
+      return;
     }
+    const players = matches.slice(mi).map((m) => m.players).flat();
+    shuffleArray(players);
+    const newMatches = [];
+    for (let i = 0; i < players.length; i += 2) {
+      newMatches.push({
+        players: [players[i], players[i + 1]],
+        winRank: matches[mi].winRank,
+        loseRank: matches[mi].loseRank,
+      });
+    }
+    setMatches(matches.slice(0, mi).concat(newMatches));
   };
   const getCurWinRank = () => {
     if (matches[mi].winRank === 0) {
@@ -167,6 +194,9 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
         <button className={`${roundButton} bg-sky-500`} onClick={showFolder}>
           결과 폴더 열기
         </button>
+        <button className={`${roundButton} bg-red-500`} onClick={resetRanks}>
+          순위 초기화
+        </button>
         <button
           onClick={() => {
             if (winner === -1 && !lock.current && mi !== 0)
@@ -176,8 +206,8 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
         >
           실행취소
         </button>
-        <button className={`${roundButton} bg-red-500`} onClick={resetRanks}>
-          순위 초기화
+        <button className={`${roundButton} bg-orange-400`} onClick={reroll}>
+          대진 리롤
         </button>
         {/* <button */}
         {/*   className={`${roundButton} ${fastmode ? 'bg-orange-400' : 'bg-green-500'}`} */}
