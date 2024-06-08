@@ -296,13 +296,22 @@ const ResultDetailView = ({
         let base64Image = await imageService.fetchImage(paths[selectedIndex])!;
         setImage(base64Image);
         base64Image = dataUriToBase64(base64Image);
-        const [prompt, seed, scale, sampler, steps, uc] = await extractPromptDataFromBase64(base64Image);
-        setMiddlePrompt(prompt);
-        setSeed(seed.toString());
-        setScale(scale.toString());
-        setSampler(sampler);
-        setSteps(steps.toString());
-        setUc(uc);
+        try {
+          const [prompt, seed, scale, sampler, steps, uc] = await extractPromptDataFromBase64(base64Image);
+          setMiddlePrompt(prompt);
+          setSeed(seed.toString());
+          setScale(scale.toString());
+          setSampler(sampler);
+          setSteps(steps.toString());
+          setUc(uc);
+        } catch(e) {
+          setMiddlePrompt('');
+          setSeed('');
+          setScale('');
+          setSampler('');
+          setSteps('');
+          setUc('');
+        }
         setFilename(paths[selectedIndex].split('/').pop()!);
       } catch (e: any) {
         console.log(e);

@@ -42,7 +42,8 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
   const [resolution, setResolution] = useState('portrait');
   const [taskName, setTaskName] = useState('');
   const [brushSize, setBrushSize] = useState(10);
-  const [middlePrompt, setMiddlePrompt] = useState('');
+  const [currentPrompt, setCurrentPrompt] = useState('');
+  const [currentUC, setCurrentUC] = useState('');
   const [preview, setPreview] = useState('');
   useEffect(() => {
     if (editingScene) {
@@ -50,7 +51,8 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
       setMask(undefined);
       setTaskName(editingScene.name);
       setResolution(editingScene.resolution);
-      setMiddlePrompt(editingScene.middlePrompt);
+      setCurrentPrompt(editingScene.prompt);
+      setCurrentUC(editingScene.uc);
       async function loadImage() {
         try {
           const data = await imageService.fetchImage(sessionService.getInpaintOrgPath(curSession!, editingScene as InPaintScene));
@@ -69,7 +71,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
       setImage('');
       setMask(undefined);
       setTaskName('');
-      setMiddlePrompt('');
+      setCurrentPrompt('');
       setResolution('portrait');
     }
   }, [editingScene]);
@@ -107,7 +109,8 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
     const mask = brushTool.current!.getMaskBase64();
     if (editingScene) {
       editingScene.resolution = resolution;
-      editingScene.middlePrompt = middlePrompt;
+      editingScene.prompt = currentPrompt;
+      editingScene.uc = currentUC;
       await sessionService.saveInpaintImages(curSession!, editingScene, image, mask);
       sessionService.markUpdated(curSession!.name);
     } else {
@@ -120,7 +123,8 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
       const newScene: InPaintScene = {
         type: 'inpaint',
         name: taskName,
-        middlePrompt: '',
+        prompt: currentPrompt,
+        uc: currentUC,
         resolution: resolution,
         game: undefined,
       };
@@ -131,9 +135,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
     onConfirm();
   };
   const createPrompt = async () => {
-    let prompt = toPARR(selectedPreset!.frontPrompt);
-    prompt = prompt.concat(toPARR(middlePrompt));
-    prompt = prompt.concat(toPARR(selectedPreset!.backPrompt));
+    const prompt = toPARR(currentPrompt);
     const expanded = promptService.expandPARR(
       prompt,
       curSession!,
@@ -141,16 +143,6 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
     );
     return expanded.join(', ');
   };
-
-  useEffect(() => {
-    (async () => {
-      try {
-        setPreview(await createPrompt());
-      } catch (e: any) {
-        setPreview('error: ' + e.message);
-      }
-    })();
-  }, [middlePrompt]);
 
   const brushTool = useRef<BrushToolRef | null>(null);
   return (
@@ -187,13 +179,17 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
           <div className="w-48">
             <FileUploadBase64
               onFileSelect={async (file: string) => {
-                const [prompt, seed, scale, sampler, steps, uc] = await extractPromptDataFromBase64(image);
-                const middle = await extractMiddlePrompt(
-                  selectedPreset!,
-                  prompt,
-                );
-                setImage(file);
-                setMiddlePrompt(middle);
+                try {
+                  const [prompt, seed, scale, sampler, steps, uc] = await extractPromptDataFromBase64(image);
+                  setImage(file);
+                  setCurrentPrompt(prompt);
+                  setCurrentUC(uc);
+                } catch(e) {
+                  pushMessage("NAI 에서 생성된 이미지가 아닙니다.")
+                  setImage(file);
+                  setCurrentPrompt('');
+                  setCurrentUC('');
+                }
               }}
             ></FileUploadBase64>
           </div>
@@ -222,21 +218,22 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
           </div>
         </div>
         <div className="mt-auto flex-none">
-          <div className="text-xl mb-2">중간 프롬프트:</div>
+          <div className="text-xl mb-2">프롬프트:</div>
           <PromptEditTextArea
-            value={middlePrompt}
+            value={currentPrompt}
             onChange={(txt) => {
-              setMiddlePrompt(txt);
+              setCurrentPrompt(txt);
             }}
             className="bg-gray-200 h-48 mb-2"
           />
-          <div className="text-xl mb-2">최종 프롬프트 미리보기:</div>
-          <div>
-            <PromptHighlighter
-              text={preview}
-              className="bg-gray-200 h-48 overflow-auto"
-            />
-          </div>
+          <div className="text-xl mb-2">네거티브 프롬프트:</div>
+          <PromptEditTextArea
+            value={currentUC}
+            onChange={(txt) => {
+              setCurrentUC(txt);
+            }}
+            className="bg-gray-200 h-48 mb-2"
+          />
         </div>
         <div className="flex items-center gap-4 ml-auto pb-2">
           <label htmlFor="brushSize">브러시 크기: {brushSize}</label>
