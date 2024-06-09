@@ -154,7 +154,7 @@ export default function App() {
                 value: 'cur-project'
               }
             ],
-            callback: async (option: string) => {
+            callback: async (option?: string) => {
               if (option === 'new-project') {
                 await importCool();
               } else if (option === 'cur-project') {

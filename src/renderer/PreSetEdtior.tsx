@@ -3,7 +3,6 @@ import { useContext, useEffect, useState } from 'react';
 import {
   TextAreaWithUndo,
   NumberSelect,
-  ToggleFloat,
   Collapsible,
   FileUploadBase64,
   DropdownSelect,
@@ -14,7 +13,7 @@ import { Context, AppContext } from './App';
 import { base64ToDataUri } from './BrushTool';
 import { grayInput, primaryColor, roundButton } from './styles';
 import { PromptEditTextArea } from './SceneEditor';
-import { FaImage } from 'react-icons/fa';
+import { FaImage, FaTrash } from 'react-icons/fa';
 import { FloatView } from './FloatView';
 
 interface Props {
@@ -54,7 +53,8 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
     updatePresets();
   };
   const vibeChange = (vibe: string) => {
-    selectedPreset.vibe = vibe;
+    if (!vibe) return;
+    selectedPreset.vibes.push({ image: vibe, info: 1.0, strength: 0.6 });
     updatePresets();
   };
   useEffect(() => {
@@ -63,8 +63,9 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
   }, [curSession]);
 
 
-  const [isVibeImageShow, setIsVibeImageShow] = useState(false);
+  const [displayVibe, setDisplayVibe] = useState<string|undefined>(undefined);
   const [samplerSetting, setSamplerSetting] = useState(false);
+  const [vibeSetting, setVibeSetting] = useState(false);
   const vibeImageShow = (
     <button className={`${roundButton} bg-gray-500 h-8`}>
       <FaImage size={18} />{' '}
@@ -75,6 +76,12 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
       key={selectedPreset ? getPresetName(selectedPreset) : ''}
       className="p-3 flex flex-col h-full relative"
     >
+      {displayVibe && <FloatView priority={3} onEscape={() => setDisplayVibe(undefined)}>
+        <img
+          className="imageSmall"
+          src={base64ToDataUri(displayVibe)}
+        />
+      </FloatView>}
       {props.middlePromptMode && (
         <span className="font-bold">프리셋 편집 잠금: {' '}<input type="checkbox" checked={presetEditLock} onChange={() => setPresetEditLock(!presetEditLock)}></input></span>
       )}
@@ -184,9 +191,9 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
           onChange={ucPromptChange}
         ></PromptEditTextArea>
       </div>
-      {!samplerSetting &&
-        <div className="flex-none">
-      <div className="mt-auto pt-2 flex gap-2 items-center">
+      {!samplerSetting && !vibeSetting &&
+        <div className="flex-none mt-3">
+      <div className="mt-auto flex gap-2 items-center">
         <span className="font-bold flex-none">시드: </span>
         <input
           className={`w-full ${grayInput}`}
@@ -208,24 +215,20 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
           }}
         />
       </div>
-      <div className="mt-auto pt-2 flex gap-2 items-center">
-        <span className="font-bold flex-none">바이브: </span>
-        <div className="flex-1 overflow-hidden">
-          <FileUploadBase64 disabled={props.middlePromptMode && presetEditLock} onFileSelect={vibeChange}></FileUploadBase64>
+      <div className="flex-none mt-3 flex gap-2 items-center">
+        {selectedPreset.vibes.length === 0 &&
+        <button className={`${roundButton} bg-gray-500 h-8 w-full flex`} onClick={() => setVibeSetting(true)}>
+          <div className="flex-1">바이브 이미지 설정 열기</div>
+        </button>
+        }
+        {selectedPreset.vibes.length > 0 &&
+        <div className="w-full flex items-center">
+          <div className="font-bold lg flex-none mr-2">바이브 설정:</div>
+          <img src={base64ToDataUri(selectedPreset.vibes[0].image)} className="flex-1 h-14 rounded-xl object-cover cursor-pointer hover:brightness-95 active:brightness-90" onClick={()=>{setVibeSetting(true)}}/>
         </div>
-        <span className="flex-none ml-auto">
-          <button className={`${roundButton} bg-gray-500 h-8`} onClick={() => setIsVibeImageShow(!isVibeImageShow)}>
-            보기
-          </button>
-          {isVibeImageShow && <FloatView priority={3} onEscape={() => setIsVibeImageShow(false)}>
-            <img
-              className="imageSmall"
-              src={base64ToDataUri(selectedPreset.vibe)}
-            />
-          </FloatView>}
-        </span>
+        }
       </div>
-      <div className="mt-auto pt-2 flex gap-2 items-center">
+      <div className="mt-auto mt-3 flex gap-2 items-center">
         <button className={`${roundButton} bg-gray-500 h-8 w-full`} onClick={() => setSamplerSetting(true)}>
           샘플링 설정 열기
         </button>
@@ -299,6 +302,56 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
       <div className="mt-auto pt-2 flex gap-2 items-center">
         <button className={`${roundButton} bg-gray-500 h-8 w-full`} onClick={() => setSamplerSetting(false)}>
           샘플링 설정 닫기
+        </button>
+      </div>
+      </div>
+      }
+      {vibeSetting &&
+       <div className="flex-none h-2/3 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-hidden">
+            <div className="h-full overflow-auto">
+            {selectedPreset!.vibes.map(vibe => (
+              <div className="border border-gray-300 mt-2 p-2 flex gap-2 items-begin">
+                <img src={base64ToDataUri(vibe.image)} className="flex-none w-28 h-28 object-cover"/>
+                <div className="flex gap-2 flex-col w-full">
+                  <div className="flex items-cente">
+                    <div className="w-32 font-bold">정보 추출률 (IS):</div>
+                    <input className="flex-1" type="range" step="0.01" min="0" max="1" value={vibe.info} onChange={(e) => {
+                      vibe.info = parseFloat(e.target.value);
+                      updatePresets();
+                    }}
+                    disabled={props.middlePromptMode && presetEditLock}
+                      />
+                    <div className="w-11 text-lg text-center">{vibe.info}</div>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-32 font-bold flex-none">레퍼런스 강도 (RS):</div>
+                    <input className="flex-1" type="range" step="0.01" min="0" max="1" value={vibe.strength} onChange={(e) => {
+                      vibe.strength = parseFloat(e.target.value);
+                      updatePresets();
+                    }}
+                    disabled={props.middlePromptMode && presetEditLock}
+                    />
+                    <div className="w-11 text-lg text-center">{vibe.strength}</div>
+                  </div>
+                  <div className="flex-none flex ml-auto mt-auto">
+                    <button className={`${roundButton} h-8 px-8 ml-auto ` + ((props.middlePromptMode && presetEditLock) ? 'bg-gray-400' : 'bg-red-500')} onClick={() => {
+                      if (props.middlePromptMode && presetEditLock) return;
+                      selectedPreset.vibes = selectedPreset.vibes.filter(x => x !== vibe);
+                      updatePresets();
+                    }}>
+                    <FaTrash/>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      <div className="flex-none mt-auto pt-2 flex gap-2 items-center">
+        <FileUploadBase64 notext disabled={props.middlePromptMode && presetEditLock} onFileSelect={vibeChange}></FileUploadBase64>
+        <button className={`${roundButton} bg-gray-500 h-8 w-full`} onClick={() => setVibeSetting(false)}>
+          바이브 설정 닫기
         </button>
       </div>
       </div>

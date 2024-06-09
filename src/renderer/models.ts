@@ -34,18 +34,24 @@ export function getDefaultPreset(): PreSet {
     frontPrompt: defaultFPrompt,
     backPrompt: defaultBPrompt,
     uc: defaultUC,
-    vibe: '',
+    vibes: [],
     sampling: Sampling.KEulerAncestral,
     promptGuidance: 5.0,
     steps: 28,
   };
 }
 
+export interface VibeItem {
+  image: string;
+  info: number;
+  strength: number;
+}
+
 export interface PreSet {
   frontPrompt: string;
   backPrompt: string;
   uc: string;
-  vibe: string;
+  vibes: VibeItem[];
   steps?: number;
   promptGuidance?: number;
   smeaOff?: boolean;
@@ -110,9 +116,7 @@ export const isValidPreSet = (preset: any) => {
   return (
     typeof preset.frontPrompt === 'string' &&
     typeof preset.backPrompt === 'string' &&
-    typeof preset.uc === 'string' &&
-    typeof preset.vibe === 'string' &&
-    (preset.sampling === undefined || typeof preset.sampling === 'string')
+    typeof preset.uc === 'string'
   );
 };
 
@@ -148,7 +152,6 @@ export const isValidInPaintScene = (inpaint: any) => {
   return (
     inpaint.type === 'inpaint' &&
     typeof inpaint.name === 'string' &&
-    typeof inpaint.middlePrompt === 'string' &&
     (inpaint.game === undefined || isValidGame(inpaint.game)) &&
     (inpaint.sceneRef === undefined || typeof inpaint.sceneRef === 'string')
   );
@@ -180,7 +183,7 @@ export interface BakedPreSet {
   prompt: string;
   resolution: Resolution;
   uc: string;
-  vibe: string;
+  vibes: VibeItem[];
   sampling: Sampling;
   smea: boolean;
   dyn: boolean;
@@ -424,6 +427,16 @@ export class SessionService extends ResourceSyncService<Session> {
   }
 
   async migrateSession(session: Session) {
+    for (const preset of Object.values(session.presets)) {
+      if ((preset as any).vibe) {
+        preset.vibes = [{ image: (preset as any).vibe, info: 1, strength: 0.6 }];
+        (preset as any).vibe = undefined;
+      }
+      if (preset.vibes == null) {
+        preset.vibes = [];
+      }
+    }
+
     for (const inpaint of Object.values(session.inpaints)) {
       if (inpaint.image) {
         const path = "inpaint_orgs/" + session.name + "/" + inpaint.name + ".png";
@@ -1193,14 +1206,12 @@ export class TaskQueueService extends EventTarget {
       sampling: task.preset.sampling,
       sm: task.preset.smea,
       dyn: task.preset.dyn,
+      vibes: task.preset.vibes,
       steps: task.preset.steps,
       promptGuidance: task.preset.promptGuidance,
       outputFilePath: outPath,
       seed: task.preset.seed,
     };
-    if (task.preset.vibe !== '') {
-      arg.vibe = task.preset.vibe;
-    }
     await invoke('image-gen', arg);
   }
 
@@ -1218,15 +1229,13 @@ export class TaskQueueService extends EventTarget {
       steps: task.preset.steps,
       promptGuidance: task.preset.promptGuidance,
       imageStrength: 0.7,
+      vibes: task.preset.vibes,
       image: task.image,
       mask: task.mask,
       outputFilePath: outPath,
       seed: task.preset.seed,
       originalImage: task.originalImage,
     };
-    if (task.preset.vibe !== '') {
-      arg.vibe = task.preset.vibe;
-    }
     await invoke('image-gen', arg);
   }
 
@@ -1357,7 +1366,7 @@ export const createPrompts = async (
         cur = cur.concat(toPARR(comb));
       }
       cur = cur.concat(toPARR(preset.backPrompt));
-      cur = await promptService.expandPARR(cur, session, scene);
+      cur = promptService.expandPARR(cur, session, scene);
       cur = cur.filter((x) => x.length > 0);
       const prompt = cur.join(', ');
       res.push(prompt);
@@ -1534,7 +1543,7 @@ export const queueScenePrompt = (
     preset: {
       prompt,
       uc: preset.uc,
-      vibe: preset.vibe,
+      vibes: preset.vibes,
       resolution: scene.resolution as Resolution,
       smea: preset.smeaOff ? false : true,
       dyn: preset.dynOn ? true : false,
@@ -1592,7 +1601,7 @@ export const queueInPaint = async (
     preset: {
       prompt,
       uc: scene.uc,
-      vibe: preset.vibe,
+      vibes: preset.vibes,
       resolution: scene.resolution as Resolution,
       smea: preset.smeaOff ? false : true,
       dyn: preset.dynOn ? true : false,

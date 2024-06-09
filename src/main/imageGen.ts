@@ -40,6 +40,12 @@ export enum Sampling {
   DDIM = 'ddim_v3',
 }
 
+export interface Vibe {
+  image: string;
+  info: number;
+  strength: number;
+}
+
 export interface ImageGenInput {
   model: Model;
   prompt: string;
@@ -51,7 +57,7 @@ export interface ImageGenInput {
   dyn: boolean;
   steps: number;
   promptGuidance: number;
-  vibe?: string;
+  vibes: Vibe[];
   image?: string;
   mask?: string;
   imageStrength?: number;
