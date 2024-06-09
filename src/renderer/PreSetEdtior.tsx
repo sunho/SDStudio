@@ -315,7 +315,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
                 <img src={base64ToDataUri(vibe.image)} className="flex-none w-28 h-28 object-cover"/>
                 <div className="flex gap-2 flex-col w-full">
                   <div className="flex items-cente">
-                    <div className="w-32 font-bold">정보 추출률 (IS):</div>
+                    <div className="w-36 font-bold">정보 추출률 (IS):</div>
                     <input className="flex-1" type="range" step="0.01" min="0" max="1" value={vibe.info} onChange={(e) => {
                       vibe.info = parseFloat(e.target.value);
                       updatePresets();
@@ -325,7 +325,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
                     <div className="w-11 text-lg text-center">{vibe.info}</div>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-32 font-bold flex-none">레퍼런스 강도 (RS):</div>
+                    <div className="w-36 font-bold flex-none">레퍼런스 강도 (RS):</div>
                     <input className="flex-1" type="range" step="0.01" min="0" max="1" value={vibe.strength} onChange={(e) => {
                       vibe.strength = parseFloat(e.target.value);
                       updatePresets();
