@@ -147,10 +147,10 @@ export class NovelAiImageGenService implements ImageGenService {
           add_original_image: params.originalImage ? true : false,
         },
       };
-      if (params.vibe) {
-        body.parameters.reference_image_multiple = [params.vibe!];
-        body.parameters.reference_information_extracted_multiple = [1.0];
-        body.parameters.reference_strength_multiple = [0.6];
+      if (params.vibes.length) {
+        body.parameters.reference_image_multiple = params.vibes.map((v) => v.image);
+        body.parameters.reference_information_extracted_multiple = params.vibes.map((v) => v.info);
+        body.parameters.reference_strength_multiple = params.vibes.map((v) => v.strength);
       }
       if (params.image) {
         body.parameters.image = params.image;

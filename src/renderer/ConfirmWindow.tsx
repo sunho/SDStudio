@@ -4,7 +4,7 @@ import { grayInput } from './styles';
 
 export interface Dialog {
   text: string;
-  callback?: (value?: string) => void;
+  callback?: ((value?: string) => void) | ((value?: string) => Promise<void>);
   type: 'confirm' | 'yes-only' | 'input-confirm' | 'select';
   inputValue?: string;
   green?: boolean;

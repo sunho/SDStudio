@@ -56,7 +56,8 @@ export const DropdownSelect = <T,>({
 export const FileUploadBase64: React.FC<{
   onFileSelect: (file: string) => void;
   disabled?: boolean;
-}> = ({ onFileSelect, disabled }) => {
+  notext?: boolean;
+}> = ({ onFileSelect, disabled, notext }) => {
   const [dragging, setDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef(null);
@@ -134,7 +135,7 @@ export const FileUploadBase64: React.FC<{
         onChange={handleFileChange}
         className="hidden"
       />
-      <p className="whitespace-nowrap">{file ? file.name : <FaFileUpload />}</p>
+      <p className="whitespace-nowrap">{(file && !notext) ? file.name : <FaFileUpload />}</p>
     </div>
   );
 };
