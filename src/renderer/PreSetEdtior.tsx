@@ -228,7 +228,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
         </div>
         }
       </div>
-      <div className="mt-auto mt-3 flex gap-2 items-center">
+      <div className="flex-none mt-3 flex gap-2 items-center">
         <button className={`${roundButton} bg-gray-500 h-8 w-full`} onClick={() => setSamplerSetting(true)}>
           샘플링 설정 열기
         </button>
