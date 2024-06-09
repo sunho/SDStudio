@@ -112,7 +112,9 @@ const PieceEditor = () => {
       {curPieceLibrary && (
         <div className="h-min-0 flex-1 overflow-auto">
           {Object.entries(curPieceLibrary.pieces).map(([key, value]) => (
-            <div className="p-3 border border-gray-300 my-2">
+            <div
+              key={curPieceLibrary.description + " " + key}
+              className="p-3 border border-gray-300 my-2">
               <div className="flex pb-2">
                 <div className="font-bold">{key}</div>
                 <button
