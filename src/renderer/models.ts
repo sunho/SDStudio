@@ -4,7 +4,7 @@ import { CircularQueue } from './circularQueue';
 
 import { v4 as uuidv4 } from 'uuid';
 import ExifReader from 'exifreader';
-import { watch } from 'fs/promises';
+import { setInterval } from 'timers/promises';
 
 const PROMPT_SERVICE_INTERVAL = 5000;
 const UPDATE_SERVICE_INTERVAL = 60*1000;
@@ -12,9 +12,15 @@ const SESSION_SERVICE_INTERVAL = 5000;
 const FAST_TASK_TIME_ESTIMATOR_SAMPLE_COUNT = 16;
 const TASK_TIME_ESTIMATOR_SAMPLE_COUNT = 128;
 const IMAGE_CACHE_SIZE = 256;
-const RANDOM_DELAY_BIAS = 5.3;
-const TASK_DEFAULT_ESTIMATE = 19 * 1000;
-const RANDOM_DELAY_STD = 2.5;
+const TASK_DEFAULT_ESTIMATE = 22 * 1000;
+const RANDOM_DELAY_BIAS = 6.0;
+const RANDOM_DELAY_STD = 3.0;
+const LARGE_RANDOM_DELAY_BIAS = RANDOM_DELAY_BIAS * 2;
+const LARGE_RANDOM_DELAY_STD = RANDOM_DELAY_STD * 2;
+const LARGE_WAIT_DELAY_BIAS = 5*60;
+const LARGE_WAIT_DELAY_STD = 2.5*60;
+const LARGE_WAIT_INTERVAL_BIAS = 500;
+const LARGE_WAIT_INTERVAL_STD = 100;
 const FAST_TASK_DEFAULT_ESTIMATE = TASK_DEFAULT_ESTIMATE - RANDOM_DELAY_BIAS * 1000 - RANDOM_DELAY_STD * 1000 / 2 + 1000;
 
 export function assert(condition: any, message?: string): asserts condition {
@@ -1047,6 +1053,7 @@ class TaskTimeEstimator {
 
 interface TaskQueueRun {
   stopped: boolean;
+  delayCnt: number;
 }
 
 export class TaskQueueService extends EventTarget {
@@ -1167,10 +1174,15 @@ export class TaskQueueService extends EventTarget {
     }
   }
 
+  getDelayCnt() {
+    return Math.floor(LARGE_WAIT_INTERVAL_BIAS + Math.random() * LARGE_WAIT_INTERVAL_STD)
+  }
+
   run() {
     if (!this.currentRun) {
       this.currentRun = {
         stopped: false,
+        delayCnt: this.getDelayCnt()
       };
       this.runInternal(this.currentRun);
       this.dispatchEvent(new CustomEvent('start', {}));
@@ -1280,9 +1292,15 @@ export class TaskQueueService extends EventTarget {
               (1 + Math.random() * RANDOM_DELAY_STD) * 1000,
             );
           } else {
-            await sleep(
-              (Math.random() * RANDOM_DELAY_STD + RANDOM_DELAY_BIAS) * 1000,
-            );
+            if (i === 0 && Math.random() > 0.98) {
+              await sleep(
+                (Math.random() * LARGE_RANDOM_DELAY_STD + LARGE_RANDOM_DELAY_BIAS) * 1000,
+              );
+            } else {
+              await sleep(
+                (Math.random() * RANDOM_DELAY_STD + RANDOM_DELAY_BIAS) * 1000,
+              );
+            }
           }
 
           const outputFilePath = task.outPath + '/' + Date.now().toString() + '.png';
@@ -1298,6 +1316,11 @@ export class TaskQueueService extends EventTarget {
             this.timeEstimator.addSample(after - before);
           }
           done = true;
+          cur.delayCnt --;
+          if (cur.delayCnt === 0) {
+            await sleep((Math.random() * LARGE_WAIT_DELAY_STD + LARGE_WAIT_DELAY_BIAS) * 1000);
+            cur.delayCnt = this.getDelayCnt();
+          }
           if (!cur.stopped) {
             task.done++;
             if (task.preset.seed) {
