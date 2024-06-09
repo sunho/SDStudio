@@ -5,6 +5,7 @@ import {
   useEffect,
   createContext,
   useState,
+  useRef,
 } from 'react';
 import {
   taskQueueService,
@@ -86,9 +87,10 @@ export default function App() {
   const [samples, setSamples] = useState<number>(10);
   const [messages, setMessages] = useState<string[]>([]);
   const [dialogs, setDialogs] = useState<Dialog[]>([]);
+  const updatedIgnored = useRef<boolean>(false);
   useEffect(() => {
     const handleUpdate = () => {
-      if (appUpdateNoticeService.outdated) {
+      if (appUpdateNoticeService.outdated && !updatedIgnored.current) {
         pushDialog({
           type: 'confirm',
           text: '새로운 버전이 있습니다. 새로 다운 받으시겠습니까?',
@@ -97,6 +99,7 @@ export default function App() {
             invoke('open-web-page', 'https://github.com/sunho/SDStudio/releases');
           },
         })
+        updatedIgnored.current = true;
       }
     };
     handleUpdate();
