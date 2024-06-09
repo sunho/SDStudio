@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react';
+import { createRef, useContext, useEffect, useRef, useState } from 'react';
 import { AppContext } from './App';
 import { PieceLibrary, invoke, promptService, sessionService } from './models';
 import { DropdownSelect } from './UtilComponents';
@@ -32,6 +32,62 @@ const PieceEditor = () => {
       selectedPieceLibrary ? curSession!.library[selectedPieceLibrary] : null,
     );
   }, [selectedPieceLibrary]);
+
+  const draggedItem = useRef<string | null>(null);
+  const elementsRef = useRef<{[key: string] : any}>({});
+
+  useEffect(() => {
+    if (curPieceLibrary) {
+      for (const key in curPieceLibrary.pieces) {
+        elementsRef.current[key] = createRef();
+      }
+    }
+  }, [curPieceLibrary]);
+
+  const handleDragStart = (e: any, key: string) => {
+    const eleRef = elementsRef.current[key]?.current;
+    if (eleRef) {
+      const rect = eleRef.getBoundingClientRect();
+      const isWithinElement =
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom;
+      if (isWithinElement) {
+        e.preventDefault();
+        return;
+      }
+    }
+    draggedItem.current = key;
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, key: string) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: any , key: string) => {
+    e.preventDefault();
+    if (draggedItem.current !== key) {
+      const reorderedPieces: any = {};
+      const keys = Object.keys(curPieceLibrary!.pieces);
+      const draggedIndex = keys.indexOf(draggedItem.current!);
+      const targetIndex = keys.indexOf(key);
+      const [removed] = keys.splice(draggedIndex, 1);
+      keys.splice(targetIndex, 0, removed);
+      keys.forEach(k => {
+        reorderedPieces[k] = curPieceLibrary!.pieces[k];
+      });
+      curPieceLibrary!.pieces = reorderedPieces;
+      onUpdated();
+    }
+    draggedItem.current = null;
+  };
+
+  const handleDragEnd = () => {
+    draggedItem.current = null;
+  };
+
 
   return (
     <div className="flex flex-col h-full">
@@ -113,8 +169,13 @@ const PieceEditor = () => {
         <div className="h-min-0 flex-1 overflow-auto">
           {Object.entries(curPieceLibrary.pieces).map(([key, value]) => (
             <div
+              draggable
+              onDragStart={(e) => handleDragStart(e, key)}
+              onDragOver={(e) => {handleDragOver(e,key);}}
+              onDragEnd={handleDragEnd}
+              onDrop={(e) => handleDrop(e, key)}
               key={curPieceLibrary.description + " " + key}
-              className="p-3 border border-gray-300 my-2">
+              className="p-3 bg-white border border-gray-300 my-2">
               <div className="flex pb-2">
                 <div className="font-bold">{key}</div>
                 <button
@@ -129,6 +190,7 @@ const PieceEditor = () => {
               </div>
               <PromptEditTextArea
                 className="bg-gray-200 h-20"
+                innerRef={elementsRef.current[key]}
                 value={value}
                 onChange={(txt) => {
                   curPieceLibrary.pieces[key] = txt;
@@ -150,6 +212,7 @@ const PieceEditor = () => {
                     return;
                   }
                   curPieceLibrary!.pieces[name] = '';
+                  elementsRef.current[name] = createRef();
                   onUpdated();
                 },
               });
