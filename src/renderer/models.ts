@@ -445,14 +445,22 @@ export class SessionService extends ResourceSyncService<Session> {
 
     for (const inpaint of Object.values(session.inpaints)) {
       if (inpaint.image) {
-        const path = "inpaint_orgs/" + session.name + "/" + inpaint.name + ".png";
-        await invoke('write-data-file', path, inpaint.image);
-        inpaint.image = undefined;
+        try {
+          const path = "inpaint_orgs/" + session.name + "/" + inpaint.name + ".png";
+          await invoke('write-data-file', path, inpaint.image);
+          inpaint.image = undefined;
+        } catch(e){
+          inpaint.image = undefined;
+        }
       }
       if (inpaint.mask) {
-        const path = "inpaint_masks/" + session.name + "/" + inpaint.name + ".png";
-        await invoke('write-data-file', path, inpaint.mask);
-        inpaint.mask = undefined;
+        try {
+          const path = "inpaint_masks/" + session.name + "/" + inpaint.name + ".png";
+          await invoke('write-data-file', path, inpaint.mask);
+          inpaint.mask = undefined;
+        } catch(e) {
+          inpaint.mask = undefined;
+        }
       }
       if ((inpaint as any).middlePrompt != null) {
         inpaint.prompt = '';

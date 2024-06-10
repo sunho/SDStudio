@@ -162,8 +162,15 @@ export default function App() {
                 await importCool();
               } else if (option === 'cur-project') {
                 const cur = curSession!;
+                await sessionService.migrateSession(json);
                 for (const key in json.scenes) {
-                  cur.scenes[key] = json.scenes[key];
+                  if (key in cur.scenes) {
+                    cur.scenes[key].slots = json.scenes[key].slots;
+                  } else {
+                    cur.scenes[key] = json.scenes[key];
+                    cur.scenes[key].main = undefined;
+                    cur.scenes[key].game = undefined;
+                  }
                 }
                 sessionService.markUpdated(cur.name);
                 sessionService.mainImageUpdated();
