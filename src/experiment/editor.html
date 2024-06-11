@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <script src="https://unpkg.com/hangul-js" type="text/javascript"></script>
+    <title>Code Highlighter</title>
+    <style>
+        #editor {
+            border: 1px solid #ccc;
+            padding: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .keyword {
+            color: blue;
+            font-weight: bold;
+            font-size: 17px;
+        }
+    </style>
+    <script>
+    class Mutex {
+  constructor() {
+    this._queue = [];
+    this._locked = false;
+  }
+
+  _acquire() {
+    return new Promise(resolve => {
+      this._queue.push(resolve);
+      if (!this._locked) {
+        this._dispatchNext();
+      }
+    });
+  }
+
+  _dispatchNext() {
+    if (this._queue.length === 0) {
+      this._locked = false;
+      return;
+    }
+    this._locked = true;
+    const resolve = this._queue.shift();
+    resolve();
+  }
+
+  async lock() {
+    await this._acquire();
+  }
+
+  unlock() {
+    this._dispatchNext();
+  }
+
+  async runExclusive(callback) {
+    await this.lock();
+    try {
+      return await callback();
+    } finally {
+      this.unlock();
+    }
+  }
+}
+
+const mutex = new Mutex();
+
+document.addEventListener('DOMContentLoaded', () => {
+    const editor = document.getElementById('editor');
+    const clipboard = document.getElementById('clipboard');
+    let curText = '';
+
+    const keywords = ['function', 'const', 'let', 'var', 'if', 'else', 'return'];
+
+
+		 const highlightSyntax = (text) => {
+        return text.split(/\b/).map(word => {
+            if (keywords.includes(word)) {
+                return `<span class="keyword">${word}</span>`;
+            }
+            if (word === '\n') {
+                return '<br>';
+            }
+            return word;
+        }).join('')+'<span></span><br>';
+    };
+
+    let composing = false;
+   var compositionBuffer = [];
+   let previousOffsets = undefined;
+
+    const getCaretPosition = () => {
+        const selection = window.getSelection();
+        let res = [0,0];
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            let startContainer = range.startContainer;
+            let endContainer = range.endContainer;
+            let startOffset = range.startOffset;
+            let endOffset = range.endOffset;
+						for (let i of [0,1]) {
+              const nodeIterator = document.createNodeIterator(editor, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, null, false);
+              let currentNode;
+              while (currentNode = nodeIterator.nextNode()) {
+                  if (i === 0 && currentNode === startContainer) {
+                  		if (startContainer.nodeType === 3) {
+                        res[i] += startOffset;
+                      } else if (startContainer.tagName !== "BR"){
+                      	for (let j=0;j<startOffset;j++){
+                           	const child = startContainer.childNodes[j];
+                        		res[i] += child.textContent.length;
+                          	if (child.tagName === 'BR')
+                           		res[i]++;
+                        }
+                      }
+                      break;
+                  }
+                  if (i === 1 && currentNode === endContainer) {
+                 		 if (endContainer.nodeType === 3) {
+                        res[i] += endOffset;
+                      } else if (endContainer.tagName !== "BR"){
+                      	for (let j=0;j<endOffset;j++){
+                          const child = endContainer.childNodes[j];
+                          res[i] += child.textContent.length;
+                          if (child.tagName === 'BR')
+                            res[i]++;
+                        }
+                      }
+                      break;
+                  }
+                  if (currentNode.nodeType === 3) {
+                    res[i] += currentNode.textContent.length;
+                  }
+                  if (currentNode.nodeName === 'BR') {
+                    res[i] += 1;
+                  }
+              }
+						}
+            previousOffsets = res;
+            return res;
+        }
+        previousOffsets = res;
+        return res;
+    };
+
+    const setCaretPosition = async (pos) => {
+   	 		await new Promise(resolve => requestAnimationFrame(resolve));
+        const selection = window.getSelection();
+        const range = document.createRange();
+        let node = editor.firstChild;
+				for (let i = 0; i < 2; i ++) {
+          let offset = 0;
+          const nodeIterator = document.createNodeIterator(editor, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, null, false);
+          let currentNode;
+          while (currentNode = nodeIterator.nextNode()) {
+              let nodeLength = currentNode.textContent.length;
+              if (currentNode.nodeName === 'BR') {
+                  if (offset === pos[i]) {
+                  	if (i === 0) {
+                    	range.setStart(currentNode, pos[i] - offset);
+                    } else {
+                    	range.setEnd(currentNode, pos[i] - offset);
+                    }
+                    break;
+                  }
+                  offset += 1;
+              }
+              if (currentNode.nodeType === 3) {
+                if (offset + nodeLength >= pos[i]) {
+                  	if (i === 0) {
+                      range.setStart(currentNode, pos[i] - offset);
+                    } else {
+											range.setEnd(currentNode, pos[i] - offset);
+                    }
+                    break;
+                }
+                offset += nodeLength;
+              }
+          }
+        }
+
+        selection.removeAllRanges();
+        selection.addRange(range);
+    };
+
+    const handleFocus = async (e) => {
+      let [start,end] = getCaretPosition();
+      await setCaretPosition([start,start]);
+    };
+
+    const handleInput = async (inputChar, offset, range) => {
+      const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/g;
+      const selection = window.getSelection();
+      const range = selection.getRangeAt(0);
+      let  [start,end] = range ? range : getCaretPosition();
+
+      if (!range.collapsed) {
+          curText = curText.substring(0, start) + curText.substring(end);
+       }
+      let end2 = start;
+
+      if (koreanRegex.test(inputChar)) {
+          let txtB = Hangul.assemble(compositionBuffer);
+          if (compositionBuffer.length === 0) {
+            end2++;
+          }
+        	compositionBuffer.push(inputChar);
+          let txt = Hangul.assemble(compositionBuffer);
+          if (txt.length === 2) {
+            curText = curText.substring(0,start-1) + txt[0] + curText.substring(start-1);
+            let found;
+            for (let i = 0; i < compositionBuffer.length; i++) {
+              if (Hangul.assemble(compositionBuffer.slice(0,i)) === txt[0]) {
+                found = i;
+                break;
+              }
+            }
+            compositionBuffer = compositionBuffer.slice(found);
+            start++;
+            end2++;
+          /*   end2 += txt.legnth - txtB.length + 1; */
+            txt = txt[1];
+            editor.innerHTML = highlightSyntax(curText.substring(0, start-1) + txt + curText.substring(start-1));
+            await setCaretPosition([end2,end2]);
+          } else {
+            if (txtB.length === 0) {
+              editor.innerHTML = highlightSyntax(curText.substring(0, start) + txt + curText.substring(start));
+							await setCaretPosition([end2,end2]);
+
+            } else {
+              editor.innerHTML = highlightSyntax(curText.substring(0, start-1) + txt + curText.substring(start-1));
+							await setCaretPosition([end2,end2]);
+            }
+          }
+
+        } else {
+        	if (compositionBuffer.length) {
+          		let txt = Hangul.assemble(compositionBuffer);
+             	curText = curText.substring(0,start-1) + txt + inputChar + curText.substring(start-1);
+             	compositionBuffer = [];
+            	editor.innerHTML = highlightSyntax(curText);
+            	await setCaretPosition([end2+1,end2+1]);
+          } else {
+            const text = curText;
+            curText = text.substring(0, start) + inputChar + text.substring(start);
+
+            editor.innerHTML = highlightSyntax(curText);
+            end2++;
+            await setCaretPosition([end2,end2]);
+          }
+        }
+         getCaretPosition();
+    };
+
+   const flushCompositon = (prev) => {
+   	let [start,end] = prev;
+     if (compositionBuffer.length) {
+       let txt = Hangul.assemble(compositionBuffer);
+       curText = curText.substring(0,start-1) + txt + curText.substring(start-1);
+       compositionBuffer = [];
+       return true;
+     }
+     return false;
+   };
+
+    const handleKeyDown = async (e) => {
+    	await mutex.runExclusive(async () => {
+        const selection = window.getSelection();
+        const range = selection.getRangeAt(0);
+      const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/g;
+      const prev = previousOffsets;
+       const [start,end] = getCaretPosition();
+       console.log(e.key)
+      if (koreanRegex.test(e.key || '')) {
+      		e.preventDefault();
+         	clipboard.focus();
+         	editor.focus();
+          await setCaretPosition([start,end]);
+          await handleInput(e.key || '')
+
+        return;
+      }
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown' || (e.key === 'a' && (e.metaKey || e.ctrlKey))) {
+        console.log("ctrl-a");
+        	flushCompositon(prev);
+        }
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            let start2 = start;
+            if (!range.collapsed) {
+              	 const text = curText;
+                curText = text.substring(0, start) + text.substring(end);
+            } else {
+             if (flushCompositon(prev)) {
+            		start2++;
+            	}
+            }
+            curText = curText.substring(0, start2) + '\n' + curText.substring(start2);
+
+            editor.innerHTML = highlightSyntax(curText);
+            await setCaretPosition([start+1,start+1]);
+        } else if (e.key === 'Backspace') {
+            e.preventDefault();
+            if (range.collapsed) {
+                let  [start,end] = getCaretPosition();
+                if (start === 0) return;
+              	if (compositionBuffer.length) {
+                	compositionBuffer.pop();
+                  const txt = Hangul.assemble(compositionBuffer);
+                  if (txt === '') {
+                  	start --;
+                    editor.innerHTML = highlightSyntax(curText);
+                  } else {
+                  	editor.innerHTML = highlightSyntax(curText.substring(0, start-1) + txt + curText.substring(start-1));
+                  }
+                  await setCaretPosition([start,start]);
+                } else {
+                  start--;
+                  const text = curText;
+                  curText = text.substring(0, start) + text.substring(start + 1);
+
+                  editor.innerHTML = highlightSyntax(curText);
+                  await setCaretPosition([start,start]);
+                }
+            } else {
+								let [start,end] = getCaretPosition();
+                if (compositionBuffer.length) {
+                	compositionBuffer = [];
+                }
+              	 const text = curText;
+                curText = text.substring(0, start) + text.substring(end);
+
+                editor.innerHTML = highlightSyntax(curText);
+                await setCaretPosition([start,start]);
+						}
+
+        }
+        });
+    };
+
+	window.addEventListener('mousedown', () => {
+  	if (compositionBuffer.length)
+  		flushCompositon(previousOffsets);
+  });
+
+    let block = false;
+  editor.addEventListener('compositionupdate', function(e) {
+  return;
+     	e.preventDefault();
+      if (!e.data) return;
+      const selection = window.getSelection();
+        const range = selection.getRangeAt(0);
+        console.log("DATA:" + e.data || '');
+      let  [start,end] = getCaretPosition();
+         	clipboard.focus();
+        	setTimeout(async () => {
+          	editor.focus();
+            await handleInput(e.data || '', [start, end])
+          },0.0001);
+/*
+
+        let  [start,end] = getCaretPosition();
+        editor.innerHTML = highlightSyntax(curText);
+       setCaretPosition(start);  */
+
+  });
+  editor.addEventListener('compositionend', function(e) {
+   e.preventDefault();
+
+
+  });
+
+    editor.addEventListener('beforeinput', async function(e) {
+      await mutex.runExclusive(async () => {
+      e.preventDefault();
+           const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/g;
+      if (koreanRegex.test(e.data || ''))
+     	 return;
+      if (!e.data) return;
+      await handleInput(e.data || '', false);
+   		});
+    });
+    editor.addEventListener('keydown', handleKeyDown);
+    editor.addEventListener('focus', handleFocus);
+});
+
+    </script>
+</head>
+<body>
+    <div id="editor" contenteditable="true"></div>
+    <textarea id="clipboard" style="position: absolute; left: -9999px;"></textarea>
+</body>
+</html>
+
