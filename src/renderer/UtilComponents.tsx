@@ -40,7 +40,7 @@ export const DropdownSelect = <T,>({
       onChange={handleChange}
       menuPlacement={menuPlacement}
       isDisabled={disabled}
-      className="w-full"
+      className={"w-full " + (className ?? '')}
       theme={(theme) => ({
         ...theme,
         borderRadius: 0,
