@@ -93,7 +93,7 @@ export interface Scene {
   slots: PromptPieceSlot[];
   game: Game | undefined;
   landscape?: boolean;
-  main?: string;
+  mains: string[];
 }
 
 export interface InPaintScene {
@@ -494,6 +494,11 @@ export class SessionService extends ResourceSyncService<Session> {
         }
         scene.landscape = undefined;
       }
+      if ((scene as any).main) {
+        scene.mains = [(scene as any).main];
+        (scene as any).main = undefined;
+      }
+      scene.mains = scene.mains ?? [];
     }
 
     for (const inpaint of Object.values(session.inpaints)) {
@@ -871,7 +876,10 @@ export class ImageService extends EventTarget {
     );
     files.sort(naturalSort);
     target[session.name][scene.name] = files;
-
+    if (scene.type === 'scene') {
+      const names = files.map((x: string) => x.split('/').pop());
+      scene.mains = scene.mains.filter((x) => names.includes(x));
+    }
     if (emitEvent)
       this.dispatchEvent(new CustomEvent('updated', { detail: { batch: false, session, scene } }));
   }
@@ -1792,6 +1800,15 @@ export class GameService extends EventTarget {
       files.sort(sortByGameAndNatural);
       list[session.name][scene.name] = files.map((x: [string, number|undefined]) => x[0]);
     }
+    if (scene.type === 'scene') {
+      const nameToPrior: any = {};
+      list[session.name][scene.name].forEach((x: string, i: number) => {
+        nameToPrior[x.split('/').pop()!] = i;
+      });
+      scene.mains.sort((a: string, b: string) => {
+        return nameToPrior[a] - nameToPrior[b];
+      });
+    }
   }
 
   async createGame(path: string) {
@@ -1993,9 +2010,9 @@ export function dataUriToBase64(dataUri: string) {
 }
 
 export async function getMainImage(session: Session, scene: Scene, size: number) {
-  if (scene.main) {
+  if (scene.mains.length) {
     const path =
-      imageService.getImageDir(session, scene) + '/' + scene.main;
+      imageService.getImageDir(session, scene) + '/' + scene.mains[0];
     const base64 = await imageService.fetchImageSmall(path, size);
     return base64;
   }

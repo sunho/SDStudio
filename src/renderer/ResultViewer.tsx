@@ -48,7 +48,7 @@ interface ImageGalleryProps {
   imageSize: number;
   onSelected?: (index: number) => void;
   isMainImage?: (path: string) => boolean;
-  onFilenameChange?: (path: string) => void;
+  onFilenameChange?: (src: string, dst: string) => void;
   pageSize?: number;
   isHidden?: boolean;
 }
@@ -88,13 +88,12 @@ const Cell = memo(({
       draggedIndex.current !== index &&
       index < filePaths.length
     ) {
-      if (onFilenameChange) {
-        onFilenameChange(filePaths[index]);
-        onFilenameChange(filePaths[draggedIndex.current]);
-      }
       await swapImages(filePaths[draggedIndex.current], filePaths[index]);
       await refreshImageFuncs.current.get(filePaths[draggedIndex.current])?.();
       await refreshImageFuncs.current.get(filePaths[index])?.();
+      if (onFilenameChange) {
+        onFilenameChange(filePaths[index], filePaths[draggedIndex.current]);
+      }
       draggedIndex.current = null;
     }
   };
@@ -274,7 +273,7 @@ const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
 );
 
 interface ResultDetailViewButton {
-  text: string;
+  text: string | ((path: string) => string);
   className: string;
   onClick: (scene: GenericScene, path: string, close: () => void) => void;
 }
@@ -375,7 +374,7 @@ const ResultDetailView = ({
                   button.onClick(scene, paths[selectedIndex], onClose);
                 }}
               >
-                {button.text}
+                {button.text instanceof Function ? button.text(paths[selectedIndex]) : button.text}
               </button>
             ))}
           </div>
@@ -447,7 +446,7 @@ const ResultDetailView = ({
 interface ResultViewerProps {
   scene: GenericScene;
   buttons: ResultDetailViewButton[];
-  onFilenameChange: (path: string) => void;
+  onFilenameChange: (src: string, dst: string) => void;
   onEdit: (scene: GenericScene) => void;
   isMainImage?: (path: string) => boolean;
   starScene?: Scene;
@@ -469,8 +468,8 @@ const ResultViewer = ({
   );
   const imagesSizes = [{ name: '스몰', size: 200 }, { name: '미디엄', size: 400 }, { name: '라지', size: 500}]
   const [imageSize, setImageSize] = useState<number>(1);
-  const [isInpaintList, setIsInpaintList] = useState<boolean>(false);
-
+  const [selectedTab, setSelectedTab] = useState<number>(0);
+  const tabNames = ['이미지 리스트', '인페인트 리스트', '메인 이미지 리스트'];
   useEffect(() => {
     imageService.refresh(curSession!, scene);
   }, []);
@@ -598,7 +597,7 @@ const ResultViewer = ({
             </button>
           </div>
           <div className="flex gap-3">
-            {!isInpaintList && imagesSizes.map((size, index) => (
+            {selectedTab !== 1 && imagesSizes.map((size, index) => (
               <button
                 key={index}
                 className={`${roundButton} ${
@@ -611,28 +610,28 @@ const ResultViewer = ({
                 {size.name}
               </button>
             ))}
-            {scene.type === 'scene' && <button className={`${roundButton} bg-sky-500`} onClick={() => setIsInpaintList(!isInpaintList)}>
-              {!isInpaintList ? '인페인트 리스트' : '이미지 리스트'}
+            {scene.type === 'scene' && <button className={`${roundButton} bg-sky-500`} onClick={() => setSelectedTab((selectedTab + 1) % tabNames.length)}>
+              {tabNames[selectedTab]}
             </button>}
           </div>
         </div>
       </div>
       <div className="flex-1 pt-4 pb-4 relative h-full overflow-hidden">
-        <QueueControl type='inpaint' className={isInpaintList ? 'px-4 ' : 'hidden'}
-          filterFunc={(x: InPaintScene) => {
-            return x.sceneRef && x.sceneRef === scene.name;
-          }}
-        >
-        </QueueControl>
         <ImageGallery
           scene={scene}
           onFilenameChange={onFilenameChange}
           isMainImage={isMainImage}
           filePaths={paths}
           imageSize={imagesSizes[imageSize].size}
-          isHidden={isInpaintList}
+          isHidden={selectedTab !== 0}
           onSelected={onSelected}
         />
+        <QueueControl type='inpaint' className={selectedTab === 1 ? 'px-4 ' : 'hidden'}
+          filterFunc={(x: InPaintScene) => {
+            return x.sceneRef && x.sceneRef === scene.name;
+          }}
+        >
+        </QueueControl>
         {selectedImageIndex != null && (
           <FloatView priority={1} onEscape={() => setSelectedImageIndex(undefined)}>
             <ResultDetailView
@@ -646,6 +645,15 @@ const ResultViewer = ({
             />
           </FloatView>
         )}
+        <ImageGallery
+          scene={scene}
+          onFilenameChange={onFilenameChange}
+          isMainImage={isMainImage}
+          filePaths={paths.filter((path) => isMainImage && isMainImage(path))}
+          imageSize={imagesSizes[imageSize].size}
+          isHidden={selectedTab !== 2}
+          onSelected={onSelected}
+        />
       </div>
     </div>
   );

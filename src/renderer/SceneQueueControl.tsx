@@ -386,10 +386,17 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
             },
           },
           {
-            text: '메인 이미지 지정',
+            text: (path) => {
+              return isMainImage(path) ? '메인 이미지 해제' : '메인 이미지 지정';
+            },
             className: 'bg-orange-400',
             onClick: async (scene, path, close) => {
-              scene.main = path.split('/').pop();
+              const filename = path.split('/').pop()!;
+              if (isMainImage(path)) {
+                scene.mains = scene.mains.filter((x) => x !== filename);
+              } else {
+                scene.mains.push(filename);
+              }
               updateScenes();
               refreshSceneImageFuncs.current[scene.name]();
               sessionService.mainImageUpdated();
@@ -540,45 +547,77 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
 
   const isMainImage = (path: string) => {
     if (type === 'inpaint') return false;
-    const scene = displayScene as Scene;
-    if (scene.main) {
-      return path.split('/').pop() === scene.main;
-    }
-    return false;
+    const filename = path.split('/').pop()!;
+    return !!(displayScene && (displayScene as Scene).mains.includes(filename));
   };
 
-  const onFilenameChange = (path: string) => {
+  const onFilenameChange = (src: string, dst: string) => {
     if (type === 'scene') {
       const scene = displayScene as Scene;
-      if (scene.main && scene.main === path.split('/').pop()) {
-        scene.main = undefined;
-        updateScenes();
+      src = src.split('/').pop()!;
+      dst = dst.split('/').pop()!;
+      if (scene.mains.includes(src) && !scene.mains.includes(dst)) {
+        scene.mains = scene.mains.map((x) => (x === src ? dst : x));
+      } else if (!scene.mains.includes(src) && scene.mains.includes(dst)) {
+        scene.mains = scene.mains.map((x) => (x === dst ? src : x));
       }
     }
+    updateScenes();
+    sessionService.mainImageUpdated();
   };
   const exportPackage = async () => {
-    const paths = [];
-    for (const scene of Object.values(curSession!.scenes)) {
-      let path = undefined;
-      if (scene.main) {
-        path = imageService.getImageDir(curSession!, scene) + '/' + scene.main;
-      } else {
-        const images = imageService.getImages(curSession, scene);
-        if (images.length) {
-          path = images[0];
+    const exportImpl = async (prefix: string) => {
+      const paths = [];
+      for (const scene of Object.values(curSession!.scenes)) {
+        const images = [];
+        if (scene.mains.length) {
+          for (const main of scene.mains) {
+            images.push(imageService.getImageDir(curSession!, scene) + '/' + main);
+          }
+        } else {
+          const cands = imageService.getImages(curSession, scene);
+          if (cands.length) {
+            images.push(cands[0]);
+          }
+        }
+        for (let i=0;i<images.length;i++) {
+          const path = images[i];
+          if (path) paths.push({ path, name: prefix + scene.name + '.' + i.toString() });
         }
       }
-      if (path) paths.push({ path, name: scene.name });
-    }
-    const outFilePath =
-      'exports/' +
-      curSession!.name +
-      '_main_images_' +
-      Date.now().toString() +
-      '.zip';
-    await invoke('zip-files', paths, outFilePath);
-    await invoke('show-file', outFilePath);
-  };
+      const outFilePath =
+        'exports/' +
+        curSession!.name +
+        '_main_images_' +
+        Date.now().toString() +
+        '.zip';
+      await invoke('zip-files', paths, outFilePath);
+      await invoke('show-file', outFilePath);
+      }
+      ctx.pushDialog({
+        type: 'select',
+        text: '파일 이름 형식을 선택해주세요',
+        items: [
+          { text: '(씬이름).(이미지 번호).png', value: 'normal' },
+          { text: '(캐릭터 이름).(씬이름).(이미지 번호)', value: 'prefix' },
+        ],
+        callback: async (format) => {
+          if (!format) return;
+          if (format === 'normal') {
+            await exportImpl('');
+          } else {
+            ctx.pushDialog({
+              type: 'input-confirm',
+              text: '캐릭터 이름을 입력해주세요',
+              callback: async (prefix) => {
+                if (!prefix) return;
+                await exportImpl(prefix + '.');
+              }
+            });
+          }
+        },
+      })
+    };
 
   const resultViewer = useMemo(() => {
     if (displayScene) return <FloatView
