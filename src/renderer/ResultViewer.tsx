@@ -152,7 +152,7 @@ const Cell = memo(({
         <>
           <img
             src={image}
-            alt={`Image ${index}`}
+            alt={path}
             className={
               'image relative cursor-pointer hover:brightness-95 active:brightness-90 ' +
               (isMain ? 'border-2 border-yellow-400' : '')
@@ -386,7 +386,7 @@ const ResultDetailView = ({
           {image && (
             <img
               src={image}
-              alt="Result"
+              alt={paths[selectedIndex]}
               className="w-full h-full object-contain"
             />
           )}

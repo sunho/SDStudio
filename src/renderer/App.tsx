@@ -16,6 +16,7 @@ import {
   sessionService,
   appUpdateNoticeService,
   invoke,
+  imageService,
 } from './models';
 import SessionSelect from './SessionSelect';
 import PreSetEditor from './PreSetEdtior';
@@ -30,6 +31,8 @@ import ConfirmWindow, { Dialog } from './ConfirmWindow';
 import QueueControl from './SceneQueueControl';
 import { convertDenDenData, isValidDenDenDataFormat } from './compat';
 import { FloatViewProvider } from './FloatView';
+
+const ipcRenderer = window.electron.ipcRenderer;
 
 export interface Context {
   curSession: Session | undefined;
@@ -108,6 +111,44 @@ export default function App() {
       appUpdateNoticeService.removeEventListener('updated', handleUpdate);
     };
   },[]);
+  useEffect(() => {
+    const removeListener = ipcRenderer.on('copy-image', (srcPath) => {
+      pushDialog({
+        type: 'dropdown',
+        text: '이미지를 어디에 복사할까요?',
+        items: Object.keys(curSession!.scenes).map((key) => ({
+          text: key,
+          value: key,
+        })),
+        callback: async (value) => {
+          if (!value)
+            return;
+
+          const scene = curSession!.scenes[value];
+          if (!scene) {
+            return;
+          }
+
+          await invoke(
+            'copy-file',
+            srcPath,
+            imageService.getImageDir(curSession!, scene) +
+              '/' +
+              Date.now().toString() +
+              '.png',
+          );
+          imageService.refresh(curSession!, scene);
+          pushDialog({
+            type: 'yes-only',
+            text: '이미지를 복사했습니다',
+          });
+        },
+      });
+    });
+    return () => {
+      removeListener();
+    };
+  },[curSession]);
   useEffect(() => {
     const handleJSONContent = async (name: string, json: any) => {
       if (name.endsWith('.json')) {

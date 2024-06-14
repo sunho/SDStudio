@@ -19,10 +19,6 @@ import { NovelAiImageGenService } from './genVendors/nai';
 const sharp = require('sharp');
 import contextMenu from 'electron-context-menu';
 
-contextMenu({
-	showSaveImageAs: true
-});
-
 let mainWindow: BrowserWindow | null = null;
 
 const imageGen: ImageGenService = new NovelAiImageGenService();
@@ -252,6 +248,24 @@ const createWindow = async () => {
         : path.join(__dirname, '../../.erb/dll/preload.js'),
     },
   });
+
+   contextMenu({
+    window: mainWindow,
+    prepend: (defaultActions, params, browserWindow) => {
+      if (params.mediaType === 'image' && params.altText) {
+        return [
+          {
+            label: '해당 이미지를 다른 씬으로 복사',
+            click: () => {
+              mainWindow!.webContents.send('copy-image', params.altText);
+            },
+          },
+        ];
+      }
+      return [];
+    },
+  });
+
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
