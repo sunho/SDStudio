@@ -2060,3 +2060,13 @@ export const deleteImageFiles = async (curSession: Session, paths: string[]) => 
   }
   await imageService.refreshBatch(curSession);
 }
+
+export interface ContextAlt {
+  path: string;
+  scene?: string;
+  starable?: boolean;
+};
+
+
+export const encodeContextAlt = (x: ContextAlt) => JSON.stringify(x);
+export const decodeContextAlt = JSON.parse as (x: string) => ContextAlt;

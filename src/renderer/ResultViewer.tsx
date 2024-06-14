@@ -15,6 +15,7 @@ import {
   Scene,
   dataUriToBase64,
   deleteImageFiles,
+  encodeContextAlt,
   extractExifFromBase64,
   extractMiddlePrompt,
   extractPromptDataFromBase64,
@@ -42,6 +43,7 @@ import { FloatView } from './FloatView';
 import memoizeOne from 'memoize-one';
 
 interface ImageGalleryProps {
+  scene: GenericScene;
   filePaths: string[];
   imageSize: number;
   onSelected?: (index: number) => void;
@@ -62,6 +64,7 @@ const Cell = memo(({
   data,
 }: GridChildComponentProps) => {
   const {
+    scene,
     filePaths,
     onSelected,
     columnCount,
@@ -152,7 +155,11 @@ const Cell = memo(({
         <>
           <img
             src={image}
-            alt={path}
+            alt={encodeContextAlt({
+              path,
+              scene: scene.name,
+              starable: true,
+            })}
             className={
               'image relative cursor-pointer hover:brightness-95 active:brightness-90 ' +
               (isMain ? 'border-2 border-yellow-400' : '')
@@ -173,7 +180,9 @@ const CustomScrollbarsVirtualGrid = memo(forwardRef((props, ref) => (
   <CustomScrollbars {...props} forwardedRef={ref} />
 )));
 
-const createItemData = memoizeOne((filePaths,
+const createItemData = memoizeOne((
+            scene,
+            filePaths,
             onSelected,
             columnCount,
             refreshImageFuncs,
@@ -182,6 +191,7 @@ const createItemData = memoizeOne((filePaths,
             onFilenameChange,
             imageSize) => {
     return {
+      scene,
       filePaths,
       onSelected,
       columnCount,
@@ -194,7 +204,7 @@ const createItemData = memoizeOne((filePaths,
 });
 
 const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
-  ({ isHidden, imageSize, filePaths, isMainImage, onSelected, onFilenameChange }, ref) => {
+  ({ scene, isHidden, imageSize, filePaths, isMainImage, onSelected, onFilenameChange }, ref) => {
     const { curSession } = useContext(AppContext)!;
     const [containerWidth, setContainerWidth] = useState(0);
     const [containerHeight, setContainerHeight] = useState(0);
@@ -242,6 +252,7 @@ const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
           rowHeight={rowHeight}
           width={columnCount * columnWidth}
           itemData={createItemData(
+            scene,
             filePaths,
             onSelected,
             columnCount,
@@ -386,7 +397,11 @@ const ResultDetailView = ({
           {image && (
             <img
               src={image}
-              alt={paths[selectedIndex]}
+              alt={encodeContextAlt({
+                path: paths[selectedIndex],
+                scene: scene.name,
+                starable: true,
+              })}
               className="w-full h-full object-contain"
             />
           )}
@@ -594,6 +609,7 @@ const ResultViewer = ({
         >
         </QueueControl>
         <ImageGallery
+          scene={scene}
           onFilenameChange={onFilenameChange}
           isMainImage={isMainImage}
           filePaths={paths}
