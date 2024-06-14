@@ -233,6 +233,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
                 }
                 src={images[0]}
                 alt={encodeContextAlt({
+                  type: 'image',
                   path: matches[mi].players[0].path
                 })}
               />
@@ -249,6 +250,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
                 }
                 src={images[1]}
                 alt={encodeContextAlt({
+                  type: 'image',
                   path: matches[mi].players[1].path
                 })}
               />

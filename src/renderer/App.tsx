@@ -18,6 +18,7 @@ import {
   invoke,
   imageService,
   ContextAlt,
+  SceneContextAlt,
 } from './models';
 import SessionSelect from './SessionSelect';
 import PreSetEditor from './PreSetEdtior';
@@ -113,7 +114,7 @@ export default function App() {
     };
   },[]);
   useEffect(() => {
-    const removeListener = ipcRenderer.on('copy-image', (ctx: ContextAlt) => {
+    const removeCopyImageListener = ipcRenderer.on('copy-image', (ctx: ContextAlt) => {
       pushDialog({
         type: 'dropdown',
         text: '이미지를 어디에 복사할까요?',
@@ -146,8 +147,44 @@ export default function App() {
         },
       });
     });
+    const removeMoveSceneFrontListener = ipcRenderer.on('move-scene-front', (ctx: SceneContextAlt) => {
+      const field = ctx.sceneType === 'scene' ? 'scenes' : 'inpaints';
+      const scene = curSession![field][ctx.name];
+      if (!scene) {
+        return;
+      }
+      const newScenes: any = {};
+      newScenes[ctx.name] = scene;
+      for (const key in curSession![field]) {
+        if (key !== ctx.name) {
+          newScenes[key] = curSession![field][key];
+        }
+      }
+      curSession![field] = newScenes;
+      sessionService.markUpdated(curSession!.name);
+      sessionService.sceneOrderChanged();
+    });
+    const removeMoveSceneBackListener = ipcRenderer.on('move-scene-back', (ctx: SceneContextAlt) => {
+      const field = ctx.sceneType === 'scene' ? 'scenes' : 'inpaints';
+      const scene = curSession![field][ctx.name];
+      if (!scene) {
+        return;
+      }
+      const newScenes: any = {};
+      for (const key in curSession![field]) {
+        if (key !== ctx.name) {
+          newScenes[key] = curSession![field][key];
+        }
+      }
+      newScenes[ctx.name] = scene;
+      curSession![field] = newScenes;
+      sessionService.markUpdated(curSession!.name);
+      sessionService.sceneOrderChanged();
+    });
     return () => {
-      removeListener();
+      removeCopyImageListener();
+      removeMoveSceneFrontListener();
+      removeMoveSceneBackListener();
     };
   },[curSession]);
   useEffect(() => {
