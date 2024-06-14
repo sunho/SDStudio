@@ -2052,3 +2052,11 @@ class AppUpdateNoticeService extends EventTarget {
 }
 
 export const appUpdateNoticeService = new AppUpdateNoticeService();
+
+export const deleteImageFiles = async (curSession: Session, paths: string[]) => {
+  for (const path of paths) {
+    await invoke('trash-file', path);
+    await imageService.invalidateCache(path);
+  }
+  await imageService.refreshBatch(curSession);
+}

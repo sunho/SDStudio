@@ -21,12 +21,12 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
 
   const handleConfirm = () => {
     const currentDialog = dialogs[dialogs.length - 1];
+    setDialogs(dialogs.slice(0, dialogs.length - 1));
     if (currentDialog && currentDialog.callback) {
       currentDialog.callback(
         currentDialog.type === 'input-confirm' ? inputValue : undefined,
       );
     }
-    setDialogs(dialogs.slice(0, dialogs.length - 1));
     setInputValue('');
   };
 
@@ -112,10 +112,11 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                       key={idx}
                       className="w-full px-4 py-2 rounded bg-sky-500 text-white mr-2"
                       onClick={() => {
-                        if (dialogs[dialogs.length - 1].callback) {
-                          dialogs[dialogs.length - 1].callback!(item.value);
-                        }
+                        const currentDialog = dialogs[dialogs.length - 1];
                         setDialogs(dialogs.slice(0, dialogs.length - 1));
+                        if (currentDialog.callback) {
+                          currentDialog.callback!(item.value);
+                        }
                       }}
                     >
                       {item.text}
