@@ -170,7 +170,7 @@ ipcMain.handle('delete-file', async (event, filename) => {
 });
 
 ipcMain.handle('trash-file', async (event, filename) => {
-  await shell.trashItem(APP_DIR + '/' + filename);
+  await shell.trashItem(path.join(APP_DIR, filename));
 });
 
 ipcMain.handle('close', async (event) => {
