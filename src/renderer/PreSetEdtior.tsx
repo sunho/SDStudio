@@ -12,7 +12,7 @@ import { PreSet, getDefaultPreset, sessionService } from './models';
 import { Context, AppContext } from './App';
 import { base64ToDataUri } from './BrushTool';
 import { grayInput, primaryColor, roundButton } from './styles';
-import { PromptEditTextArea } from './SceneEditor';
+import PromptEditTextArea from './PromptEditTextArea';
 import { FaImage, FaTrash } from 'react-icons/fa';
 import { FloatView } from './FloatView';
 

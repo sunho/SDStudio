@@ -1,0 +1,18 @@
+{
+  "name": "native",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "install": "node-gyp rebuild"
+  },
+  "author": "",
+  "license": "ISC",
+  "gypfile": true,
+  "description": "",
+  "dependencies": {
+    "bindings": "^1.5.0",
+    "node-addon-api": "^8.0.0",
+    "prompt-sync": "^4.2.0"
+  }
+}
