@@ -8,6 +8,7 @@ import {
   sessionService,
   invoke,
   shuffleArray,
+  encodeContextAlt,
 } from './models';
 import { AppContext } from './App';
 import { roundButton } from './styles';
@@ -231,7 +232,9 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
                   'active:brightness-90 hover:brightness-95 cursor-pointer imageSmall '
                 }
                 src={images[0]}
-                alt={matches[mi].players[0].path}
+                alt={encodeContextAlt({
+                  path: matches[mi].players[0].path
+                })}
               />
             </div>
             <div className="bg-gray-300 w-px h-full flex-none"></div>
@@ -245,7 +248,9 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
                   'active:brightness-90 hover:brightness-95 cursor-pointer imageSmall flex-1 '
                 }
                 src={images[1]}
-                alt={matches[mi].players[1].path}
+                alt={encodeContextAlt({
+                  path: matches[mi].players[1].path
+                })}
               />
             </div>
           </div>

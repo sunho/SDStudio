@@ -253,14 +253,20 @@ const createWindow = async () => {
     window: mainWindow,
     prepend: (defaultActions, params, browserWindow) => {
       if (params.mediaType === 'image' && params.altText) {
-        return [
-          {
-            label: '해당 이미지를 다른 씬으로 복사',
-            click: () => {
-              mainWindow!.webContents.send('copy-image', params.altText);
+        console.log(params.altText);
+        try {
+          const altContext = JSON.parse(params.altText);
+          return [
+            {
+              label: '해당 이미지를 다른 씬으로 복사',
+              click: () => {
+                mainWindow!.webContents.send('copy-image', altContext);
+              },
             },
-          },
-        ];
+          ];
+        } catch(e) {
+          console.error(e);
+        }
       }
       return [];
     },
