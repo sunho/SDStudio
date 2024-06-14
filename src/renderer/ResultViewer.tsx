@@ -499,7 +499,7 @@ const ResultViewer = ({
           value: 'all'
         },
         {
-          text: 'n등 이하 이미지 삭제',
+          text: '메인 제외 n등 이하 이미지 삭제',
           value: 'n'
         },
       ],
@@ -519,7 +519,7 @@ const ResultViewer = ({
             callback: async (value) => {
               if (value) {
                 const n = parseInt(value);
-                await deleteImageFiles(curSession!, paths.slice(n));
+                await deleteImageFiles(curSession!, paths.slice(n).filter((x) => !isMainImage || !isMainImage(x)));
               }
             }
           });
