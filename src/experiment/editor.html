@@ -233,14 +233,14 @@ class CursorMemorizeEditor {
     await this.setCaretPosition([newPos,newPos]);
   }
 
-  handleWindowMouseDown() {
+  handleWindowMouseDown(e) {
     if (this.compositionBuffer.length)
   		this.flushCompositon(this.previousRange);
   }
 
-  async handleMouseDown() {
-    const range = this.getCaretPosition();
-    await this.setCaretPosition(range);
+  handleMouseDown(e) {
+    // const pos = this.getCaretPosition();
+    // this.setCaretPosition(pos);
   }
 
   flushCompositon(prev)  {
@@ -269,6 +269,18 @@ class CursorMemorizeEditor {
       }
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown' || (e.key === 'a' && (e.metaKey || e.ctrlKey))) {
         this.flushCompositon(this.previousRange);
+        return;
+      }
+      if (e.key === 'c' && (e.metaKey || e.ctrlKey)) {
+        this.flushCompositon(this.previousRange);
+        return;
+      }
+      if (e.key === 'x' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        await navigator.clipboard.writeText(this.curText.substring(start, end));
+        this.updateCurText(this.curText.substring(0, start) + this.curText.substring(end));
+        this.updateDOM(this.curText);
+        await this.setCaretPosition([start,start]);
         return;
       }
       if (e.key === 'Enter') {
@@ -338,11 +350,29 @@ class CursorMemorizeEditor {
       const range = selection.getRangeAt(0);
       const [start,end] = this.getCaretPosition();
       const collapsed = range.collapsed;
-      this.editor.blur();
-      await this.handleInput(e.key || '', collapsed, [start, end]);
+      this.clipboard.focus();
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await this.handleInput(e.data || '', collapsed, [start, end]);
     });
   }
 
+
+  async handlePaste(e) {
+    e.preventDefault();
+    await mutex.runExclusive(async () => {
+      const text = e.clipboardData.getData('text');
+      const selection = window.getSelection();
+      const range = selection.getRangeAt(0);
+      const [start,end] = this.getCaretPosition();
+      let cursor = start;
+      if (this.flushCompositon(this.previousRange)) {
+        cursor++;
+      }
+      this.updateCurText(this.curText.substring(0, cursor) + text + this.curText.substring(end));
+      this.updateDOM(this.curText);
+      await this.setCaretPosition([cursor+text.length,cursor+text.length]);
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -350,7 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const clipboard = document.getElementById('clipboard');
     const cursorMemorizeEditor = new CursorMemorizeEditor(editor, clipboard);
     window.addEventListener('mousedown', () => cursorMemorizeEditor.handleWindowMouseDown());
-    editor.addEventListener('mousedown', () => cursorMemorizeEditor.handleMouseDown());
+    editor.addEventListener('mousedown', (e) => cursorMemorizeEditor.handleMouseDown(e));
     editor.addEventListener('beforeinput', e => cursorMemorizeEditor.handleBeforeInput(e));
     if (!isMacPlatform()){
       editor.addEventListener('compositionupdate', e => cursorMemorizeEditor.handleCompositionUpdate(e));
@@ -359,6 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     editor.addEventListener('keydown', e => cursorMemorizeEditor.handleKeyDown(e));
+    editor.addEventListener('paste', e => cursorMemorizeEditor.handlePaste(e));
     clipboard.addEventListener('input', e => {
       clipboard.value = '';
     });

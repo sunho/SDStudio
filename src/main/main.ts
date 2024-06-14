@@ -17,12 +17,15 @@ import { resolveHtmlPath } from './util';
 import { v4 as uuidv4 } from 'uuid';
 import { NovelAiImageGenService } from './genVendors/nai';
 const sharp = require('sharp');
+const native = require('sdsnative');
+
 import contextMenu from 'electron-context-menu';
 
 contextMenu({
 	showSaveImageAs: true
 });
 
+let databaseId: number = -1;
 let mainWindow: BrowserWindow | null = null;
 
 const imageGen: ImageGenService = new NovelAiImageGenService();
@@ -125,6 +128,10 @@ ipcMain.handle('zip-files', async (event, files, outPath) => {
 
 const fs = require('fs').promises;
 
+ipcMain.handle('search-tags', async (event, word) => {
+  return native.search(databaseId, word);
+});
+
 ipcMain.handle('list-files', async (event, arg) => {
   return await listFilesInDirectory(APP_DIR + '/' + arg);
 });
@@ -219,18 +226,19 @@ const installExtensions = async () => {
     .catch(console.log);
 };
 
+const RESOURCES_PATH = app.isPackaged
+  ? path.join(process.resourcesPath, 'assets')
+  : path.join(__dirname, '../../assets');
+
+const getAssetPath = (...paths: string[]): string => {
+  return path.join(RESOURCES_PATH, ...paths);
+};
+
 const createWindow = async () => {
   if (isDebug) {
     await installExtensions();
   }
 
-  const RESOURCES_PATH = app.isPackaged
-    ? path.join(process.resourcesPath, 'assets')
-    : path.join(__dirname, '../../assets');
-
-  const getAssetPath = (...paths: string[]): string => {
-    return path.join(RESOURCES_PATH, ...paths);
-  };
 
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.workAreaSize;
@@ -291,6 +299,9 @@ const createWindow = async () => {
 
 (async () => {
   await fs.mkdir(APP_DIR, { recursive: true });
+  const dbCsvContent = await fs.readFile(getAssetPath('db.csv'), 'utf-8');
+  databaseId = native.createDB('danbooru');
+  native.loadDB(databaseId, dbCsvContent);
 })();
 
 const gotTheLock = app.requestSingleInstanceLock()

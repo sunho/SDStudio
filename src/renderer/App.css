@@ -228,7 +228,8 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 .syntax-strong {
-  font-weight: bold;
+  font-weight: 800;
+  font-size: 1.05em;
 }
 
 .syntax-weak {
@@ -237,15 +238,14 @@ input[type='number']::-webkit-outer-spin-button {
 
 .syntax-wildcard {
   color: #0ea5e9;
+  font-size: 1.05em;
   font-weight: 800;
 }
 
 .syntax-word {
-  white-space: pre-line;
 }
 
 .syntax-line {
-  white-space: pre-line;
 }
 
 .progress-transition {

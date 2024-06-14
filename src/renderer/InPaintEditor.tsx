@@ -18,7 +18,7 @@ import {
 } from './models';
 import { AppContext } from './App';
 import { grayInput, primaryColor, roundButton } from './styles';
-import { PromptEditTextArea, PromptHighlighter } from './SceneEditor';
+import PromptEditTextArea from './PromptEditTextArea';
 import { Resolution, resolutionMap } from '../main/imageGen';
 
 interface Props {

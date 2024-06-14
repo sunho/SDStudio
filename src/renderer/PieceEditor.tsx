@@ -2,7 +2,7 @@ import { createRef, useContext, useEffect, useRef, useState } from 'react';
 import { AppContext } from './App';
 import { PieceLibrary, invoke, promptService, sessionService } from './models';
 import { DropdownSelect } from './UtilComponents';
-import { PromptEditTextArea } from './SceneEditor';
+import PromptEditTextArea from './PromptEditTextArea';
 import { primaryColor, roundButton } from './styles';
 import {
   FaArrowCircleUp,

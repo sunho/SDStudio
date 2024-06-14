@@ -20,7 +20,8 @@ export type Channels =
   | 'show-file'
   | 'zip-files'
   | 'get-version'
-  | 'open-web-page';
+  | 'open-web-page'
+  | 'search-tags';
 
 const electronHandler = {
   ipcRenderer: {
