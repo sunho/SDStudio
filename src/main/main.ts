@@ -180,6 +180,10 @@ ipcMain.handle('delete-file', async (event, filename) => {
   return await fs.unlink(APP_DIR + '/' + filename);
 });
 
+ipcMain.handle('trash-file', async (event, filename) => {
+  await shell.trashItem(APP_DIR + '/' + filename);
+});
+
 ipcMain.handle('close', async (event) => {
   saveCompleted = true;
   mainWindow!.close();

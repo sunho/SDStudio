@@ -14,6 +14,7 @@ import {
   InPaintScene,
   Scene,
   dataUriToBase64,
+  deleteImageFiles,
   extractExifFromBase64,
   extractMiddlePrompt,
   extractPromptDataFromBase64,
@@ -34,7 +35,7 @@ import { userInfo } from 'os';
 import { CustomScrollbars } from './UtilComponents';
 import Tournament from './Tournament';
 import { roundButton } from './styles';
-import { FaStar } from 'react-icons/fa';
+import { FaFolder, FaStar, FaTrash } from 'react-icons/fa';
 import { PromptHighlighter } from './SceneEditor';
 import QueueControl from './SceneQueueControl';
 import { FloatView } from './FloatView';
@@ -429,7 +430,7 @@ const ResultViewer = ({
   isMainImage,
   buttons,
 }: ResultViewerProps) => {
-  const { curSession, selectedPreset, samples } = useContext(AppContext)!;
+  const { curSession, selectedPreset, samples, pushDialog } = useContext(AppContext)!;
   const [_, forceUpdate] = useState<{}>({});
   const [tournament, setTournament] = useState<boolean>(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | undefined>(
@@ -458,6 +459,45 @@ const ResultViewer = ({
   const onSelected = useCallback((index) => {
     setSelectedImageIndex(index);
   },[]);
+  const onDeleteImages = async (scene: GenericScene) => {
+    pushDialog({
+      type: 'select',
+      text: '이미지를 삭제합니다. 원하시는 작업을 선택해주세요.',
+      items: [
+        {
+          text: '모든 이미지 삭제',
+          value: 'all'
+        },
+        {
+          text: 'n등 이하 이미지 삭제',
+          value: 'n'
+        },
+      ],
+      callback: (value) => {
+        if (value === 'all') {
+          pushDialog({
+            type: 'confirm',
+            text: '정말로 모든 이미지를 삭제하시겠습니까?',
+            callback: async () => {
+              await deleteImageFiles(curSession!, paths);
+            }
+          });
+        } else {
+          pushDialog({
+            type: 'input-confirm',
+            text: '몇등 이하 이미지를 삭제할지 입력해주세요.',
+            callback: async (value) => {
+              if (value) {
+                const n = parseInt(value);
+                await deleteImageFiles(curSession!, paths.slice(n));
+              }
+            }
+          });
+        }
+      }
+    })
+
+  };
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -490,14 +530,6 @@ const ResultViewer = ({
               이상형 월드컵
             </button>
             <button
-              className={`${roundButton} bg-sky-500`}
-              onClick={async () => {
-                await invoke('show-file', getResultDirectory(curSession!, scene));
-              }}
-            >
-              결과 폴더 열기
-            </button>
-            <button
               className={`${roundButton} bg-green-500`}
               onClick={async () => {
                 await queueGenericScene(curSession!, selectedPreset!, scene, samples);
@@ -517,6 +549,21 @@ const ResultViewer = ({
                 onEdit(scene);
               }}>
               씬 편집
+            </button>
+            <button
+              className={`${roundButton} bg-sky-500`}
+              onClick={async () => {
+                await invoke('show-file', getResultDirectory(curSession!, scene));
+              }}
+            >
+              <FaFolder/>
+            </button>
+            <button
+              className={`${roundButton} bg-red-500`}
+              onClick={() => {
+                onDeleteImages(scene);
+              }}>
+              <FaTrash/>
             </button>
           </div>
           <div className="flex gap-3">
