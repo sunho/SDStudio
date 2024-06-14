@@ -20,6 +20,7 @@ import {
   extractMiddlePrompt,
   getMainImage,
   gameService,
+  encodeContextAlt,
 } from './models';
 import { AppContext } from './App';
 import { FloatView } from './FloatView';
@@ -158,14 +159,26 @@ const SceneCell = ({
       onClick={(event) => {
         setDisplayScene(scene);
       }}
+      title={encodeContextAlt({
+        type: 'scene',
+        sceneType: scene.type,
+        name: scene.name,
+      })}
     >
-      <div className="relative flex flex-col w-full h-full z-10">
+      <div className="relative flex flex-col w-full h-full z-10"
+        title={encodeContextAlt({
+          type: 'scene',
+          sceneType: scene.type,
+          name: scene.name,
+        })}
+      >
         {getSceneQueueCount(scene) > 0 && (
           <span className="absolute right-0 bg-yellow-400 inline-block mr-3 px-2 py-1 text-center align-middle rounded-md font-bold text-white">
             {getSceneQueueCount(scene)}
           </span>
         )}
-        <span className="text-lg overflow-auto no-scrollbars">{scene.name}</span>
+        <span className="text-lg overflow-auto no-scrollbars"
+        >{scene.name}</span>
         <div className="w-full flex mt-auto justify-center items-center gap-2">
           <button
             className={`${roundButton} bg-green-500`}
@@ -199,7 +212,11 @@ const SceneCell = ({
       {image && (
         <img
           src={image}
-          alt={`Image ${scene.name}`}
+          alt={encodeContextAlt({
+            type: 'scene',
+            sceneType: scene.type,
+            name: scene.name,
+          })}
           className="top-0 left-0 absolute w-full h-full object-cover z-0"
         />
       )}
@@ -245,6 +262,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
     }
     taskQueueService.addEventListener('progress', onProgressUpdated);
     imageService.addEventListener('updated', updateScenes);
+    sessionService.addEventListener('scene-order-changed', onProgressUpdated);
     return () => {
       if (type === 'inpaint') {
         sessionService.removeEventListener(
@@ -254,6 +272,10 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
       }
       taskQueueService.removeEventListener('progress', onProgressUpdated);
       imageService.removeEventListener('updated', updateScenes);
+      sessionService.removeEventListener(
+        'scene-order-changed',
+        onProgressUpdated,
+      );
     };
   }, []);
   useEffect(() => {

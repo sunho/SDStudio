@@ -260,10 +260,11 @@ const createWindow = async () => {
    contextMenu({
     window: mainWindow,
     prepend: (defaultActions, params, browserWindow) => {
-      if (params.mediaType === 'image' && params.altText) {
-        console.log(params.altText);
-        try {
-          const altContext = JSON.parse(params.altText);
+      console.log(params.mediaType);
+      console.log(params.altText);
+      console.log(params.titleText);
+      const handleContextAlt = (altContext: any) => {
+        if (altContext.type === 'image') {
           return [
             {
               label: '해당 이미지를 다른 씬으로 복사',
@@ -272,6 +273,35 @@ const createWindow = async () => {
               },
             },
           ];
+        } else {
+          return [
+            {
+              label: '해당 씬을 맨위로 이동',
+              click: () => {
+                mainWindow!.webContents.send('move-scene-front', altContext);
+              },
+            },
+            {
+              label: '해당 씬을 맨뒤로 이동',
+              click: () => {
+                mainWindow!.webContents.send('move-scene-back', altContext);
+              },
+            },
+          ];
+        }
+      };
+      if (params.mediaType === 'image' && params.altText) {
+        try {
+          const altContext = JSON.parse(params.altText);
+          return handleContextAlt(altContext);
+        } catch(e) {
+          console.error(e);
+        }
+      }
+      if (params.mediaType === 'none' && params.titleText) {
+        try {
+          const altContext = JSON.parse(params.titleText);
+          return handleContextAlt(altContext);
         } catch(e) {
           console.error(e);
         }
