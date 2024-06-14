@@ -526,6 +526,10 @@ export class SessionService extends ResourceSyncService<Session> {
   pieceLibraryImported(): void {
     this.dispatchEvent(new CustomEvent('piece-library-imported', {}));
   }
+
+  sceneOrderChanged(): void {
+    this.dispatchEvent(new CustomEvent('scene-order-changed', {}));
+  }
 }
 
 export const sessionService = new SessionService();
@@ -2061,12 +2065,20 @@ export const deleteImageFiles = async (curSession: Session, paths: string[]) => 
   await imageService.refreshBatch(curSession);
 }
 
-export interface ContextAlt {
+export interface ImageContextAlt {
+  type: 'image';
   path: string;
   scene?: string;
   starable?: boolean;
-};
+}
 
+export interface SceneContextAlt {
+  type: 'scene';
+  sceneType: SceneType;
+  name: string;
+}
 
-export const encodeContextAlt = (x: ContextAlt) => JSON.stringify(x);
+export type ContextAlt = ImageContextAlt | SceneContextAlt;
+
+export const encodeContextAlt = (x: ContextAlt) => JSON.stringify(x)!;
 export const decodeContextAlt = JSON.parse as (x: string) => ContextAlt;

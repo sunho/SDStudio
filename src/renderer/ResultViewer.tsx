@@ -156,6 +156,7 @@ const Cell = memo(({
           <img
             src={image}
             alt={encodeContextAlt({
+              type: 'image',
               path,
               scene: scene.name,
               starable: true,
@@ -292,7 +293,7 @@ const ResultDetailView = ({
   initialSelectedIndex,
   onClose,
 }: ResultDetailViewProps) => {
-  const { selectedPreset } = useContext(AppContext)!;
+  const { curSession, selectedPreset, pushDialog } = useContext(AppContext)!;
   const [selectedIndex, setSelectedIndex] = useState<number>(initialSelectedIndex);
   const [filename, setFilename] = useState<string>(paths[selectedIndex].split('/').pop()!);
   const [image, setImage] = useState<string | undefined>(undefined);
@@ -352,6 +353,20 @@ const ResultDetailView = ({
             >
               파일 위치 열기
             </button>
+            <button
+              className={`${roundButton} bg-red-500`}
+              onClick={() => {
+                pushDialog({
+                  type: 'confirm',
+                  text: '정말로 파일을 삭제하시겠습니까?',
+                  callback: async () => {
+                    await deleteImageFiles(curSession!, [paths[selectedIndex]]);
+                    onClose();
+                  },
+                })
+              }}
+            >파일 삭제
+            </button>
             {buttons.map((button, index) => (
               <button
                 key={index}
@@ -398,6 +413,7 @@ const ResultDetailView = ({
             <img
               src={image}
               alt={encodeContextAlt({
+                type: 'image',
                 path: paths[selectedIndex],
                 scene: scene.name,
                 starable: true,
