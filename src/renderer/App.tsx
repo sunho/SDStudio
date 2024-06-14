@@ -17,6 +17,7 @@ import {
   appUpdateNoticeService,
   invoke,
   imageService,
+  ContextAlt,
 } from './models';
 import SessionSelect from './SessionSelect';
 import PreSetEditor from './PreSetEdtior';
@@ -112,7 +113,7 @@ export default function App() {
     };
   },[]);
   useEffect(() => {
-    const removeListener = ipcRenderer.on('copy-image', (srcPath) => {
+    const removeListener = ipcRenderer.on('copy-image', (ctx: ContextAlt) => {
       pushDialog({
         type: 'dropdown',
         text: '이미지를 어디에 복사할까요?',
@@ -131,7 +132,7 @@ export default function App() {
 
           await invoke(
             'copy-file',
-            srcPath,
+            ctx.path,
             imageService.getImageDir(curSession!, scene) +
               '/' +
               Date.now().toString() +
