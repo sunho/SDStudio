@@ -320,6 +320,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
                   resolution: 'portrait',
                   locked: false,
                   slots: [[{ prompt: '', enabled: true }]],
+                  mains: [],
                   game: undefined,
                 };
                 updateScenes();
