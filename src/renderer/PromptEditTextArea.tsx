@@ -4,6 +4,8 @@ import { createRef, useCallback, useContext, useEffect, useRef, useState } from 
 import { AppContext } from './App';
 import Denque from 'denque';
 import { WordTag, calcGapMatch, highlightPrompt, invoke, promptService } from './models';
+import { FaBook, FaBox, FaBrush, FaDatabase, FaPaintBrush, FaTag } from 'react-icons/fa';
+import { FaPerson } from "react-icons/fa6";
 
 interface PromptEditTextAreaProps {
   value: string;
@@ -224,13 +226,16 @@ class CursorMemorizeEditor {
       return '';
     }
     let curText = this.domText;
-    let startIdx = start;
+    let startIdx = start+1;
     let endIdx = end;
     while (startIdx > 0 && curText[startIdx-1] !== ',') {
       startIdx--;
     }
     while (endIdx < curText.length && curText[endIdx] !== ',') {
       endIdx++;
+    }
+    if (startIdx >= endIdx) {
+      return '';
     }
     return curText.substring(startIdx, endIdx).trim();
   }
@@ -238,7 +243,7 @@ class CursorMemorizeEditor {
   setCurWord(word: string) {
     const [start,end] = this.getCaretPosition();
     let curText = this.domText;
-    let startIdx = start;
+    let startIdx = start+1;
     let endIdx = end;
     while (startIdx > 0 && curText[startIdx-1] !== ',') {
       startIdx--;
@@ -246,7 +251,8 @@ class CursorMemorizeEditor {
     while (endIdx < curText.length && curText[endIdx] !== ',') {
       endIdx++;
     }
-    word = ' ' + word;
+    if (startIdx !== 0)
+      word = ' ' + word;
     this.updateCurText(curText.substring(0, startIdx) + word + curText.substring(endIdx));
     this.updateDOM(this.curText, false);
     this.setCaretPosition([startIdx + word.length, startIdx + word.length]);
@@ -496,13 +502,20 @@ class CursorMemorizeEditor {
   }
 }
 
-
 const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSelectTag }: { tags: WordTag[], curWord: string, clientX: number, clientY: number, selectedTag: number, onSelectTag: (idx: number) => void }) => {
   const [posX, setPosX] = useState(0);
   const [posY, setPosY] = useState(0);
   const [matchMasks, setMatchMasks] = useState<number[][]>([]);
   const tagsRef = useRef<any[]>([]);
   const idRef = useRef<number>(0);
+  const categoryIcon = (category: number) => {
+    if (category === 0) return <FaTag/>
+    if (category === 1) return <FaPaintBrush/>
+    if (category === 3) return <FaBook/>
+    if (category === 4) return <FaPerson/>
+    if (category === 5) return <FaDatabase/>
+    return <FaBox/>
+  }
   useEffect(() => {
     setPosX(clientX);
     setPosY(clientY + 22);
@@ -571,12 +584,15 @@ const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSe
       }>
       <ul>
         {tags.map((tag, idx) => (
-          <li ref={tagsRef.current[idx]} className={(idx === selectedTag ? 'p-1 bg-gray-200' : 'p-1')} key={idx}>
+          <li ref={tagsRef.current[idx]} className={(idx === selectedTag ? 'flex items-center p-1 bg-gray-200' : 'flex items-center p-1')} key={idx}>
+            <span className="text-gray-600 mr-1">{categoryIcon(tag.category)}</span>
+            <div>
             {matchMasks.length ? processWord(tag.word, matchMasks[idx]).map((section, idx2) => (
               <span key={idx2} className={section.bold ? 'font-bold' : ''}>
                 {section.text}
               </span>
             )) : tag.word}
+            </div>
           </li>
         ))}
       </ul>
@@ -603,6 +619,18 @@ function useLatest(value: any) {
   return ref;
 }
 
+function trimByBraces(str: string) {
+  str = str.replace(/^[{\[]*(artist:)?/, '');
+  str = str.replace(/[}\]]*S$/, '');
+  return str;
+}
+
+function replaceMiddleWord(str: string, newWord: string) {
+  let trimmedLeft = str.match(/^[{\[]*(artist:)?/) ? str.match(/^[{\[]*(artist:)?/)[0] : '';
+  let trimmedRight = str.match(/[}\]]*$/) ? str.match(/[}\]]*$/)[0] : '';
+  return trimmedLeft + newWord + trimmedRight;
+}
+
 const PromptEditTextArea = ({
   value,
   onChange,
@@ -623,6 +651,7 @@ const PromptEditTextArea = ({
   const tagsRef = useLatest(tags);
   const idRef = useRef<number>(0);
   const selectedTagRef = useLatest(selectedTag);
+  const curWordRef = useLatest(curWord);
 
   const onUpArrow = (me: CursorMemorizeEditor) => {
     if (tagsRef.current.length === 0) return;
@@ -642,8 +671,9 @@ const PromptEditTextArea = ({
       idRef.current++;
       const myId = idRef.current;
       const word = me.getCurWord();
+      
       if (updateAutoComplete) {
-        invoke('search-tags', word).then(async (tags: any[]) => {
+        invoke('search-tags', trimByBraces(word)).then(async (tags: any[]) => {
           if (myId !== idRef.current) return;
           tags = tags.slice(0, 64);
           if (tags.length > 0) {
@@ -672,7 +702,8 @@ const PromptEditTextArea = ({
 
     const onEnter = (me: CursorMemorizeEditor) => {
       if (tagsRef.current.length === 0) return;
-      me.setCurWord(tagsRef.current[selectedTagRef.current].word);
+      const newWord = replaceMiddleWord(curWordRef.current, tagsRef.current[selectedTagRef.current].word);
+      me.setCurWord(newWord);
       setTags([]);
       setSelectedTag(0);
       me.autocomplete = false;
