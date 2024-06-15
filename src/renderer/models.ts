@@ -1261,7 +1261,7 @@ export class TaskQueueService extends EventTarget {
       steps: task.preset.steps,
       promptGuidance: task.preset.promptGuidance,
       imageStrength: 0.7,
-      vibes: task.preset.vibes,
+      vibes: [],
       image: task.image,
       mask: task.mask,
       outputFilePath: outPath,

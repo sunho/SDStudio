@@ -640,7 +640,7 @@ const ResultViewer = ({
                 setSelectedImageIndex(undefined);
               }}
               scene={scene}
-              paths={paths}
+              paths={selectedTab === 2 ? paths.filter((path) => isMainImage && isMainImage(path)) : paths}
               initialSelectedIndex={selectedImageIndex}
             />
           </FloatView>
