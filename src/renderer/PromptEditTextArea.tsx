@@ -1,8 +1,9 @@
+import { Scrollbars } from 'react-custom-scrollbars-2';
 import * as Hangul from 'hangul-js';
-import { useContext, useEffect, useRef, useState } from 'react';
+import { createRef, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppContext } from './App';
 import Denque from 'denque';
-import { highlightPrompt, invoke, promptService } from './models';
+import { WordTag, calcGapMatch, highlightPrompt, invoke, promptService } from './models';
 
 interface PromptEditTextAreaProps {
   value: string;
@@ -11,7 +12,6 @@ interface PromptEditTextAreaProps {
   disabled?: boolean;
   onChange: (value: string) => void;
 }
-
 
 interface HistoryEntry {
   text: string;
@@ -79,11 +79,24 @@ class CursorMemorizeEditor {
   domText: string;
   editor: HTMLElement;
   clipboard: HTMLElement;
-  highlightPrompt: (editor: CursorMemorizeEditor, text: string) => string;
+  highlightPrompt: (editor: CursorMemorizeEditor, text: string, updateAutoComplete: boolean) => string;
   onUpdated: (editor: CursorMemorizeEditor, text: string) => void;
+  onUpArrow: (editor: CursorMemorizeEditor) => void;
+  onDownArrow: (editor: CursorMemorizeEditor) => void;
+  onEnter: (editor: CursorMemorizeEditor) => void;
+  autocomplete: boolean;
   historyBuf: any;
   redoBuf: any;
-  constructor(editor: HTMLElement, clipboard: HTMLElement, highlightPrompt: (editor: CursorMemorizeEditor, text: string) => string, onUpdated: (editor: CursorMemorizeEditor, text: string) => void, historBuf: any, redoBuf: any) {
+  constructor(editor: HTMLElement,
+    clipboard: HTMLElement,
+    highlightPrompt: (editor: CursorMemorizeEditor, text: string, updateAutoComplete: boolean) => string,
+    onUpdated: (editor: CursorMemorizeEditor, text: string) => void,
+    historBuf: any,
+    redoBuf: any,
+    onUpArrow: (editor: CursorMemorizeEditor) => void,
+    onDownArrow: (editor: CursorMemorizeEditor) => void,
+    onEnter: (editor: CursorMemorizeEditor) => void
+  ) {
     this.compositionBuffer = [];
     this.previousRange = undefined;
     this.curText = '';
@@ -94,6 +107,10 @@ class CursorMemorizeEditor {
     this.onUpdated = onUpdated;
     this.historyBuf = historBuf;
     this.redoBuf = redoBuf;
+    this.autocomplete = false;
+    this.onUpArrow = onUpArrow;
+    this.onDownArrow = onDownArrow;
+    this.onEnter = onEnter;
   }
 
   getCaretPosition() {
@@ -178,9 +195,9 @@ class CursorMemorizeEditor {
     this.previousRange = pos;
   }
 
-  updateDOM(text: string) {
+  updateDOM(text: string, updateAutoComplete: boolean = true) {
     this.domText = text;
-    this.editor.innerHTML = this.highlightPrompt(this, text) + '<span></span><br>';
+    this.editor.innerHTML = this.highlightPrompt(this, text, updateAutoComplete) + '<span></span><br>';
   }
 
   updateCurText(text: string, push: boolean = true) {
@@ -216,6 +233,23 @@ class CursorMemorizeEditor {
       endIdx++;
     }
     return curText.substring(startIdx, endIdx).trim();
+  }
+
+  setCurWord(word: string) {
+    const [start,end] = this.getCaretPosition();
+    let curText = this.domText;
+    let startIdx = start;
+    let endIdx = end;
+    while (startIdx > 0 && curText[startIdx-1] !== ',') {
+      startIdx--;
+    }
+    while (endIdx < curText.length && curText[endIdx] !== ',') {
+      endIdx++;
+    }
+    word = ' ' + word;
+    this.updateCurText(curText.substring(0, startIdx) + word + curText.substring(endIdx));
+    this.updateDOM(this.curText, false);
+    this.setCaretPosition([startIdx + word.length, startIdx + word.length]);
   }
 
   async handleInput(inputChar: string, collapsed: boolean, pos: number[] | undefined = undefined) {
@@ -302,6 +336,18 @@ class CursorMemorizeEditor {
         await this.handleInput(e.key || '', collapsed, [start, end]);
         return;
       }
+      if (this.autocomplete && ! e.shiftKey) {
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          this.onUpArrow(this);
+          return;
+        }
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          this.onDownArrow(this);
+          return;
+        }
+      }
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown' || (e.key === 'a' && (e.metaKey || e.ctrlKey))) {
         this.flushCompositon(this.previousRange);
         return;
@@ -355,8 +401,12 @@ class CursorMemorizeEditor {
         return;
       }
       if (e.key === 'Enter') {
-        let cursor = start;
         e.preventDefault();
+        if (this.autocomplete) {
+          this.onEnter(this);
+          return;
+        }
+        let cursor = start;
         this.pushHistory();
         if (!range.collapsed) {
           this.updateCurText(this.curText.substring(0, start) + this.curText.substring(end), false);
@@ -429,7 +479,6 @@ class CursorMemorizeEditor {
     });
   }
 
-
   async handlePaste(e: any) {
     e.preventDefault();
     await mutex.runExclusive(async () => {
@@ -447,12 +496,111 @@ class CursorMemorizeEditor {
   }
 }
 
+
+const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSelectTag }: { tags: WordTag[], curWord: string, clientX: number, clientY: number, selectedTag: number, onSelectTag: (idx: number) => void }) => {
+  const [posX, setPosX] = useState(0);
+  const [posY, setPosY] = useState(0);
+  const [matchMasks, setMatchMasks] = useState<number[][]>([]);
+  const tagsRef = useRef<any[]>([]);
+  const idRef = useRef<number>(0);
+  useEffect(() => {
+    setPosX(clientX);
+    setPosY(clientY + 22);
+  }, [clientX, clientY]);
+  useEffect(() => {
+    while (tagsRef.current.length < tags.length) {
+      tagsRef.current.push(createRef());
+    }
+    setMatchMasks([]);
+    // idRef.current++;
+    // const myId = idRef.current;
+    setMatchMasks(tags.map(tag =>
+      calcGapMatch(curWord, tag.word).path
+    ));
+    // setTimeout(() => {
+    //   if (myId !== idRef.current) return;
+    //   setMatchMasks(tags.map(tag =>
+    //     calcGapMatch(curWord, tag.word).path
+    //   ));
+    // }, 250);
+  }, [tags, curWord]);
+  useEffect(() => {
+    if (selectedTag >= 0 && selectedTag < tagsRef.current.length) {
+      if (tagsRef.current[selectedTag].current)
+        tagsRef.current[selectedTag].current.scrollIntoView({ block: 'center' });
+    }
+  }, [selectedTag, tagsRef.current.length]);
+  const processWord = (word: string, mask: number[]) => {
+    const sections = [];
+    let currentSection = { text: '', bold: false };
+
+    for (let i = 0; i < word.length; i++) {
+      const char = word[i];
+      const isBold = mask && mask.includes(i);
+
+      if (isBold !== currentSection.bold) {
+        if (currentSection.text) {
+          sections.push(currentSection);
+        }
+        currentSection = { text: char, bold: isBold };
+      } else {
+        currentSection.text += char;
+      }
+    }
+
+    if (currentSection.text) {
+      sections.push(currentSection);
+    }
+
+    return sections;
+  };
+  return (
+    <div
+      onMouseDown={(e) => {
+        e.stopPropagation();
+      }}
+      className="fixed bg-white border border-gray-300 rounded-lg shadow-lg overflow-y-scroll z-10 always-show-scroll"
+      style={
+        {
+          display: (tags.length > 0 && (clientX !== 0 || clientY !== 0)) ? 'block' : 'none',
+          width: '400px',
+          height: '200px',
+          left: posX,
+          top: posY,
+        }
+      }>
+      <ul>
+        {tags.map((tag, idx) => (
+          <li ref={tagsRef.current[idx]} className={(idx === selectedTag ? 'p-1 bg-gray-200' : 'p-1')} key={idx}>
+            {matchMasks.length ? processWord(tag.word, matchMasks[idx]).map((section, idx2) => (
+              <span key={idx2} className={section.bold ? 'font-bold' : ''}>
+                {section.text}
+              </span>
+            )) : tag.word}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
 interface PromptEditTextAreaProps {
   value: string;
   className?: string;
   innerRef?: any;
   disabled?: boolean;
   onChange: (value: string) => void;
+}
+
+
+function useLatest(value: any) {
+  const ref = useRef(value);
+
+  useEffect(() => {
+    ref.current = value;
+  }, [value]);
+
+  return ref;
 }
 
 const PromptEditTextArea = ({
@@ -464,32 +612,79 @@ const PromptEditTextArea = ({
 }: PromptEditTextAreaProps) => {
   const { curSession } = useContext(AppContext)!;
   const editorRef = useRef<any>(null);
+  const editorModelRef = useRef<any>(null);
   const historyRef = useRef<Denque<HistoryEntry>>(new Denque<HistoryEntry>());
   const redoRef = useRef<Denque<HistoryEntry>>(new Denque<HistoryEntry>());
   const [tags, setTags] = useState<any[]>([]);
+  const [selectedTag, setSelectedTag] = useState<number>(0);
+  const [curWord, setCurWord] = useState<string>('');
   const [clientX, setClientX] = useState(0);
   const [clientY, setClientY] = useState(0);
-  const [_, rerender] = useState<{}>({});
+  const tagsRef = useLatest(tags);
+  const idRef = useRef<number>(0);
+  const selectedTagRef = useLatest(selectedTag);
+
+  const onUpArrow = (me: CursorMemorizeEditor) => {
+    if (tagsRef.current.length === 0) return;
+    setSelectedTag((selectedTagRef.current - 1 + tagsRef.current.length) % tagsRef.current.length)
+  };
+  const onDownArrow = (me: CursorMemorizeEditor) => {
+    if (tagsRef.current.length === 0) return;
+    setSelectedTag((selectedTagRef.current + 1) % tagsRef.current.length);
+  };
 
   useEffect(() => {
+    if (!editorRef.current) return;
     const onUpdated = (me: CursorMemorizeEditor, text: string) => {
       onChange(text);
     };
-    const highlight = (me: CursorMemorizeEditor, text: string) => {
+    const highlight = (me: CursorMemorizeEditor, text: string, updateAutoComplete: boolean) => {
+      idRef.current++;
+      const myId = idRef.current;
       const word = me.getCurWord();
-      invoke('search-tags', word).then((tags: any[]) => {
-        setTags(tags.map(x=>x.word));
-        const selection = window.getSelection()!;
-        const range = selection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-        setClientX(rect.right);
-        setClientY(rect.top);
-      });
+      if (updateAutoComplete) {
+        invoke('search-tags', word).then(async (tags: any[]) => {
+          if (myId !== idRef.current) return;
+          tags = tags.slice(0, 64);
+          if (tags.length > 0) {
+            let selection = window.getSelection()!;
+            let range = selection.getRangeAt(0);
+            let rect = range.getBoundingClientRect();
+            if (rect.right === 0 && rect.top === 0) {
+              await new Promise(resolve => requestAnimationFrame(resolve));
+              selection = window.getSelection()!;
+              range = selection.getRangeAt(0);
+              rect = range.getBoundingClientRect();
+            }
+            setClientX(rect.right);
+            setClientY(rect.top);
+            setSelectedTag(0);
+            setCurWord(word);
+            editorModelRef.current.autocomplete = true;
+          } else {
+            editorModelRef.current.autocomplete = false;
+          }
+          setTags(tags);
+        });
+      }
       return highlightPrompt(curSession!, text);
     }
-    const editor = new CursorMemorizeEditor(editorRef.current, editorRef.current, highlight, onUpdated, historyRef.current, redoRef.current);
-    editor.updateDOM(value);
+
+    const onEnter = (me: CursorMemorizeEditor) => {
+      if (tagsRef.current.length === 0) return;
+      me.setCurWord(tagsRef.current[selectedTagRef.current].word);
+      setTags([]);
+      setSelectedTag(0);
+      me.autocomplete = false;
+    };
+
+    const editor = new CursorMemorizeEditor(editorRef.current,
+      editorRef.current, highlight, onUpdated, historyRef.current, redoRef.current,
+      onUpArrow, onDownArrow, onEnter
+    );
+    editorModelRef.current = editor;
     editor.updateCurText(value);
+    editor.updateDOM(value);
     const handleKeyDown = (e: any) => editor.handleKeyDown(e);
     editorRef.current.addEventListener('keydown', handleKeyDown);
     const handleBeforeInput = (e: any) => editor.handleBeforeInput(e);
@@ -502,6 +697,8 @@ const PromptEditTextArea = ({
     editorRef.current.addEventListener('paste', handlePaste);
     const handleWindowMouseDown = (e: any) => {
       setTags([]);
+      setSelectedTag(0);
+      editorModelRef.current.autocomplete = false;
       editor.handleWindowMouseDown(e);
     };
     window.addEventListener('mousedown', handleWindowMouseDown);
@@ -518,118 +715,30 @@ const PromptEditTextArea = ({
       window.removeEventListener('mousedown', handleWindowMouseDown);
       editorRef.current.removeEventListener('mousedown', handleMouseDown);
     };
-  }, [editorRef]);
-
-  useEffect(() => {
-
   }, []);
 
-  // const applyHistory = (entry: HistoryEntry) => {
-  //   const [text, cursorPos] = [entry.text, entry.cursorPos];
-  //   setInput(text, cursorPos);
-  // };
-  //
-  // useEffect(() => {
-  //   if (value !== editorRef.current!.innerText) {
-  //     historyRef.current.push({ text: cleanedValue, cursorPos: 0 });
-  //     if (historyRef.current.length > MAX_HISTORY_SIZE) {
-  //       historyRef.current.shift();
-  //     }
-  //     redoRef.current.clear();
-  //     if (value === '') {
-  //       editorRef.current.innerHTML = '';
-  //     } else {
-  //       editorRef.current.innerHTML = highlightPrompt(
-  //         curSession!,
-  //         value,
-  //       );
-  //     }
-  //     onChange(cleanedValue);
-  //   }
-  // }, [value]);
-  //
-  // useEffect(() => {
-  //   const handleInput = (e: any) => {
-  //     let text = cleanify(e.target.innerText);
-  //     if (text === '') {
-  //       onChange(text);
-  //       return;
-  //     }
-  //     historyRef.current.push({ text: text, cursorPos: getCurPos() });
-  //     if (historyRef.current.length > MAX_HISTORY_SIZE) {
-  //       historyRef.current.shift();
-  //     }
-  //     redoRef.current.clear();
-  //     setInput(text, getCurPos());
-  //   };
-  //   const cancelEnter = (e: any) => {
-  //     const redo = () => {
-  //       if (redoRef.current.length > 0) {
-  //         const entry = redoRef.current.pop()!;
-  //         applyHistory(entry);
-  //         historyRef.current.push(entry);
-  //       }
-  //     };
-  //     if (e.key === 'Enter') {
-  //       e.preventDefault();
-  //     } else if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey || e.metaKey)) {
-  //       e.preventDefault();
-  //       if (e.shiftKey) {
-  //        redo();
-  //       } else {
-  //         if (historyRef.current.length > 1) {
-  //           const entry = historyRef.current.pop()!;
-  //           redoRef.current.push(entry);
-  //           applyHistory(historyRef.current.peekBack()!);
-  //         }
-  //       }
-  //     } else if (e.key === 'y' && (e.ctrlKey || e.metaKey)) {
-  //       redo();
-  //     }
-  //   };
-  //   const onFetch = () => {
-  //     setInput(cleanify(editorRef.current.innerText), getCurPos());
-  //   };
-  //   editorRef.current.addEventListener('input', handleInput);
-  //   editorRef.current.addEventListener('keydown', cancelEnter);
-  //   promptService.addEventListener('fetched', onFetch);
-  //   return () => {
-  //     if (editorRef.current) {
-  //       editorRef.current.removeEventListener('input', handleInput);
-  //       editorRef.current.removeEventListener('keydown', cancelEnter);
-  //     }
-  //     promptService.removeEventListener('fetched', onFetch);
-  //   };
-  // }, []);
+  const onSelectTag = (idx: number) => {
+  };
+
+  useEffect(() => {
+    if (editorModelRef.current && value !== editorModelRef.current.curText) {
+      editorModelRef.current.updateCurText(value);
+      editorModelRef.current.updateDOM(value);
+    }
+  }, [value]);
 
   return (
     <div
       ref={innerRef}
       spellCheck={false}
-      className={className + ' overflow-auto '}
+      className={className + ' overflow-auto relative'}
     >
       <div
         className={'w-full h-full focus:outline-0 whitespace-pre-wrap align-middle'}
         ref={editorRef}
         contentEditable={disabled ? 'false' : 'true'}
       ></div>
-      <div
-        className="fixed bg-white border border-gray-300 rounded-lg shadow-lg overflow-auto"
-        style={
-          {
-            display: (tags.length > 0 && (clientX !== 0 || clientY !== 0)) ? 'block' : 'none',
-            width: '200px',
-            height: '200px',
-            left: clientX,
-            top: clientY + 22,
-          }
-        }>
-        <ul className="p-2">
-          {tags.map((tag, idx) => (
-            <li key={idx}>{tag}</li>
-          ))}
-        </ul>
-      </div>
+      <PromptAutoComplete curWord={curWord} tags={tags} clientX={clientX} clientY={clientY} selectedTag={selectedTag} onSelectTag={onSelectTag}/>
     </div>
     );
 };

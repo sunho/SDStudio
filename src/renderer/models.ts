@@ -2099,3 +2099,71 @@ export type ContextAlt = ImageContextAlt | SceneContextAlt;
 
 export const encodeContextAlt = (x: ContextAlt) => JSON.stringify(x)!;
 export const decodeContextAlt = JSON.parse as (x: string) => ContextAlt;
+
+export interface WordTag {
+  normalized: string;
+  word: string;
+  redirect: string;
+  freq: number;
+  priority: number;
+  category: number;
+}
+
+export const inf = 1e9|0;
+
+export function calcGapMatch(small: string, large: string) {
+  const m = small.length;
+  const n = large.length;
+  const dp = Array.from({ length: m + 1 }, () =>
+    Array.from({ length: n + 1 }, () => [inf, inf])
+  );
+  const backtrack:any = Array.from({ length: m + 1 }, () =>
+    Array.from({ length: n + 1 }, () => [null, null])
+  );
+
+  dp[0][0][0] = 0;
+
+  for (let i = 0; i <= m; i++) {
+    for (let j = 0; j < n; j++) {
+      if (i < m && small[i] === large[j]) {
+        if (dp[i][j][0] + 1 < dp[i + 1][j + 1][1]) {
+          dp[i + 1][j + 1][1] = dp[i][j][0] + 1;
+          backtrack[i + 1][j + 1][1] = [i, j, 0];
+        }
+        if (dp[i][j][1] < dp[i + 1][j + 1][1]) {
+          dp[i + 1][j + 1][1] = dp[i][j][1];
+          backtrack[i + 1][j + 1][1] = [i, j, 1];
+        }
+      }
+      if (dp[i][j][0] < dp[i][j + 1][0]) {
+        dp[i][j + 1][0] = dp[i][j][0];
+        backtrack[i][j + 1][0] = [i, j, 0];
+      }
+      if (dp[i][j][1] < dp[i][j + 1][0]) {
+        dp[i][j + 1][0] = dp[i][j][1];
+        backtrack[i][j + 1][0] = [i, j, 1];
+      }
+    }
+  }
+
+  const result = Math.min(dp[m][n][0], dp[m][n][1]);
+  if (result === inf) {
+    return { result, path: [] };
+  }
+  let path = [];
+  let i = m, j = n, k = dp[m][n][0] < dp[m][n][1] ? 0 : 1;
+
+  while (i !== 0 || j !== 0) {
+    const [prevI, prevJ, prevK] = backtrack[i][j][k];
+    if (i - 1 === prevI && j - 1 === prevJ) {
+      path.push(j - 1);
+    }
+    i = prevI;
+    j = prevJ;
+    k = prevK;
+  }
+
+  path.reverse();
+  return { result, path };
+}
+

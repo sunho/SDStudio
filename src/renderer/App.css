@@ -1,14 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@font-face {
-  font-family: 'Noto Sans';
-  src: url('../../assets/fonts/NotoSans-Regular.ttf') format('truetype'),
-       url('../../assets/fonts/NotoSans-Bold.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
 
 body {
   font-family: 'Noto Sans', sans-serif;
@@ -279,4 +273,14 @@ input[type='number']::-webkit-outer-spin-button {
   to {
     clip-path: inset(0 0 0 0);
   }
+}
+
+.always-show-scroll::-webkit-scrollbar {
+  width: 7px;
+}
+
+.always-show-scroll::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, .5);
+  box-shadow: 0 0 1px rgba(255, 255, 255, .5);
 }
