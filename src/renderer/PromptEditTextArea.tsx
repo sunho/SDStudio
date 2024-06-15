@@ -86,6 +86,7 @@ class CursorMemorizeEditor {
   onUpArrow: (editor: CursorMemorizeEditor) => void;
   onDownArrow: (editor: CursorMemorizeEditor) => void;
   onEnter: (editor: CursorMemorizeEditor) => void;
+  onEsc: (editor: CursorMemorizeEditor) => void;
   autocomplete: boolean;
   historyBuf: any;
   redoBuf: any;
@@ -97,7 +98,8 @@ class CursorMemorizeEditor {
     redoBuf: any,
     onUpArrow: (editor: CursorMemorizeEditor) => void,
     onDownArrow: (editor: CursorMemorizeEditor) => void,
-    onEnter: (editor: CursorMemorizeEditor) => void
+    onEnter: (editor: CursorMemorizeEditor) => void,
+    onEsc: (editor: CursorMemorizeEditor) => void
   ) {
     this.compositionBuffer = [];
     this.previousRange = undefined;
@@ -113,6 +115,7 @@ class CursorMemorizeEditor {
     this.onUpArrow = onUpArrow;
     this.onDownArrow = onDownArrow;
     this.onEnter = onEnter;
+    this.onEsc = onEsc;
   }
 
   getCaretPosition() {
@@ -226,7 +229,7 @@ class CursorMemorizeEditor {
       return '';
     }
     let curText = this.domText;
-    let startIdx = start+1;
+    let startIdx = start;
     let endIdx = end;
     while (startIdx > 0 && curText[startIdx-1] !== ',') {
       startIdx--;
@@ -243,7 +246,7 @@ class CursorMemorizeEditor {
   setCurWord(word: string) {
     const [start,end] = this.getCaretPosition();
     let curText = this.domText;
-    let startIdx = start+1;
+    let startIdx = start;
     let endIdx = end;
     while (startIdx > 0 && curText[startIdx-1] !== ',') {
       startIdx--;
@@ -430,20 +433,39 @@ class CursorMemorizeEditor {
         e.preventDefault();
         let newPos = start;
         if (range.collapsed) {
+          let delAmount = 1;
+          const massDel = e.shiftKey || e.metaKey;
+          if (massDel) {
+            let i = start-2;
+            const blanks = ' \t\n\u200B';
+            if (!blanks.includes(this.curText[start-1])) {
+              while (i >= 0 && !blanks.includes(this.curText[i])) {
+                i--;
+                delAmount++;
+              }
+            }
+          }
           if (start !== 0) {
             this.pushHistory();
             if (this.compositionBuffer.length) {
-              this.compositionBuffer.pop();
-              const txt = Hangul.assemble(this.compositionBuffer);
-              if (txt === '') {
-                newPos--;
-                this.updateDOM(this.curText);
+              if (!massDel) {
+                this.compositionBuffer.pop();
+                const txt = Hangul.assemble(this.compositionBuffer);
+                if (txt === '') {
+                  newPos--;
+                  this.updateDOM(this.curText);
+                } else {
+                  this.updateDOM(this.curText.substring(0, start-1) + txt + this.curText.substring(start-1));
+                }
               } else {
-                this.updateDOM(this.curText.substring(0, start-1) + txt + this.curText.substring(start-1));
+                newPos -= delAmount;
+                this.compositionBuffer = [];
+                this.updateCurText(this.curText.substring(0, start-delAmount) + this.curText.substring(start-1));
+                this.updateDOM(this.curText);
               }
             } else {
-              newPos--;
-              this.updateCurText(this.curText.substring(0, start-1) + this.curText.substring(start));
+              newPos-=delAmount;
+              this.updateCurText(this.curText.substring(0, start-delAmount) + this.curText.substring(start));
               this.updateDOM(this.curText);
             }
           }
@@ -671,7 +693,7 @@ const PromptEditTextArea = ({
       idRef.current++;
       const myId = idRef.current;
       const word = me.getCurWord();
-      
+
       if (updateAutoComplete) {
         invoke('search-tags', trimByBraces(word)).then(async (tags: any[]) => {
           if (myId !== idRef.current) return;

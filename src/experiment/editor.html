@@ -302,23 +302,52 @@ class CursorMemorizeEditor {
         e.preventDefault();
         let newPos = start;
         if (range.collapsed) {
+          let delAmount = 1;
+          if (e.shiftKey) {
+            let i = start-1;
+              while (i >= 0 && !' \t\n'.includes(this.curText[i])) {
+                i--;
+                delAmount++;
+              }
+          }
           if (start !== 0) {
             if (this.compositionBuffer.length) {
-              this.compositionBuffer.pop();
-              const txt = Hangul.assemble(this.compositionBuffer);
-              if (txt === '') {
-                newPos--;
-                this.updateDOM(this.curText);
+              if (delAmount === 1) {
+                this.compositionBuffer.pop();
+                const txt = Hangul.assemble(this.compositionBuffer);
+                if (txt === '') {
+                  newPos--;
+                  this.updateDOM(this.curText);
+                } else {
+                  this.updateDOM(this.curText.substring(0, start-1) + txt + this.curText.substring(start-1));
+                }
               } else {
-                this.updateDOM(this.curText.substring(0, start-1) + txt + this.curText.substring(start-1));
+                this.compositionBuffer = [];
+                this.updateDOM(this.curText.substring(0, start-delAmount) + this.curText.substring(start-1));
               }
             } else {
-              newPos--;
-              this.updateCurText(this.curText.substring(0, start-1) + this.curText.substring(start));
+              let delAmount = 1;
+              if (e.shiftKey) {
+                let i = start;
+                  while (i >= 0 && !' \t\n'.includes(this.curText[i])) {
+                    i--;
+                    delAmount++;
+                  }
+              }
+              newPos-=delAmount;
+              this.updateCurText(this.curText.substring(0, start-delAmount) + this.curText.substring(start));
               this.updateDOM(this.curText);
             }
           }
         } else {
+          let delAmount = 1;
+          if (e.shiftKey) {
+            let i = start-1;
+              while (i >= 0 && !' \t\n'.includes(this.curText[i])) {
+                i--;
+                delAmount++;
+              }
+          }
           if (this.compositionBuffer.length) {
             this.compositionBuffer = [];
           }
@@ -329,7 +358,6 @@ class CursorMemorizeEditor {
       }
     });
   }
-
 
   async handleBeforeInput(e) {
     e.preventDefault();
