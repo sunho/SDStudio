@@ -69,6 +69,11 @@ const configuration: webpack.Configuration = {
         test: /\.(png|jpg|jpeg|gif)$/i,
         type: 'asset/resource',
       },
+      // Images
+      {
+        test: /\.(csv)$/i,
+        type: 'asset/resource',
+      },
       // SVG
       {
         test: /\.svg$/,

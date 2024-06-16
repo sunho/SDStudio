@@ -2059,9 +2059,9 @@ class AppUpdateNoticeService extends EventTarget {
         if (this.current === '') this.current = await invoke('get-version');
 
         const latest = await this.getLatestRelease('sunho', 'SDStudio');
-        if (this.current !== latest) {
+        console.log("latst", this.current, latest);
+        if (this.isOutdated(this.current, latest)) {
           this.outdated = true;
-          this.current = latest;
           this.dispatchEvent(new CustomEvent('updated', { detail: { } }));
         }
       } catch (e: any) {
@@ -2069,6 +2069,24 @@ class AppUpdateNoticeService extends EventTarget {
       }
       await sleep(UPDATE_SERVICE_INTERVAL);
     }
+  }
+
+  isOutdated(current: string, latest: string): boolean {
+    const currentParts = current.split('.').map(Number);
+    const latestParts = latest.split('.').map(Number);
+
+    for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
+      const currentPart = currentParts[i] || 0;
+      const latestPart = latestParts[i] || 0;
+
+      if (currentPart < latestPart) {
+        return true;
+      } else if (currentPart > latestPart) {
+        return false;
+      }
+    }
+
+    return false; // they are equal
   }
 }
 
