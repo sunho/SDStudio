@@ -74,6 +74,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          python3 -m pip install setuptools
           npm install
           cd src/native
           npm install
