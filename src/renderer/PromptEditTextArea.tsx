@@ -6,6 +6,8 @@ import Denque from 'denque';
 import { WordTag, calcGapMatch, highlightPrompt, invoke, promptService } from './models';
 import { FaBook, FaBox, FaBrush, FaDatabase, FaPaintBrush, FaTag } from 'react-icons/fa';
 import { FaPerson } from "react-icons/fa6";
+import { FixedSizeList as List } from 'react-window';
+
 
 interface PromptEditTextAreaProps {
   value: string;
@@ -81,7 +83,7 @@ class CursorMemorizeEditor {
   domText: string;
   editor: HTMLElement;
   clipboard: HTMLElement;
-  highlightPrompt: (editor: CursorMemorizeEditor, text: string, updateAutoComplete: boolean) => string;
+  highlightPrompt: (editor: CursorMemorizeEditor, text: string, curWord: string, updateAutoComplete: boolean) => string;
   onUpdated: (editor: CursorMemorizeEditor, text: string) => void;
   onUpArrow: (editor: CursorMemorizeEditor) => void;
   onDownArrow: (editor: CursorMemorizeEditor) => void;
@@ -92,7 +94,7 @@ class CursorMemorizeEditor {
   redoBuf: any;
   constructor(editor: HTMLElement,
     clipboard: HTMLElement,
-    highlightPrompt: (editor: CursorMemorizeEditor, text: string, updateAutoComplete: boolean) => string,
+    highlightPrompt: (editor: CursorMemorizeEditor, text: string, curWord: string, updateAutoComplete: boolean) => string,
     onUpdated: (editor: CursorMemorizeEditor, text: string) => void,
     historBuf: any,
     redoBuf: any,
@@ -200,9 +202,10 @@ class CursorMemorizeEditor {
     this.previousRange = pos;
   }
 
-  updateDOM(text: string, updateAutoComplete: boolean = true) {
+  updateDOM(text: string, newPos: number, updateAutoComplete: boolean = true) {
     this.domText = text;
-    this.editor.innerHTML = this.highlightPrompt(this, text, updateAutoComplete) + '<span></span><br>';
+    const cur = this.getCurWord(newPos)
+    this.editor.innerHTML = this.highlightPrompt(this, text, cur, updateAutoComplete) + '<span></span><br>';
   }
 
   updateCurText(text: string, push: boolean = true) {
@@ -223,41 +226,26 @@ class CursorMemorizeEditor {
     this.redoBuf.clear();
   }
 
-  getCurWord() {
-    const [start,end] = this.getCaretPosition();
-    if (start !== end) {
-      return '';
-    }
+  getCurWord(start: number) {
     let curText = this.domText;
     let startIdx = start;
-    let endIdx = end;
-    while (startIdx > 0 && curText[startIdx-1] !== ',') {
+    while (startIdx > 0 && !',\n'.includes(curText[startIdx-1])) {
       startIdx--;
     }
-    while (endIdx < curText.length && curText[endIdx] !== ',') {
-      endIdx++;
-    }
-    if (startIdx >= endIdx) {
-      return '';
-    }
-    return curText.substring(startIdx, endIdx).trim();
+    return curText.substring(startIdx, start+1).trim();
   }
 
   setCurWord(word: string) {
     const [start,end] = this.getCaretPosition();
     let curText = this.domText;
     let startIdx = start;
-    let endIdx = end;
-    while (startIdx > 0 && curText[startIdx-1] !== ',') {
+    while (startIdx > 0 && !',\n'.includes(curText[startIdx-1])) {
       startIdx--;
     }
-    while (endIdx < curText.length && curText[endIdx] !== ',') {
-      endIdx++;
-    }
-    if (startIdx !== 0)
+    if (startIdx !== 0 && curText[startIdx-1] !== '\n')
       word = ' ' + word;
-    this.updateCurText(curText.substring(0, startIdx) + word + curText.substring(endIdx));
-    this.updateDOM(this.curText, false);
+    this.updateCurText(curText.substring(0, startIdx) + word + curText.substring(start));
+    this.updateDOM(this.curText, startIdx, false);
     this.setCaretPosition([startIdx + word.length, startIdx + word.length]);
   }
 
@@ -286,12 +274,12 @@ class CursorMemorizeEditor {
         this.compositionBuffer = this.compositionBuffer.slice(found);
         newPos++;
         txt = txt[1];
-        this.updateDOM(this.curText.substring(0, start) + txt + this.curText.substring(start));
+        this.updateDOM(this.curText.substring(0, start) + txt + this.curText.substring(start), newPos);
       } else {
         if (txtB.length === 0) {
-          this.updateDOM(this.curText.substring(0, start) + txt + this.curText.substring(start));
+          this.updateDOM(this.curText.substring(0, start) + txt + this.curText.substring(start), newPos);
         } else {
-          this.updateDOM(this.curText.substring(0, start-1) + txt + this.curText.substring(start-1));
+          this.updateDOM(this.curText.substring(0, start-1) + txt + this.curText.substring(start-1), newPos);
         }
       }
     } else {
@@ -299,12 +287,12 @@ class CursorMemorizeEditor {
         let txt = Hangul.assemble(this.compositionBuffer);
         this.updateCurText(this.curText.substring(0,start-1) + txt + inputChar + this.curText.substring(start-1));
         this.compositionBuffer = [];
-        this.updateDOM(this.curText);
         newPos++;
+        this.updateDOM(this.curText, newPos);
       } else {
         this.updateCurText(this.curText.substring(0, start) + inputChar + this.curText.substring(start));
-        this.updateDOM(this.curText);
         newPos++;
+        this.updateDOM(this.curText, newPos);
       }
     }
     await this.setCaretPosition([newPos,newPos]);
@@ -370,7 +358,7 @@ class CursorMemorizeEditor {
         this.pushHistory();
         await navigator.clipboard.writeText(this.curText.substring(start, end));
         this.updateCurText(this.curText.substring(0, start) + this.curText.substring(end));
-        this.updateDOM(this.curText);
+        this.updateDOM(this.curText, start);
         await this.setCaretPosition([start,start]);
         return;
       }
@@ -382,7 +370,7 @@ class CursorMemorizeEditor {
             this.compositionBuffer = [];
             this.historyBuf.push(entry);
             this.updateCurText(entry.text, false);
-            this.updateDOM(this.curText);
+            this.updateDOM(this.curText, entry.cursorPos, false);
             await this.setCaretPosition(entry.cursorPos);
           }
         } else {
@@ -391,7 +379,7 @@ class CursorMemorizeEditor {
             this.compositionBuffer = [];
             this.redoBuf.push(entry);
             this.updateCurText(entry.text, false);
-            this.updateDOM(this.curText);
+            this.updateDOM(this.curText, entry.cursorPos, false);
             await this.setCaretPosition(entry.cursorPos);
           }
         }
@@ -404,7 +392,7 @@ class CursorMemorizeEditor {
           this.compositionBuffer = [];
           this.historyBuf.push(entry);
           this.updateCurText(entry.text, false);
-          this.updateDOM(this.curText);
+          this.updateDOM(this.curText, entry.curPos, false);
           await this.setCaretPosition(entry.cursorPos);
         }
         return;
@@ -425,7 +413,7 @@ class CursorMemorizeEditor {
           }
         }
         this.updateCurText(this.curText.substring(0, cursor) + '\n' + this.curText.substring(cursor));
-        this.updateDOM(this.curText);
+        this.updateDOM(this.curText, start+1, false);
         await this.setCaretPosition([start+1,start+1]);
         return;
       }
@@ -453,20 +441,20 @@ class CursorMemorizeEditor {
                 const txt = Hangul.assemble(this.compositionBuffer);
                 if (txt === '') {
                   newPos--;
-                  this.updateDOM(this.curText);
+                  this.updateDOM(this.curText, newPos);
                 } else {
-                  this.updateDOM(this.curText.substring(0, start-1) + txt + this.curText.substring(start-1));
+                  this.updateDOM(this.curText.substring(0, start-1) + txt + this.curText.substring(start-1), newPos);
                 }
               } else {
                 newPos -= delAmount;
                 this.compositionBuffer = [];
                 this.updateCurText(this.curText.substring(0, start-delAmount) + this.curText.substring(start-1));
-                this.updateDOM(this.curText);
+                this.updateDOM(this.curText, newPos);
               }
             } else {
               newPos-=delAmount;
               this.updateCurText(this.curText.substring(0, start-delAmount) + this.curText.substring(start));
-              this.updateDOM(this.curText);
+              this.updateDOM(this.curText, newPos);
             }
           }
         } else {
@@ -475,9 +463,18 @@ class CursorMemorizeEditor {
             this.compositionBuffer = [];
           }
           this.updateCurText(this.curText.substring(0, start) + this.curText.substring(end));
-          this.updateDOM(this.curText);
+          this.updateDOM(this.curText, newPos);
         }
         await this.setCaretPosition([newPos,newPos]);
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (this.autocomplete) {
+          this.onEsc(this);
+        } else {
+          this.flushCompositon(this.previousRange);
+        }
+        return;
       }
     });
   }
@@ -518,7 +515,7 @@ class CursorMemorizeEditor {
         cursor++;
       }
       this.updateCurText(this.curText.substring(0, cursor) + text + this.curText.substring(end));
-      this.updateDOM(this.curText);
+      this.updateDOM(this.curText, cursor+text.length, false);
       await this.setCaretPosition([cursor+text.length,cursor+text.length]);
     });
   }
@@ -529,7 +526,7 @@ const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSe
   const [posY, setPosY] = useState(0);
   const [matchMasks, setMatchMasks] = useState<number[][]>([]);
   const tagsRef = useRef<any[]>([]);
-  const idRef = useRef<number>(0);
+  const listRef = createRef<any>();
   const categoryIcon = (category: number) => {
     if (category === 0) return <FaTag/>
     if (category === 1) return <FaPaintBrush/>
@@ -543,28 +540,15 @@ const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSe
     setPosY(clientY + 22);
   }, [clientX, clientY]);
   useEffect(() => {
-    while (tagsRef.current.length < tags.length) {
-      tagsRef.current.push(createRef());
-    }
-    setMatchMasks([]);
-    // idRef.current++;
-    // const myId = idRef.current;
     setMatchMasks(tags.map(tag =>
       calcGapMatch(curWord, tag.word).path
     ));
-    // setTimeout(() => {
-    //   if (myId !== idRef.current) return;
-    //   setMatchMasks(tags.map(tag =>
-    //     calcGapMatch(curWord, tag.word).path
-    //   ));
-    // }, 250);
   }, [tags, curWord]);
   useEffect(() => {
-    if (selectedTag >= 0 && selectedTag < tagsRef.current.length) {
-      if (tagsRef.current[selectedTag].current)
-        tagsRef.current[selectedTag].current.scrollIntoView({ block: 'center' });
-    }
-  }, [selectedTag, tagsRef.current.length]);
+    console.log(selectedTag, tagsRef.current.length)
+    if (listRef.current)
+      listRef.current.scrollToItem(selectedTag, "smart");
+  }, [listRef,selectedTag, tagsRef.current.length]);
   const processWord = (word: string, mask: number[]) => {
     const sections = [];
     let currentSection = { text: '', bold: false };
@@ -589,12 +573,40 @@ const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSe
 
     return sections;
   };
+
+  const formatCount = (count: number) => {
+    if (count > 1000) {
+      return (count / 1000).toFixed(1) + 'k';
+    }
+    return count;
+  }
+
+  const renderRow = ({ index, style } : { index: number, style: any }) => (
+    <div
+      ref={tagsRef.current[index]}
+      className={'hover:brightness-95 active:brightness-90 cursor-pointer ' + (index === selectedTag ? 'flex items-center p-1 bg-gray-200' : 'flex bg-white items-center p-1')}
+      style={style}
+      key={index}
+      onMouseDown={() => onSelectTag(index)}
+    >
+      <span className="text-gray-600 mr-1 flex-none">{categoryIcon(tags[index].category)}</span>
+      <div className="flex-1 truncate h-full">
+        {matchMasks.length ? processWord(tags[index].word, matchMasks[index]).map((section, idx2) => (
+          <span key={idx2} className={section.bold ? 'font-bold' : ''}>
+            {section.text}
+          </span>
+        )) : tags[index].word}
+        {tags[index].redirect!=='null' ? <span className="text-gray-400">→{tags[index].redirect}</span> : ''}
+      </div>
+      <div className="flex-none text-right">{formatCount(tags[index].freq)}</div>
+    </div>
+  );
   return (
     <div
       onMouseDown={(e) => {
         e.stopPropagation();
       }}
-      className="fixed bg-white border border-gray-300 rounded-lg shadow-lg overflow-y-scroll z-10 always-show-scroll"
+      className="fixed bg-white border border-gray-300 rounded-lg shadow-lg z-30"
       style={
         {
           display: (tags.length > 0 && (clientX !== 0 || clientY !== 0)) ? 'block' : 'none',
@@ -604,20 +616,17 @@ const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSe
           top: posY,
         }
       }>
-      <ul>
-        {tags.map((tag, idx) => (
-          <li ref={tagsRef.current[idx]} className={(idx === selectedTag ? 'flex items-center p-1 bg-gray-200' : 'flex items-center p-1')} key={idx}>
-            <span className="text-gray-600 mr-1">{categoryIcon(tag.category)}</span>
-            <div>
-            {matchMasks.length ? processWord(tag.word, matchMasks[idx]).map((section, idx2) => (
-              <span key={idx2} className={section.bold ? 'font-bold' : ''}>
-                {section.text}
-              </span>
-            )) : tag.word}
-            </div>
-          </li>
-        ))}
-      </ul>
+       <List
+        ref={listRef}
+        className="always-show-scroll"
+        height={200}
+        itemCount={tags.length}
+        itemSize={31}
+        width={400}
+        overscanRowCount={16}
+      >
+        {renderRow}
+      </List>
     </div>
   );
 };
@@ -671,9 +680,17 @@ const PromptEditTextArea = ({
   const [clientX, setClientX] = useState(0);
   const [clientY, setClientY] = useState(0);
   const tagsRef = useLatest(tags);
-  const idRef = useRef<number>(0);
+  const [id, setId] = useState(0);
+  const cntRef = useRef(0);
   const selectedTagRef = useLatest(selectedTag);
   const curWordRef = useLatest(curWord);
+
+  const closeAutoComplete = () => {
+    setTags([]);
+    setSelectedTag(0);
+    editorModelRef.current.autocomplete = false;
+    setId(id => id + 1);
+  };
 
   const onUpArrow = (me: CursorMemorizeEditor) => {
     if (tagsRef.current.length === 0) return;
@@ -683,61 +700,65 @@ const PromptEditTextArea = ({
     if (tagsRef.current.length === 0) return;
     setSelectedTag((selectedTagRef.current + 1) % tagsRef.current.length);
   };
+  const onEsc = (me: CursorMemorizeEditor) => {
+    closeAutoComplete();
+  };
 
   useEffect(() => {
     if (!editorRef.current) return;
     const onUpdated = (me: CursorMemorizeEditor, text: string) => {
       onChange(text);
     };
-    const highlight = (me: CursorMemorizeEditor, text: string, updateAutoComplete: boolean) => {
-      idRef.current++;
-      const myId = idRef.current;
-      const word = me.getCurWord();
-
+    const highlight = (me: CursorMemorizeEditor, text: string, word: string, updateAutoComplete: boolean) => {
       if (updateAutoComplete) {
-        invoke('search-tags', trimByBraces(word)).then(async (tags: any[]) => {
-          if (myId !== idRef.current) return;
-          tags = tags.slice(0, 64);
-          if (tags.length > 0) {
-            let selection = window.getSelection()!;
-            let range = selection.getRangeAt(0);
-            let rect = range.getBoundingClientRect();
-            if (rect.right === 0 && rect.top === 0) {
-              await new Promise(resolve => requestAnimationFrame(resolve));
-              selection = window.getSelection()!;
-              range = selection.getRangeAt(0);
-              rect = range.getBoundingClientRect();
+        if (word === '') {
+          closeAutoComplete();
+        } else {
+          cntRef.current++;
+          const myId = cntRef.current;
+          invoke('search-tags', trimByBraces(word)).then(async (tags: any[]) => {
+            if (myId !== cntRef.current) return;
+            if (tags.length > 0) {
+              let selection = window.getSelection()!;
+              let range = selection.getRangeAt(0);
+              let rect = range.getBoundingClientRect();
+              if (rect.right === 0 && rect.top === 0) {
+                await new Promise(resolve => requestAnimationFrame(resolve));
+                selection = window.getSelection()!;
+                range = selection.getRangeAt(0);
+                rect = range.getBoundingClientRect();
+              }
+              setClientX(rect.right);
+              setClientY(rect.top);
+              setSelectedTag(0);
+              setCurWord(word);
+              setTags(tags);
+              editorModelRef.current.autocomplete = true;
+            } else {
+              closeAutoComplete();
             }
-            setClientX(rect.right);
-            setClientY(rect.top);
-            setSelectedTag(0);
-            setCurWord(word);
-            editorModelRef.current.autocomplete = true;
-          } else {
-            editorModelRef.current.autocomplete = false;
-          }
-          setTags(tags);
-        });
+          });
+        }
       }
       return highlightPrompt(curSession!, text);
     }
 
     const onEnter = (me: CursorMemorizeEditor) => {
       if (tagsRef.current.length === 0) return;
-      const newWord = replaceMiddleWord(curWordRef.current, tagsRef.current[selectedTagRef.current].word);
-      me.setCurWord(newWord);
-      setTags([]);
-      setSelectedTag(0);
-      me.autocomplete = false;
+      const tag = tagsRef.current[selectedTagRef.current];
+      const tagWord = tag.redirect!=='null' ? tag.redirect : tag.word;
+      const newWord = replaceMiddleWord(curWordRef.current, tagWord);
+      editorModelRef.current.setCurWord(newWord);
+      closeAutoComplete();
     };
 
     const editor = new CursorMemorizeEditor(editorRef.current,
       editorRef.current, highlight, onUpdated, historyRef.current, redoRef.current,
-      onUpArrow, onDownArrow, onEnter
+      onUpArrow, onDownArrow, onEnter, onEsc
     );
     editorModelRef.current = editor;
     editor.updateCurText(value);
-    editor.updateDOM(value);
+    editor.updateDOM(value, 0, false);
     const handleKeyDown = (e: any) => editor.handleKeyDown(e);
     editorRef.current.addEventListener('keydown', handleKeyDown);
     const handleBeforeInput = (e: any) => editor.handleBeforeInput(e);
@@ -749,9 +770,7 @@ const PromptEditTextArea = ({
     const handlePaste = (e: any) => editor.handlePaste(e);
     editorRef.current.addEventListener('paste', handlePaste);
     const handleWindowMouseDown = (e: any) => {
-      setTags([]);
-      setSelectedTag(0);
-      editorModelRef.current.autocomplete = false;
+      closeAutoComplete();
       editor.handleWindowMouseDown(e);
     };
     window.addEventListener('mousedown', handleWindowMouseDown);
@@ -771,12 +790,19 @@ const PromptEditTextArea = ({
   }, []);
 
   const onSelectTag = (idx: number) => {
+    if (tagsRef.current.length === 0) return;
+    const tag = tagsRef.current[idx];
+    const tagWord = tag.redirect!=='null' ? tag.redirect : tag.word;
+    const newWord = replaceMiddleWord(curWordRef.current, tagWord);
+    editorModelRef.current.setCurWord(newWord);
+    closeAutoComplete();
   };
 
   useEffect(() => {
     if (editorModelRef.current && value !== editorModelRef.current.curText) {
+      closeAutoComplete();
       editorModelRef.current.updateCurText(value);
-      editorModelRef.current.updateDOM(value);
+      editorModelRef.current.update(value, 0, false);
     }
   }, [value]);
 
@@ -791,7 +817,7 @@ const PromptEditTextArea = ({
         ref={editorRef}
         contentEditable={disabled ? 'false' : 'true'}
       ></div>
-      <PromptAutoComplete curWord={curWord} tags={tags} clientX={clientX} clientY={clientY} selectedTag={selectedTag} onSelectTag={onSelectTag}/>
+      <PromptAutoComplete key={id} curWord={curWord} tags={tags} clientX={clientX} clientY={clientY} selectedTag={selectedTag} onSelectTag={onSelectTag}/>
     </div>
     );
 };

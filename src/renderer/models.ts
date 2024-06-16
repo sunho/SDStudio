@@ -257,7 +257,7 @@ export function cleanPARR(parr: PARR): PARR {
 }
 
 export function toPARR(str: string) {
-  return cleanPARR(str.split(',')).filter((x) => x !== '');
+  return cleanPARR(str.replace('\n',',').split(',')).filter((x) => x !== '');
 }
 
 export type PARR = string[];

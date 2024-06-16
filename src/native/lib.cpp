@@ -1,4 +1,5 @@
 #include <napi.h>
+#include <unordered_set>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -158,13 +159,22 @@ public:
 
   std::vector<Word> search(const std::string& word) {
     const std::string normalized = normalize(word);
-    std::vector<Word> result;
+    std::vector<Word> result_;
+    std::unordered_set<std::string_view> seen;
     for (const auto& item : words) {
       if (isSubsequence(normalized, item.normalized)) {
-        result.push_back(item);
+        if (item.redirect == "null")
+          seen.insert(item.word);
+        result_.push_back(item);
       }
-      if (result.size() >= INITIAL_CUTOFF) {
+      if (result_.size() >= INITIAL_CUTOFF) {
         break;
+      }
+    }
+    std::vector<Word> result;
+    for (const auto& item : result_) {
+      if (item.redirect == "null" || seen.find(item.redirect) == seen.end()) {
+        result.push_back(item);
       }
     }
     std::vector<std::tuple<int,int,int>> scores;
