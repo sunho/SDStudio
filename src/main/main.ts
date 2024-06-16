@@ -18,6 +18,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { NovelAiImageGenService } from './genVendors/nai';
 const sharp = require('sharp');
 const native = require('sdsnative');
+import webpackPaths from '../../.erb/configs/webpack.paths';
 
 import contextMenu from 'electron-context-menu';
 
@@ -351,9 +352,13 @@ const createWindow = async () => {
   // new AppUpdater();
 };
 
+const dataDir = isDebug
+  ? path.join(webpackPaths.appPath, 'data')
+  : path.join(__dirname, '../../data');
+
 (async () => {
   await fs.mkdir(APP_DIR, { recursive: true });
-  const dbCsvContent = await fs.readFile(getAssetPath('db.csv'), 'utf-8');
+  const dbCsvContent = await fs.readFile(path.join(dataDir, 'db.csv'), 'utf-8');
   databaseId = native.createDB('danbooru');
   native.loadDB(databaseId, dbCsvContent);
 })();
