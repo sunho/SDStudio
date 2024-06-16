@@ -75,7 +75,6 @@ jobs:
       - name: Install dependencies
         run: |
           python3 -m pip install setuptools --break-system-packages
-          npm install
           cd src/native
           rm package-lock.json
           npm install
@@ -84,6 +83,9 @@ jobs:
           npm uninstall sharp
           npm install --platform=darwin --arch=x64 sharp@0.32.6
           npm rebuild --platform=darwin --arch=arm64 sharp@0.32.6
+          cd ../..
+          npm install
+
 
 
       - name: Build the application
