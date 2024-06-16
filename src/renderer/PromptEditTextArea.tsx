@@ -81,6 +81,7 @@ class CursorMemorizeEditor {
   previousRange: number[] | any;
   curText: string;
   domText: string;
+  container: HTMLElement;
   editor: HTMLElement;
   clipboard: HTMLElement;
   highlightPrompt: (editor: CursorMemorizeEditor, text: string, curWord: string, updateAutoComplete: boolean) => string;
@@ -92,7 +93,9 @@ class CursorMemorizeEditor {
   autocomplete: boolean;
   historyBuf: any;
   redoBuf: any;
-  constructor(editor: HTMLElement,
+  constructor(
+    container: HTMLElement,
+    editor: HTMLElement,
     clipboard: HTMLElement,
     highlightPrompt: (editor: CursorMemorizeEditor, text: string, curWord: string, updateAutoComplete: boolean) => string,
     onUpdated: (editor: CursorMemorizeEditor, text: string) => void,
@@ -103,6 +106,7 @@ class CursorMemorizeEditor {
     onEnter: (editor: CursorMemorizeEditor) => void,
     onEsc: (editor: CursorMemorizeEditor) => void
   ) {
+    this.container = container;
     this.compositionBuffer = [];
     this.previousRange = undefined;
     this.curText = '';
@@ -203,6 +207,11 @@ class CursorMemorizeEditor {
     selection.removeAllRanges();
     selection.addRange(range);
     this.previousRange = pos;
+    const rect = range.getBoundingClientRect();
+    const parentRect = this.container.getBoundingClientRect();
+    if (rect.bottom > parentRect.bottom) {
+      this.container.scrollTop += rect.bottom - parentRect.bottom;
+    }
   }
 
   updateDOM(text: string, newPos: number, updateAutoComplete: boolean = true) {
@@ -239,17 +248,19 @@ class CursorMemorizeEditor {
   }
 
   setCurWord(word: string) {
-    const [start,end] = this.getCaretPosition();
-    let curText = this.domText;
-    let startIdx = start;
-    while (startIdx > 0 && !',\n'.includes(curText[startIdx-1])) {
-      startIdx--;
-    }
-    if (startIdx !== 0 && curText[startIdx-1] !== '\n')
-      word = ' ' + word;
-    this.updateCurText(curText.substring(0, startIdx) + word + curText.substring(start));
-    this.updateDOM(this.curText, startIdx, false);
-    this.setCaretPosition([startIdx + word.length, startIdx + word.length]);
+    mutex.runExclusive(async () => {
+      const [start,end] = this.getCaretPosition();
+      let curText = this.domText;
+      let startIdx = start;
+      while (startIdx > 0 && !',\n'.includes(curText[startIdx-1])) {
+        startIdx--;
+      }
+      if (startIdx !== 0 && curText[startIdx-1] !== '\n')
+        word = ' ' + word;
+      this.updateCurText(curText.substring(0, startIdx) + word + curText.substring(start));
+      this.updateDOM(this.curText, startIdx, false);
+      await this.setCaretPosition([startIdx + word.length, startIdx + word.length]);
+    });
   }
 
   async handleInput(inputChar: string, collapsed: boolean, pos: number[] | undefined = undefined) {
@@ -673,6 +684,7 @@ const PromptEditTextArea = ({
 }: PromptEditTextAreaProps) => {
   const { curSession } = useContext(AppContext)!;
   const editorRef = useRef<any>(null);
+  const containerRef = useRef<any>(null);
   const clipboardRef = useRef<any>(null);
   const editorModelRef = useRef<any>(null);
   const historyRef = useRef<Denque<HistoryEntry>>(new Denque<HistoryEntry>());
@@ -756,7 +768,7 @@ const PromptEditTextArea = ({
       closeAutoComplete();
     };
 
-    const editor = new CursorMemorizeEditor(editorRef.current,
+    const editor = new CursorMemorizeEditor(containerRef.current, editorRef.current,
       clipboardRef.current, highlight, onUpdated, historyRef.current, redoRef.current,
       onUpArrow, onDownArrow, onEnter, onEsc
     );
@@ -802,25 +814,19 @@ const PromptEditTextArea = ({
     closeAutoComplete();
   };
 
-  useEffect(() => {
-    if (editorModelRef.current && value !== editorModelRef.current.curText) {
-      closeAutoComplete();
-      editorModelRef.current.updateCurText(value);
-      editorModelRef.current.updateDOM(value, 0, false);
-    }
-  }, [value]);
-
   return (
     <div
       ref={innerRef}
       spellCheck={false}
-      className={className + ' overflow-auto'}
+      className={className + ' overflow-hidden h-full'}
     >
-    <div
-      className={'w-full h-full focus:outline-0 whitespace-pre-wrap align-middle'}
-      ref={editorRef}
-      contentEditable={disabled ? 'false' : 'true'}
-    ></div>
+    <div ref={containerRef} className="overflow-auto h-full">
+      <div
+        className={'w-full min-h-full focus:outline-0 whitespace-pre-wrap align-middle'}
+        ref={editorRef}
+        contentEditable={disabled ? 'false' : 'true'}
+      ></div>
+    </div>
     <PromptAutoComplete key={id} curWord={curWord} tags={tags} clientX={clientX} clientY={clientY} selectedTag={selectedTag} onSelectTag={onSelectTag}/>
     <textarea
       className="absolute top-0 left-0 opacity-0 w-0 h-0"
