@@ -166,6 +166,7 @@ class CursorMemorizeEditor {
     await new Promise(resolve => requestAnimationFrame(resolve));
     const selection = window.getSelection()!;
     const range = document.createRange();
+    let foundNode = undefined;
     for (let i = 0; i < 2; i ++) {
       let offset = 0;
       const nodeIterator = document.createNodeIterator(this.editor, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, null, false);
@@ -177,6 +178,7 @@ class CursorMemorizeEditor {
                   range.setStart(currentNode, pos[i] - offset);
                 } else {
                   range.setEnd(currentNode, pos[i] - offset);
+                  foundNode = currentNode;
                 }
                 break;
               }
@@ -189,6 +191,7 @@ class CursorMemorizeEditor {
                   range.setStart(currentNode, pos[i] - offset);
                 } else {
                   range.setEnd(currentNode, pos[i] - offset);
+                  foundNode = currentNode;
                 }
                 break;
             }
@@ -545,7 +548,6 @@ const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSe
     ));
   }, [tags, curWord]);
   useEffect(() => {
-    console.log(selectedTag, tagsRef.current.length)
     if (listRef.current)
       listRef.current.scrollToItem(selectedTag, "smart");
   }, [listRef,selectedTag, tagsRef.current.length]);
@@ -581,8 +583,8 @@ const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSe
     return count;
   }
 
-  const renderRow = ({ index, style } : { index: number, style: any }) => (
-    <div
+  const renderRow = ({ index, style } : { index: number, style: any }) => {
+    return <div
       ref={tagsRef.current[index]}
       className={'hover:brightness-95 active:brightness-90 cursor-pointer ' + (index === selectedTag ? 'flex items-center p-1 bg-gray-200' : 'flex bg-white items-center p-1')}
       style={style}
@@ -596,11 +598,11 @@ const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSe
             {section.text}
           </span>
         )) : tags[index].word}
-        {tags[index].redirect!=='null' ? <span className="text-gray-400">→{tags[index].redirect}</span> : ''}
+        {(tags[index].redirect.trim()!=='null') && <span className="text-gray-400">→{tags[index].redirect}</span>}
       </div>
       <div className="flex-none text-right">{formatCount(tags[index].freq)}</div>
     </div>
-  );
+  };
   return (
     <div
       onMouseDown={(e) => {
@@ -671,6 +673,7 @@ const PromptEditTextArea = ({
 }: PromptEditTextAreaProps) => {
   const { curSession } = useContext(AppContext)!;
   const editorRef = useRef<any>(null);
+  const clipboardRef = useRef<any>(null);
   const editorModelRef = useRef<any>(null);
   const historyRef = useRef<Denque<HistoryEntry>>(new Denque<HistoryEntry>());
   const redoRef = useRef<Denque<HistoryEntry>>(new Denque<HistoryEntry>());
@@ -720,6 +723,7 @@ const PromptEditTextArea = ({
             if (myId !== cntRef.current) return;
             if (tags.length > 0) {
               let selection = window.getSelection()!;
+              if (selection.rangeCount === 0) return;
               let range = selection.getRangeAt(0);
               let rect = range.getBoundingClientRect();
               if (rect.right === 0 && rect.top === 0) {
@@ -746,14 +750,14 @@ const PromptEditTextArea = ({
     const onEnter = (me: CursorMemorizeEditor) => {
       if (tagsRef.current.length === 0) return;
       const tag = tagsRef.current[selectedTagRef.current];
-      const tagWord = tag.redirect!=='null' ? tag.redirect : tag.word;
+      const tagWord = tag.redirect.trim()!=='null' ? tag.redirect.trim() : tag.word;
       const newWord = replaceMiddleWord(curWordRef.current, tagWord);
       editorModelRef.current.setCurWord(newWord);
       closeAutoComplete();
     };
 
     const editor = new CursorMemorizeEditor(editorRef.current,
-      editorRef.current, highlight, onUpdated, historyRef.current, redoRef.current,
+      clipboardRef.current, highlight, onUpdated, historyRef.current, redoRef.current,
       onUpArrow, onDownArrow, onEnter, onEsc
     );
     editorModelRef.current = editor;
@@ -792,7 +796,7 @@ const PromptEditTextArea = ({
   const onSelectTag = (idx: number) => {
     if (tagsRef.current.length === 0) return;
     const tag = tagsRef.current[idx];
-    const tagWord = tag.redirect!=='null' ? tag.redirect : tag.word;
+    const tagWord = tag.redirect.trim()!=='null' ? tag.redirect.trim() : tag.word;
     const newWord = replaceMiddleWord(curWordRef.current, tagWord);
     editorModelRef.current.setCurWord(newWord);
     closeAutoComplete();
@@ -802,7 +806,7 @@ const PromptEditTextArea = ({
     if (editorModelRef.current && value !== editorModelRef.current.curText) {
       closeAutoComplete();
       editorModelRef.current.updateCurText(value);
-      editorModelRef.current.update(value, 0, false);
+      editorModelRef.current.updateDOM(value, 0, false);
     }
   }, [value]);
 
@@ -810,14 +814,19 @@ const PromptEditTextArea = ({
     <div
       ref={innerRef}
       spellCheck={false}
-      className={className + ' overflow-auto relative'}
+      className={className + ' overflow-auto'}
     >
-      <div
-        className={'w-full h-full focus:outline-0 whitespace-pre-wrap align-middle'}
-        ref={editorRef}
-        contentEditable={disabled ? 'false' : 'true'}
-      ></div>
-      <PromptAutoComplete key={id} curWord={curWord} tags={tags} clientX={clientX} clientY={clientY} selectedTag={selectedTag} onSelectTag={onSelectTag}/>
+    <div
+      className={'w-full h-full focus:outline-0 whitespace-pre-wrap align-middle'}
+      ref={editorRef}
+      contentEditable={disabled ? 'false' : 'true'}
+    ></div>
+    <PromptAutoComplete key={id} curWord={curWord} tags={tags} clientX={clientX} clientY={clientY} selectedTag={selectedTag} onSelectTag={onSelectTag}/>
+    <textarea
+      className="absolute top-0 left-0 opacity-0 w-0 h-0"
+      ref={clipboardRef}
+      value=''
+      onChange={(e) => {e.target.value=''}}></textarea>
     </div>
     );
 };
