@@ -74,7 +74,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python3 -m pip install setuptools
+          python3 -m pip install setuptools --break-system-packages
           npm install
           cd src/native
           npm install
