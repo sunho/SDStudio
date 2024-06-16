@@ -15,7 +15,11 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          cd src/native
+          npm install
+          cd ../..
+          npm install
 
       - name: Build the application
         run: npm run package
@@ -71,6 +75,9 @@ jobs:
       - name: Install dependencies
         run: |
           npm install
+          cd src/native
+          npm install
+          cd ../..
           cd release/app
           npm uninstall sharp
           npm install --platform=darwin --arch=x64 sharp@0.32.6
