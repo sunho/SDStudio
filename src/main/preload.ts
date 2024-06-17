@@ -21,7 +21,9 @@ export type Channels =
   | 'zip-files'
   | 'get-version'
   | 'open-web-page'
-  | 'search-tags';
+  | 'search-tags'
+  | 'load-pieces-db'
+  | 'search-pieces';
 
 const electronHandler = {
   ipcRenderer: {

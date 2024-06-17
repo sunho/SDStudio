@@ -273,6 +273,7 @@ export default function App() {
           curSession.library[json.description] = json;
           sessionService.markUpdated(curSession.name);
           sessionService.pieceLibraryImported();
+          sessionService.reloadPieceLibraryDB(curSession);
           pushDialog({
             type: 'yes-only',
             text: '조각모음을 임포트 했습니다',
@@ -340,6 +341,8 @@ export default function App() {
   }, [curSession, dialogs, messages]);
   useEffect(() => {
     window.curSession = curSession;
+    if (curSession)
+      sessionService.reloadPieceLibraryDB(curSession);
     return () => {
       window.curSession = undefined;
     };

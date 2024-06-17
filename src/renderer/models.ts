@@ -535,6 +535,16 @@ export class SessionService extends ResourceSyncService<Session> {
   sceneOrderChanged(): void {
     this.dispatchEvent(new CustomEvent('scene-order-changed', {}));
   }
+
+  async reloadPieceLibraryDB(session: Session) {
+    const res = [];
+    for (const [k,v] of Object.entries(session.library)) {
+      for (const piece of Object.keys(v.pieces)) {
+        res.push(k + "." + piece);
+      }
+    }
+    await invoke('load-pieces-db', res);
+  }
 }
 
 export const sessionService = new SessionService();
