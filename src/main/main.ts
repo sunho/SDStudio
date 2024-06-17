@@ -22,7 +22,16 @@ import webpackPaths from '../../.erb/configs/webpack.paths';
 
 import contextMenu from 'electron-context-menu';
 
-let databaseId: number = -1;
+interface DataBaseConns {
+  tagDBId: number;
+  pieceDBId: number;
+}
+
+let databases: DataBaseConns = {
+  tagDBId: -1,
+  pieceDBId: -1
+};
+
 let mainWindow: BrowserWindow | null = null;
 
 const imageGen: ImageGenService = new NovelAiImageGenService();
@@ -126,7 +135,18 @@ ipcMain.handle('zip-files', async (event, files, outPath) => {
 const fs = require('fs').promises;
 
 ipcMain.handle('search-tags', async (event, word) => {
-  return native.search(databaseId, word);
+  return native.search(databases.tagDBId, word);
+});
+
+ipcMain.handle('load-pieces-db', async (event, pieces) => {
+  const csv = pieces.map((x: string) => {
+    return `<${x}>,0,0,null`;
+  }).join('\n');
+  native.loadDB(databases.pieceDBId, csv);
+});
+
+ipcMain.handle('search-pieces', async (event, word) => {
+  return native.search(databases.pieceDBId, word);
 });
 
 ipcMain.handle('list-files', async (event, arg) => {
@@ -359,8 +379,9 @@ const dataDir = isDebug
 (async () => {
   await fs.mkdir(APP_DIR, { recursive: true });
   const dbCsvContent = await fs.readFile(path.join(dataDir, 'db.csv'), 'utf-8');
-  databaseId = native.createDB('danbooru');
-  native.loadDB(databaseId, dbCsvContent);
+  databases.tagDBId = native.createDB('danbooru');
+  native.loadDB(databases.tagDBId, dbCsvContent);
+  databases.pieceDBId = native.createDB('pieces');
 })();
 
 const gotTheLock = app.requestSingleInstanceLock()

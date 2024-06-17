@@ -5,7 +5,7 @@ import { AppContext } from './App';
 import Denque from 'denque';
 import { WordTag, calcGapMatch, highlightPrompt, invoke, promptService } from './models';
 import { FaBook, FaBox, FaBrush, FaDatabase, FaPaintBrush, FaTag } from 'react-icons/fa';
-import { FaPerson } from "react-icons/fa6";
+import { FaPerson, FaStar } from "react-icons/fa6";
 import { FixedSizeList as List } from 'react-window';
 
 
@@ -602,7 +602,7 @@ const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSe
       key={index}
       onMouseDown={() => onSelectTag(index)}
     >
-      <span className="text-gray-600 mr-1 flex-none">{categoryIcon(tags[index].category)}</span>
+      <span className="text-gray-600 mr-1 flex-none">{tags[index].word.startsWith('<') ? <FaStar></FaStar> : categoryIcon(tags[index].category)}</span>
       <div className="flex-1 truncate h-full">
         {matchMasks.length ? processWord(tags[index].word, matchMasks[index]).map((section, idx2) => (
           <span key={idx2} className={section.bold ? 'font-bold' : ''}>
@@ -611,7 +611,7 @@ const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSe
         )) : tags[index].word}
         {(tags[index].redirect.trim()!=='null') && <span className="text-gray-400">→{tags[index].redirect}</span>}
       </div>
-      <div className="flex-none text-right">{formatCount(tags[index].freq)}</div>
+      {!tags[index].word.startsWith('<') && <div className="flex-none text-right">{formatCount(tags[index].freq)}</div>}
     </div>
   };
   return (
@@ -729,9 +729,10 @@ const PromptEditTextArea = ({
         if (word === '') {
           closeAutoComplete();
         } else {
+          const action = word.startsWith('<') ? 'search-pieces' : 'search-tags';
           cntRef.current++;
           const myId = cntRef.current;
-          invoke('search-tags', trimByBraces(word)).then(async (tags: any[]) => {
+          invoke(action, trimByBraces(word)).then(async (tags: any[]) => {
             if (myId !== cntRef.current) return;
             if (tags.length > 0) {
               let selection = window.getSelection()!;

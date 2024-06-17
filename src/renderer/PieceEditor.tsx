@@ -118,6 +118,7 @@ const PieceEditor = () => {
                 }
                 curSession!.library[name] = { pieces: {}, description: name };
                 setSelectedPieceLibrary(name);
+                sessionService.reloadPieceLibraryDB(curSession!);
                 onUpdated();
               },
             });
@@ -158,6 +159,7 @@ const PieceEditor = () => {
                 delete curSession!.library[selectedPieceLibrary!];
                 setSelectedPieceLibrary(null);
                 onUpdated();
+                sessionService.reloadPieceLibraryDB(curSession!);
               },
             });
           }}
@@ -183,6 +185,7 @@ const PieceEditor = () => {
                   onClick={() => {
                     delete curPieceLibrary.pieces[key];
                     onUpdated();
+                    sessionService.reloadPieceLibraryDB(curSession!);
                   }}
                 >
                   <FaTrash size={20} color="#ef4444" />
@@ -214,6 +217,7 @@ const PieceEditor = () => {
                   curPieceLibrary!.pieces[name] = '';
                   elementsRef.current[name] = createRef();
                   onUpdated();
+                  sessionService.reloadPieceLibraryDB(curSession!);
                 },
               });
             }}

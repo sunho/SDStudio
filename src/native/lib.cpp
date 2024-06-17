@@ -95,6 +95,8 @@ public:
   std::vector<Word> words;
   Database(const std::string& name) : name(name) {}
   void load(const std::string& csvData) {
+    words.clear();
+    literals.clear();
     std::istringstream iss(csvData);
     std::string line;
     while (std::getline(iss, line)) {
