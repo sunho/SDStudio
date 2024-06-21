@@ -1,0 +1,9 @@
+ 얼굴만 : face
+ 초상화 : portrait
+ 상체(얼굴~몸통) : upper_body
+ 하체(상체~하체) : lower_body
+ 얼굴~허벅지만 : cowboy_shot
+ 얼굴~발목만 : feet_out_of_frame
+ 전신 : full body
+ 멀리서 전신 : wide_shot
+ 매우 멀리서 전신 : very_wide_shot

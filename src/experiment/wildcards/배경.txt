@@ -1,0 +1,57 @@
+아쿠아 : aqua background
+베이지 : beige background
+검정 : black background
+파랑 : blue background
+갈색 : brown background
+초록 : green background
+회색 : grey background
+라벤더 : lavender background
+주황 : orange background
+분홍 : pink background
+보라 : purple background
+빨강 : red background
+세피아 : sepia background
+황갈색 : tan background
+하양 : white background
+노랑 : yellow background
+그라데이션 : gradient background
+여러 색 : multicolored background
+무지개 : rainbow background
+천국 : heaven condition
+투톤 : two-tone background
+아가일 : argyle background
+체크무늬 : checkered background
+음식 테마 : food-themed background
+하프톤 : halftone background
+벌집 : honeycomb background
+발자국 : paw print background
+격자무늬 : plaid background
+물방울 무늬 : polka dot background
+심플 : simple background
+눈송이 : snowflake background
+나선형 : spiral background
+딸기 : strawberry background
+줄무늬 : striped background
+햇살 : sunburst background
+배경 글자 : background text
+백라이트 : backlighting
+블렌딩 : blending
+흐릿한 배경 : blurry background
+카드 : card background
+치비 인셋 : chibi inset
+드라마 레이어 : drama layer
+불타는 듯한 : fiery background
+깃발 : flag background
+꽃무늬 : floral background
+과일 : fruit background
+하트 : heart background
+이미지보드 색상 : imageboard colors
+레이스 : lace background
+모자이크 : mosaic background
+패널 : paneled background
+사진 : photo background
+투사된 인셋 : projected inset
+심플 : simple background
+별이 빛나는 : starry background
+투명 : transparent background
+줌 레이어 : zoom layer

@@ -1,0 +1,17 @@
+귀갑묶기 : box tie
+묶인 팔 : bound arms
+묶인 발 : bound feet
+묶인 다리 : bound legs
+묶인 종아리 : bound calves
+묶인 무릎 : bound knees
+묶인 허벅지 : bound thighs
+묶인 상체 : bound torso
+묶인 손목 : bound wrists
+개구리 묶기 : frogtie
+족발 묶기 : hogtie
+분리된 팔 : separated arms
+분리된 다리 : separated legs
+분리된 손목 : separated wrists
+새우 묶기 : shrimp tie
+거꾸로 매달기 : strappado
+서스펜션 : suspension

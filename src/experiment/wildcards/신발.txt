@@ -1,0 +1,44 @@
+부츠 : boots
+앵클 부츠 : ankle boots
+갑옷 부츠 : armored boots
+무릎 부츠 : knee boots
+하이힐 부츠 : high heel boots
+레이스업 부츠 : lace-up boots
+고무 부츠 : rubber boots
+허벅지 부츠 : thigh boots
+카우보이 부츠 : cowboy boots
+박차 : spurs
+크로스 레이스 신발 : cross-laced footwear
+플랫 슈즈 : flats
+리본 신발 : footwear ribbon
+하이힐 : high heels
+로퍼 : loafers
+킬티 로퍼 : kiltie loafers
+메리 제인 슈즈 : mary janes
+플랫폼 신발 : platform footwear
+뾰족한 신발 : pointy footwear
+펌프스 : pumps
+샌들 : sandals
+클로그 샌들 : clog sandals
+크로스 레이스 샌들 : cross-laced sandals
+플립플랍 : flip-flops
+글래디에이터 샌들 : gladiator sandals
+게타 : geta
+오코보 : okobo
+와라지 : waraji
+조리 : zouri
+옥스포드 슈즈 : oxfords
+새들 슈즈 : saddle shoes
+몽크 슈즈 : monk shoes
+슬리퍼 : slippers
+동물 슬리퍼 : animal slippers
+발레 슬리퍼 : ballet slippers
+크록스 : crocs
+우와바키 : uwabaki
+스니커즈 : sneakers
+하이탑 : high tops
+컨버스 : converse
+토레스 신발 : toeless footwear
+우와바키 : uwabaki
+날개 달린 신발 : winged footwear
+웨지 힐 : wedge heels

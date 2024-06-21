@@ -1,0 +1,50 @@
+바이크슈트 : bikesuit
+레이싱 슈트 : racing suit
+바디스타킹 : bodystocking
+바디슈트 : bodysuit
+점프슈트 : jumpsuit
+숏 점프슈트 : short jumpsuit
+레오타드 : leotard
+스트랩리스 레오타드 : strapless leotard
+플레이보이 버니 : playboy bunny
+수영복 : swimsuit
+경기용 수영복 : competition swimsuit
+슬링샷 수영복 : slingshot swimsuit
+스쿨 수영복 : school swimsuit
+비키니 : bikini
+잎 비키니 : leaf bikini
+스트링 비키니 : string bikini
+마이크로 비키니 : micro bikini
+사이드 타이 비키니 바텀 : side-tie bikini bottom
+로우레그 비키니 : lowleg bikini
+T백 비키니 : thong bikini
+비너스 비키니 : venus bikini
+스포츠 비키니 : sports bikini
+탱키니 : tankini
+크로스 홀터 : criss-cross halter
+재머스 : jammers
+레그스킨 : legskin
+래시 가드 : rash guard
+로브 : robe
+목욕 가운 : bathrobe
+오픈 로브 : open robe
+케사 : kesa
+롬퍼 : romper
+사롱 : sarong
+튜닉 : tunic
+유니타드 : unitard
+비키니 비낌 : bikini aside
+비키니 당기기 : bikini pull
+망토 들기 : cape lift
+이불 들기 : lifting covers
+로브 흘리기 : robe slip
+끈 들기 : strap lift
+끈 당기기 : strap pull
+끈 흘리기 : strap slip
+수영복 비낌 : swimsuit aside
+수영복 당기기 : swimsuit pull
+수건 흘리기 : towel slip
+남성 속옷 당기기 : male underwear pull
+선탠 : tan
+선탠 자국 : tanlines
+누드 모델링 : nude modeling

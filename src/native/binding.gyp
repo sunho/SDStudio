@@ -2,7 +2,7 @@
   "targets": [
     {
       "target_name": "sdnative",
-      "cflags!": [ "-fno-exceptions" ],
+      "cflags!": [ "-fno-exception" ],
       "cflags_cc!": [ "-fno-exceptions" ],
       "sources": [ "lib.cpp" ],
       "include_dirs": [

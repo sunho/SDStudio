@@ -1,0 +1,7 @@
+아주 짧은 머리 : very short hair
+짧은 머리 : short hair
+중간 길이 머리 : medium hair
+긴 머리 : long hair
+아주 긴 머리 : very long hair
+말도 안 되게 긴 머리 : absurdly long hair
+풍성한 머리 : big hair

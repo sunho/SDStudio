@@ -1,0 +1,294 @@
+아바야 (이슬람 드래스) : Abaya
+앞치마 : Apron
+애슬레저 (여성 운동평상복) : Athleisure
+등이 트인 드레스 : Backless Dress
+밴드 유니폼 : Band Uniform
+야구 저지 : Baseball Jersey
+수영복 : Bathing Suit
+목욕 가운 : Bathrobe
+벨바텀 바지 : Bell Bottoms
+베레모 : Beret
+버뮤다 반바지 : Bermuda Shorts
+비키니 : Bikini
+블레이저 : Blazer
+블루머 : Bloomers
+블라우스 : Blouse
+바디스타킹 : Body Stocking
+바디슈트 : Bodysuit
+보머 재킷 : Bomber Jacket
+부츠 : Boots
+복서 반바지 : Boxer Shorts
+보이쇼츠 : Boyshorts
+브래지어 : Bra
+부루마 : Buruma
+비즈니스 수트 : Business Suit
+뷔스티에 : Bustier
+카프탄 : Caftan
+망토 : Capes
+가디건 : Cardigan
+카고 반바지 : Cargo Shorts
+캐주얼 복장 : Casuals
+캐미솔 : Camisole
+캣슈트 : Cat Suit
+차도르 (이슬람 드래스) : Chador
+챕스 : Chaps
+중세 정강이 갑옷 : Chausses
+치어리더 복장 : Cheerleader Outfit
+중국 드레스 : China Dress
+코트 : Coat
+칵테일 드레스 : Cocktail Dress
+크롭탑 : Croptop
+코르셋 : Corset
+카우보이 의상 : cowboy outfit
+치마바지 : Culottes
+데님 재킷 : Denim Jacket
+돌먼 망토 : Dolman
+드레스 : Dress
+더스터 : Duster
+전투복 : Fatigues
+플란넬 셔츠 : Flannel Shirt
+미식축구 저지 : Football Jersey
+프록 코트 : Frock
+중세 갑주 : Gambeson
+가터 : Garter
+장갑 : Gloves
+유령 의상 : ghost costume
+체육복 : gym uniform
+수도복 : habit uniform
+하렘 의상 : harem outfit
+샅바 : loincloth
+가운 : Gown
+수도복 : Habit
+하이크 : Haik
+홀터넥 탑 : halterneck
+한복 : Hanbok
+중세 하우버크 갑옷 : Hauberk
+하와이안 셔츠 : Hawaiian Shirt
+후드티 : Hoodie
+후프 스커트 : Hoop Skirt
+하우스 코트 : Housecoat
+자켓 : Jacket
+청바지 : Jeans
+승마 바지 : Jodhpurs
+쥬바 (사우디 옷) : Jubbah
+점퍼 : Jumper
+킬트 : Kilt
+기모노 : Kimono
+키텔 : Kittel
+실험 가운 : Lab Coat
+가죽 재킷 : Leather Jacket
+레더호젠 : Lederhosen
+레깅스 : Leggings
+레오타드 : Leotard
+롱코트 : Long coat
+마이요 : Maillot
+메이드 복 : maid uniform
+신사 복 : miko uniform
+군복 : military uniform
+중국 전통 상의 : Mandarin Collar
+미니스커트 : Miniskirt
+해군 제복 : Navy Uniform
+네글리제 : Negligee
+나이트 가운 : Nightgown
+잠옷 셔츠 : Nightshirt
+작업복 : Overalls
+외투 : Overcoat
+오버스커트 : Overskirt
+파자마 : Pajamas
+팔라초 팬츠 : Palazzo Pants
+팬티 : Panties
+패러슈트 팬츠 : Parachute Pants
+파카 : Parka
+골반 커튼 : Pelvic curtain
+피나포어 드래스 : Pinafore dress
+파일럿 슈트 : pilot suit
+에반게리온 플러그수트 : plugsuit
+격자무늬 옷 : Plaid
+폴로 셔츠 : Polo
+판초 : poncho
+로브 : Robe
+롬퍼스 (아이 놀이옷) : Romper
+사리 (인도 여성복) : Sari
+사롱 (허리에 두른 천) : Sarong
+요대 : Sash
+스카프 : Scarf
+수술복 : Scrubs
+세라피 (멕시코 남성 모포) : Serape
+숄 : Shawl
+쉐르와니 (목까지 단추 채우는 상의) : Sherwani
+반바지 : Shorts
+피겨 스케이팅 드레스 : figure Skating Dress
+스키 슈트 : Ski Suit
+치마 : Skirt
+슬랙스 (바지) : Slacks
+스목 (유치원복 상의) : Smock
+양말 : Socks
+라이크라 (쫄쫄이 원단) : Spandex
+스포츠 브라 : Sports Bra
+스타킹 : Stockings
+여름용 원피스 : Sundress
+서코트 : Surcoat
+멜빵 : Suspenders
+교복 : school uniform
+세라복 : serafuku
+세일러 드레스 : sailor dress
+가쿠란 : gakuran
+메이지 여학생 교복 : meiji schoolgirl uniform
+쇼세이 (메이지 전통 의상) : shosei
+슈트 : suit
+비즈니스 슈트 : business suit
+바지 슈트 : pant suit
+치마 슈트 : skirt suit
+턱시도 : tuxedo
+스웨터 : Sweater
+트렁크 수영복 : Swimming Trunks
+티셔츠 : T-shirt
+끈 팬티 : Thong
+넥타이 : Tie
+타이츠 : pantyhose
+토가 (고대 로마 전통의상) : Toga
+실크 모자 : Top Hat
+추리닝 : Track suit
+트렌치 코트 (셜록홈즈 겉옷) : Trench Coat
+튜브 톱 : Tube Top
+튜닉 (고대 로마 전통의상) : Tunic
+터틀넥 : Turtleneck
+발레치마 : Tutu
+턱시도 : Tuxedo
+웨딩 드레스 : Wedding Dress
+잠수복 : Wet Suit
+요가 팬츠 : Yoga Pants
+마이크로 반바지 : micro shorts
+자전거 반바지 : bike shorts
+데님 반바지 : denim shorts
+체육 반바지 : gym shorts
+로우레그 반바지 : lowleg shorts
+나체 : completely naked
+
+짧은 반바지 : short shorts
+치마 속 반바지 : shorts under skirt
+버블 스커트 : bubble skirt
+하이 웨이스트 스커트 : high-waist skirt
+하이 로우 스커트 : high-low skirt
+롱 스커트 : long skirt
+로우레그 스커트 : lowleg skirt
+마이크로 스커트 : microskirt
+미니 스커트 : miniskirt
+격자무늬 치마 : plaid skirt
+주름 치마 : pleated skirt
+멜빵 스커트 : suspender skirt
+갑옷 : armor
+무장 드레스 : armored dress
+비키니 아머 : bikini armor
+망토 : cape
+바이크 슈트 : bikesuit
+레이싱 슈트 : racing suit
+바디 스타킹 : bodystocking
+보디슈트 : bodysuit
+점프수트 : jumpsuit
+짧은 점프수트 : short jumpsuit
+레오타드 : leotard
+스트랩 없는 레오타드 : strapless leotard
+바니걸 : playboy bunny
+수영복 : swimsuit
+대회용 수영복 : competition swimsuit
+슬링샷 수영복 : slingshot swimsuit
+학교 수영복 : school swimsuit
+비키니 : bikini
+잎사귀 비키니 : leaf bikini
+스트링 비키니 : string bikini
+마이크로 비키니 : micro bikini
+
+사이드 타이 비키니 하의 : side-tie bikini bottom
+로우 레그 비키니 : lowleg bikini
+끈 비키니 : thong bikini
+비너스 비키니 : venus bikini
+스포츠 비키니 : sports bikini
+탱키니 : tankini
+크로스홀터 (쇄골 X자 드레스): criss-cross halter
+남자 수영 팬츠 (스피도) : swim briefs
+재머 (경기롱 남성 수영복) : jammers
+레그스킨 (남성용 쫄쫄히 긴바지 수영복) : legskin
+래쉬가드 : rash guard
+목욕 가운 : bathrobe
+오픈 로브 : open robe
+케사 (불교 로브) : kesa
+유니타드 : unitard
+중국 의상 : chinese clothes
+창파오 : changpao
+차이나 드레스 (치파오/기포) : china dress
+펑관 (중국 전통 의상) : fengguan
+한푸 (한나라 전통 의상) : hanfu
+롱파오 (남성 치파오) : longpao
+탕좡 (중국 전통 의상) : tangzhuang
+디른들 (독일 전통 의상) : dirndl
+일본 의상 : japanese clothes
+훈도시 : fundoshi
+게다 (일본 전통 신발) : geta
+하카마 (신사복) : hakama
+하카마 치마 (신사복) : hakama skirt
+하카마 짧은 치마 (신사복) : hakama short skirt
+하카마 바지 (신사복) : hakama pants
+기모노 : kimono
+후리소데 (기모노 종류) : furisode
+레이어드 기모노 : layered kimono
+짧은 기모노 : short kimono
+우치카케 (웨딩 기모노) : uchikake
+유카타 : yukata
+하오리 (기모노 자켓) : haori
+합피 (일본 전통 축제 의상) : happi
+찬창코 (일본 무사 의상) : chanchanko (clothes)
+도테라 : dotera (clothes)
+한텐 (일본 전통 평민 의상) : hanten
+기모노 치마 : kimono skirt
+무녀 : miko
+현대 무녀 : nontraditional miko
+사라시 (가슴 붕대) : sarashi
+복근 사라시 (가슴 붕대) : Midriff sarashi
+가슴 사라시 (가슴 붕대): Chest sarashi
+저가형 사라시 (가슴 붕대) : Budget sarashi
+풀린 사라시 (가슴 붕대) : Undone sarashi
+다비 (일본 양말) : tabi
+다쓰키 (기모노 요대) : tasuki
+한국 의상 : korean clothes
+한복 : hanbok
+베트남 드레스 : vietnamese dress
+드레스 꽃 장식 : dress flower
+꽃 테두리 : flower trim
+프릴 : frills
+털 테두리 : fur trim
+주름장식 : gathers
+금 테두리 : gold trim
+레이스 테두리 : lace trim
+리본 테두리 : ribbon trim
+비치는 (씨스루) : see-through
+은 테두리 : silver trim
+팽팽한 셔츠 : taut shirt
+찢어진 옷 : torn clothes
+안대 : Blindfold
+바디슈트 : Bodysuit
+고무 슈트 : Gimp suit
+본디지 의상 : bondage outfit
+라텍스 : Latex
+모노글러브 : Monoglove
+음부 노출 : Crotchless
+음부 노출 팬티 : crotchless panties
+음부 노출 바지 : crotchless pants
+음부 노출 수영복 : crotchless swimsuit
+음부 노출 팬티호스 : crotchless pantyhose
+음부 노출 레오타드 : crotchless leotard
+음부 노출 블루머 : crotchless bloomers
+음부 노출 부루마 : crotchless buruma
+엉덩이 노출 : Ass Cutout
+엉덩이 노출 수영복 : assless swimsuit
+등 노출 팬티 : backless panties
+등 노출 바지 : backless pants
+가슴 : Breasts
+가슴 노출 옷 : breastless clothes
+젖꼭지 노출 옷 : nippleless clothes
+컵 없는 비키니 : cupless bikini
+컵 없는 브라 : cupless bra
+노출 의상 : revealing clothes
+역방향 옷 : reverse outfit
+역비키니 아머 : reverse bikini armor
+역바니 : reverse bunnysuit

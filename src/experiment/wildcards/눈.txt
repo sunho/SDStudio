@@ -1,0 +1,40 @@
+파란 회색 눈 : blue-gray eyes
+주황색 눈 : orange eyes
+밝은 파란 눈 : light blue eyes
+짙은 빨간 눈 : dark red eyes
+맹인 눈 : blind eyes
+은색 눈 : silver eyes
+밝은 갈색 눈 : light brown eyes
+밝은 초록 눈 : light green eyes
+짙은 갈색 눈 : dark brown eyes
+레트로 눈 : retro eyes
+하트 눈 : heart eyes
+짙은 보라색 눈 : dark purple eyes
+호박색 눈 : amber eyes
+밝은 분홍색 눈 : light pink eyes
+헤이즐 눈 : hazel eyes
+노란 눈 : yellow eyes
+파란 눈 : blue eyes
+짙은 초록 눈 : dark green eyes
+밝은 빨간 눈 : light red eyes
+빨간 눈 : red eyes
+다이아몬드 눈 : diamond eyes
+갈색 눈 : brown eyes
+감은 눈 : closed eyes
+고양이 눈 : cat eyes
+짙은 파란 눈 : dark blue eyes
+초록-헤이즐 눈 : green-hazel eyes
+짙은 분홍색 눈 : dark pink eyes
+보라색 눈 : purple eyes
+흰색 눈 : white eyes
+악마의 눈 : demon eyes
+가늘게 뜬 눈 : squinted eyes
+회색 눈 : gray eyes
+분홍색 눈 : pink eyes
+밝은 보라색 눈 : light purple eyes
+마젠타 눈 : magenta eyes
+반짝이는 눈 : sparkling eyes
+금색 눈 : gold eyes
+검은 눈 : black eyes
+초록 눈 : green eyes
+이색증 눈 : heterochromia

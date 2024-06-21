@@ -1,0 +1,28 @@
+아쿠아 머리 : aqua hair
+검은 머리 : black hair
+금발 : blonde hair
+파란 머리 : blue hair
+연한 파란 머리 : light blue hair
+짙은 파란 머리 : dark blue hair
+갈색 머리 : brown hair
+연한 갈색 머리 : light brown hair
+초록 머리 : green hair
+짙은 초록 머리 : dark green hair
+연한 초록 머리 : light green hair
+회색 머리 : grey hair
+주황 머리 : orange hair
+분홍 머리 : pink hair
+보라 머리 : purple hair
+연한 보라 머리 : light purple hair
+빨간 머리 : red hair
+흰 머리 : white hair
+다채로운 머리 : multicolored hair
+컬러 인너 헤어 : colored inner hair
+그라데이션 머리 : gradient hair
+무지개 머리 : rainbow hair
+투톤 머리 : split-color hair
+스트릭 헤어 : streaked hair
+투톤 헤어 : two-tone hair
+컬러 팁 : colored tips
+대체 머리 색 : alternate hair color
+반투명 머리 : translucent hair

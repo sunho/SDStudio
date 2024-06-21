@@ -1,0 +1,18 @@
+시점을 뷰어에 : looking_at_viewer
+시점을 위에 : looking_up
+시점을 아래로 : looking_down
+시점을 앞으로 : looking_front
+시점을 뒤로 : looking_back
+시점을 멀리 : looking_away
+시점을 멀리 : looking_afar
+시점을 밖에 : looking_outside
+시점을 측면에 : looking_to_the_side
+시점을 눈에 : eye_contact
+시점을 손에 : looking_at_hand
+시점을 다리에 : looking_through_legs
+시점을 가슴에 : looking_at_breasts
+시점을 가슴에 : looking_at_ass
+시점을 다른 사람에 : looking_at_another
+시점을 거울에 : looking_at_mirror
+시점을 전화에 : looking_at_phone
+시점을 안경 밖에 : looking_over_eyewear

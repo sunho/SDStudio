@@ -1,0 +1,81 @@
+배우 : actor
+여배우 : actress
+연금술사 : alchemist
+화가 : artist painter
+우주비행사 : astronaut
+운동선수 : athlete
+바텐더 : bartender
+보디가드 : bodyguard
+도둑 : burglar
+집사 : butler
+계산원 : cashier
+요리사 : chef
+화학자 : chemist
+지휘자 : conductor
+건설 노동자 : construction worker
+크루피에 : croupier
+자전거 선수 : cyclist
+치과의사 : dentist
+디제이 : dj
+의사 : doctor
+지배자 : dominatrix
+운전사 : driver
+엔지니어 : engineer
+농부 : farmer
+소방관 : firefighter
+승무원 : flight attendant
+꽃집 주인 : florist
+게이샤 : geisha
+경비원 : guard
+해커 : hacker
+히키코모리 : hikikomori
+아이돌 : idol
+청소부 : janitor
+판사 : judge
+사서 : librarian
+구조대원 : lifeguard
+나무꾼 : lumberjack
+메이드 : maid
+정비사 : mechanic
+상인 : merchant
+무녀 : miko
+광부 : miner
+승려 : monk
+음악가 : musician
+닌자 : ninja
+수녀 : nun
+간호사 : nurse
+보건교사 : school nurse
+조종사 : pilot
+경찰 : police
+정치인 : politician
+사제 : priest
+죄수 : prisoner
+매춘부 : prostitution
+선원 : sailor
+샐러리맨 : salaryman
+사무라이 : samurai
+과학자 : scientist
+양치기 : shepherd
+노예 : slave
+군인 : soldier
+장교 : officer
+기수 : standard-bearer
+스파이 : spy
+스트리퍼 : stripper
+교사 : teacher
+테러리스트 : terrorist
+트럭 운전사 : trucker
+기차 승무원 : train attendant
+기차 차장 : train conductor
+오피스 레이디 : office lady
+웨이트리스 : waitress
+전사 : warrior
+마녀 : witch
+마법사 : mage
+궁수 : archer
+콜걸 : call_girl
+스트립퍼 : stripper
+매춘부 : prostitution
+포르노 배우 : Porno_Actor
+AV 배우 : Adult_Video_Actor

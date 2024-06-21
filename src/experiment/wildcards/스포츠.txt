@@ -1,0 +1,73 @@
+스포츠 : Playing sports
+미식축구 : American football
+배드민턴 : Badminton
+야구 : Baseball
+농구 : Basketball
+당구 : Billiards
+복싱 : Boxing
+볼링 : Bowling
+크로케 : Croquet
+필드하키 : Field Hockey
+골프 : Golf
+체조 : Gymnastics
+리듬체조 : Rhythmic Gymnastics
+아이스하키 : Ice hockey
+카바디 : Kabaddi
+케마리 : Kemari
+라크로스 : Lacrosse
+럭비 : Rugby
+세팍타크로 : Sepak Takraw
+축구 : Soccer
+탁구 : Table tennis
+테니스 : Tennis
+배구 : Volleyball
+수구 : Water polo
+공 : Ball
+비치볼 : Beachball
+볼링공 : Bowling ball
+당구공 : Billiard ball
+미식축구공 : American football
+골프공 : Golf ball
+구슬 : Marble
+럭비공 : Rugby ball
+축구공 : Soccer ball
+테니스공 : Tennis ball
+야구 모자 : Baseball cap
+야구 유니폼 : Baseball jersey
+야구 유니폼 : Baseball uniform
+농구 유니폼 : Basketball uniform
+하키 스웨터 : Hockey sweater
+테니스 유니폼 : Tennis uniform
+야구 방망이 : Baseball bat
+볼링 장갑 : Bowling glove
+볼링 핀 : Bowling pin
+큐대 : Cue stick
+골프 클럽 : Golf club
+후프 : Hoop
+저글링 클럽 : Juggling club
+당구대 : Pool table
+라켓 : Racket
+배드민턴 라켓 : Badminton racket
+탁구채 : Table tennis paddle
+테니스 라켓 : Tennis racket
+리본 : Ribbon
+리본 바톤 : Ribbon baton
+줄 : Rope
+다종목 : Multi-sport
+미식축구 : American Football
+야구 : Baseball
+럭비 : Rugby
+축구 : Soccer
+야구 : Baseball
+농구 : Basketball
+미식축구 : American Football
+축구 : Soccer
+아이스하키 : Ice Hockey
+당구 : Billiards
+복싱 : Boxing
+골프 : Golf
+라크로스 : Lacrosse
+탁구 : Table Tennis
+테니스 : Tennis
+육상 : Track and Field
+배구 : Volleyball

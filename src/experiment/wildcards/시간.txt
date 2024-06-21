@@ -1,0 +1,4 @@
+낮 : day
+밤 : night
+저녁 : evening
+황혼 : dusk

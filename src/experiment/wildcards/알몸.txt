@@ -1,0 +1,20 @@
+알몸 앞치마 : naked apron
+거의 알몸 앞치마 : nearly naked apron
+알몸 붕대 : naked bandage
+알몸 망토 : naked cape
+알몸 숏 망토 : naked capelet
+알몸 초콜릿 : naked chocolate
+알몸 두건 : naked cloak
+알몸 코트 : naked coat
+알몸 후드티 : naked hoodie
+알몸 재킷 : naked jacket
+알몸 작업복 : naked overalls
+알몸 리본 : naked ribbon
+알몸 로브 : naked robe
+알몸 스카프 : naked scarf
+알몸 시트 : naked sheet
+알몸 셔츠 : naked shirt
+알몸 멜빵 : naked suspenders
+알몸 타바드 : naked tabard
+알몸 수건 : naked towel
+속옷만 입은 : underwear only

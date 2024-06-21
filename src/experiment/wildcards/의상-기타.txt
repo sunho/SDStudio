@@ -1,0 +1,42 @@
+가슴 중앙 노출 : center opening
+오픈 칼라 : open collar
+드레스 당김 : dress pull
+레오타드 당김 : leotard pull
+기모노 내림 : kimono down
+기모노 당김 : kimono pull
+파자마 당김 : pajamas pull
+로브 오픈 : open robe
+셔츠 비낌 : shirt aside
+상반신 노출 남성 : topless male
+셔츠 올림 : shirt lift
+셔츠 당김 : shirt pull
+셔츠 흘러내림 : shirt slip
+스웨터 올림 : sweater lift
+상의 당김 : top pull
+조끼 오픈 : open vest
+가슴 없는 옷 : breastless clothes
+가슴 흘러내림 : breast slip
+가슴 노출 : breasts out
+브라 올림 : bra lift
+브라 당김 : bra pull
+상반신 노출 : topless
+등 노출 : back cutout
+등 노출 의상 : backless outfit
+등 노출 : bare back
+배꼽 노출 : midriff
+배꼽 노출 : navel cutout
+옆구리 노출 : side cutout
+옆구리 노출 의상 : sideless outfit
+배 노출 : stomach cutout
+허리 노출 : waist cutout
+옷 매무새 : adjusting clothes
+옷 잡기 : clothes grab
+앞치마 잡기 : apron grab
+칼라 잡기 : collar grab
+넥타이 잡기 : necktie grab
+치마 잡기 : skirt grab
+칼라 당기기 : collar tug
+드레스 당기기 : dress tug
+셔츠 당기기 : shirt tug
+치마 당기기 : skirt tug
+옷 비틀기 : wringing clothes

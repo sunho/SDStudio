@@ -1,0 +1,224 @@
+화장실 : bathroom
+욕조 : bathtub
+화장실 칸 : toilet stall
+샤워실 : shower
+침실 : bedroom
+호텔 방 : hotel room
+지저분한 방 : messy room
+오타쿠 방 : otaku room
+구내식당 : cafeteria
+탈의실 : changing room
+교실 : classroom
+동아리방 : clubroom
+온실 : conservatory
+법정 : courtroom
+식당 : dining room
+드레스룸 : dressing room
+던전 : dungeon
+감방 : prison cell
+피팅룸 : fitting room
+체육관 : gym
+락커룸 : locker room
+체육관 창고 : gym storeroom
+양호실 : infirmary
+주방 : kitchen
+실험실 : laboratory
+도서관 : library
+거실 : living room
+사무실 : office
+칸막이 사무실 : cubicle
+수영장 : pool
+무대 : stage
+교직원실 : staff room
+창고 : storage room
+무기고 : armory
+옷장 : closet
+작업실 : workshop
+해변 : beach
+해안 : shore
+협곡 : canyon
+동굴 : cave
+절벽 : cliff
+사막 : desert
+오아시스 : oasis
+숲 : forest
+대나무 숲 : bamboo forest
+빙하 : glacier
+언덕 : hill
+섬 : island
+떠다니는 섬 : floating island
+정글 : jungle
+초원 : meadow
+산 : mountain
+화산 : volcano
+자연 : nature
+공원 : park
+놀이터 : playground
+주차장 : parking lot
+평원 : plain
+사바나 : savannah
+습지 : wetland
+물 : water
+간헐천 : geyser
+호수 : lake
+바다 : ocean
+바다 밑 : ocean bottom
+연못 : pond
+강 : river
+시내 : stream
+폭포 : waterfall
+황무지 : wasteland
+비행장 : airfield
+활주로 : runway
+놀이공원 : amusement park
+회전목마 : carousel
+관람차 : ferris wheel
+롤러코스터 : roller coaster
+수로 : aqueduct
+다리 : bridge
+밧줄 다리 : rope bridge
+나무 다리 : wooden bridge
+운하 : canal
+도시 : city
+떠다니는 도시 : floating city
+시골 : rural
+마을 : town
+촌락 : village
+댐 : dam
+부두 : dock
+건선거 : drydock
+조선소 : shipyard
+정원 : garden
+묘지 : graveyard
+잔교 : jetty
+들판 : field
+꽃밭 : flower field
+논 : rice paddy
+밀밭 : wheat field
+분수 : fountain
+항구 : harbor
+시장 : market
+시장 가판대 : market stall
+선창 : pier
+전화 부스 : phone booth
+수영장 : pool
+수영장 옆 : poolside
+워터파크 : waterpark
+철도 선로 : railroad tracks
+철도 건널목 : railroad crossing
+도로 : road
+골목 : alley
+횡단보도 : crosswalk
+흙길 : dirt road
+고속도로 : highway
+길 : path
+인도 : sidewalk
+돌길 : stone walkway
+거리 : street
+축구장 : soccer field
+육상 트랙 : running track
+참호 : trench
+터널 : tunnel
+우물 : well
+동물원 : zoo
+공항 : airport
+관제탑 : control tower
+격납고 : hangar
+활주로 : runway
+아파트 : apartment
+수족관 : aquarium
+오락실 : arcade
+바 : bar
+헛간 : barn
+벙커 : bunker
+버스 정류장 : bus stop
+볼링장 : bowling alley
+카페 : cafe
+카지노 : casino
+성 : castle
+떠다니는 성 : floating castle
+교회 : church
+건설 현장 : construction site
+컨벤션 : convention
+차고 : garage
+주유소 : gas station
+정자 : gazebo
+온실 : greenhouse
+체육관 : gym
+병원 : hospital
+집 : house
+호텔 : hotel
+오두막 : hut
+산업 : industrial
+공장 : factory
+정제소 : refinery
+발전소 : powerplant
+원자력 발전소 : nuclear powerplant
+냉각탑 : cooling tower
+창고 : warehouse
+도서관 : library
+등대 : lighthouse
+쇼핑몰 : mall
+메가스트럭처 : megastructure
+우주 엘리베이터 : space elevator
+군사 기지 : military base
+모스크 : mosque
+박물관 : museum
+미술관 : art gallery
+나이트클럽 : nightclub
+천문대 : observatory
+사무실 : office
+온천 : onsen
+파고다 : pagoda
+플라네타륨 : planetarium
+감옥 : prison
+레스토랑 : restaurant
+옥상 : rooftop
+유적 : ruins
+학교 : school
+스케이트장 : skating rink
+오두막 : shack
+신사 : shrine
+가게 : shop
+빵집 : bakery
+서점 : bookstore
+편의점 : convenience store
+꽃집 : flower shop
+약국 : pharmacy
+미용실 : salon
+성인용품점 : sex shop
+슈퍼마켓 : supermarket
+무기 상점 : weapon shop
+고층 건물 : skyscraper
+경기장 : stadium
+투기장 : arena
+수상 가옥 : stilt house
+사원 : temple
+극장 : theater
+원형 극장 : amphitheater
+영화관 : movie theater
+탑 : tower
+종탑 : bell tower
+시계탑 : clock tower
+감시탑 : guard tower
+미나렛 : minaret
+기차역 : train station
+나무집 : treehouse
+풍차 : windmill
+건축물 : architecture
+도시 경관 : cityscape
+풍경 : landscape
+우주 : space
+소행성 : asteroid
+달 : moon
+행성 : planet
+우주 정거장 : space station
+차량 내부 : vehicle interior
+비행기 내부 : airplane interior
+버스 내부 : bus interior
+자동차 내부 : car interior
+조종석 : cockpit
+우주선 내부 : spacecraft interior
+탱크 내부 : tank interior
+기차 내부 : train interior
+

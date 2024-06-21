@@ -1,0 +1,40 @@
+동물 문양 : animal print
+박쥐 문양 : bat print
+곰 문양 : bear print
+나비 문양 : butterfly print
+소 문양 : cow print
+표범 문양 : leopard print
+호랑이 문양 : tiger print
+뱀 문양 : snake print
+클로버 문양 : clover print
+초승달 문양 : crescent print
+꽃무늬 : floral print
+장미 문양 : rose print
+벚꽃 문양 : cherry blossom print
+해바라기 문양 : sunflower print
+나팔꽃 문양 : morning glory print
+음식 문양 : food print
+과일 패턴 : fruit pattern
+사과 문양 : apple print
+블루베리 문양 : blueberry print
+체리 문양 : cherry print
+키위 문양 : kiwi print
+레몬 문양 : lemon print
+파인애플 문양 : pineapple print
+오렌지 문양 : orange print
+딸기 문양 : strawberry print
+수박 문양 : watermelon print
+잎 문양 : leaf print
+단풍잎 문양 : maple leaf print
+달 문양 : moon print
+음표 문양 : musical note print
+발바닥 문양 : paw print
+꽃잎 문양 : petal print
+피아노 문양 : piano print
+반짝이 문양 : sparkle print
+삼각형 문양 : triangle print
+우주 문양 : space print
+별이 빛나는 하늘 문양 : starry sky print
+별 문양 : star print
+물결 문양 : wave print
+날개 문양 : wing print
