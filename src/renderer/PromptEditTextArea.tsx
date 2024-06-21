@@ -259,6 +259,7 @@ class CursorMemorizeEditor {
         word = ' ' + word;
       this.updateCurText(curText.substring(0, startIdx) + word + curText.substring(start));
       this.updateDOM(this.curText, startIdx, false);
+      this.compositionBuffer = [];
       await this.setCaretPosition([startIdx + word.length, startIdx + word.length]);
     });
   }
@@ -430,6 +431,26 @@ class CursorMemorizeEditor {
         this.updateDOM(this.curText, start+1, false);
         await this.setCaretPosition([start+1,start+1]);
         return;
+      }
+      if (e.key === 'Delete') {
+        e.preventDefault();
+        let newPos = start;
+        if (range.collapsed) {
+          if (start !== this.curText.length) {
+            this.pushHistory();
+            this.flushCompositon(this.previousRange);
+            this.updateCurText(this.curText.substring(0, start) + this.curText.substring(start+1));
+            this.updateDOM(this.curText, newPos);
+          }
+        } else {
+          this.pushHistory();
+          if (this.compositionBuffer.length) {
+            this.compositionBuffer = [];
+          }
+          this.updateCurText(this.curText.substring(0, start) + this.curText.substring(end));
+          this.updateDOM(this.curText, newPos);
+        }
+        await this.setCaretPosition([newPos,newPos]);
       }
       if (e.key === 'Backspace') {
         e.preventDefault();

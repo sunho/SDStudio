@@ -11,27 +11,30 @@
 #include <memory>
 #include <algorithm>
 #include <numeric>
+#include <locale>
+#include <codecvt>
 
 const int INITIAL_CUTOFF = 1600;
 const int FINAL_CUTOF = 128;
 
 class Word {
 public:
-  std::string_view normalized;
-  std::string_view word;
-  std::string_view redirect;
+  std::wstring_view normalized;
+  std::wstring_view shortened;
+  std::wstring_view word;
+  std::wstring_view redirect;
   int64_t freq;
   int category;
   int priority;
-  Word(std::string_view normalized, std::string_view word, std::string_view redirect, int64_t freq, int category, int priority) :
-    normalized(normalized), word(word), redirect(redirect), freq(freq), category(category), priority(priority) {}
+  Word(std::wstring_view normalized, std::wstring_view shortened, std::wstring_view word, std::wstring_view redirect, int64_t freq, int category, int priority) :
+    normalized(normalized), shortened(shortened), word(word), redirect(redirect), freq(freq), category(category), priority(priority) {}
 };
 
-static inline bool beginsWith(std::string_view str, std::string_view prefix) {
+static inline bool beginsWith(std::wstring_view str, std::wstring_view prefix) {
   return str.size() >= prefix.size() && str.substr(0, prefix.size()) == prefix;
 }
 
-static inline bool endsWith(std::string_view str, std::string_view suffix) {
+static inline bool endsWith(std::wstring_view str, std::wstring_view suffix) {
   return str.size() >= suffix.size() && str.substr(str.size() - suffix.size()) == suffix;
 }
 
@@ -61,14 +64,18 @@ std::string join(const std::vector<std::string>& parts, char delim) {
 
 const int MAX_WORD_LEN = 64;
 
-static inline int calcGapMatch(std::string_view small, std::string_view large) {
+static inline int calcGapMatch(std::wstring_view small, std::wstring_view large) {
   if (beginsWith(large, small) || endsWith(large, small)) {
     return 0;
+  }
+  const int inf = 1e9;
+  if (small.size() > MAX_WORD_LEN || large.size() > MAX_WORD_LEN) {
+    std::cerr << "Word too long\n";
+    return inf;
   }
 
   int m = small.size();
   int n = large.size();
-  const int inf = 1e9;
   std::array<std::array<std::array<int,2>,MAX_WORD_LEN+1>,MAX_WORD_LEN+1> dp{};
   for (int i = 0; i <= m; i++) {
     for (int j = 0; j <= n; j++) {
@@ -88,15 +95,246 @@ static inline int calcGapMatch(std::string_view small, std::string_view large) {
   return std::min(dp[m][n][0], dp[m][n][1]);
 }
 
+static inline std::wstring utf8ToUtf16(const std::string& utf8) {
+  std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+  return converter.from_bytes(utf8);
+}
+
+static inline std::string utf16ToUtf8(const std::wstring& utf16) {
+  std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+  return converter.to_bytes(utf16);
+}
+
+static inline std::string utf16ToUtf8(std::wstring_view utf16) {
+  return utf16ToUtf8(std::wstring(utf16));
+}
+
+class LiteralManager {
+public:
+    std::wstring_view getLiteral(const std::string& word) {
+        std::wstring utf16Word = utf8ToUtf16(word);
+        literals.push_back(std::move(utf16Word));
+        return literals.back();
+    }
+
+    std::deque<std::wstring> literals;
+};
+
+static inline std::vector<uint32_t> utf8ToCodepoints(const std::string& utf8) {
+  std::vector<uint32_t> codepoints;
+  size_t i = 0;
+  while (i < utf8.size()) {
+      uint32_t codepoint = 0;
+      unsigned char c = utf8[i];
+      if (c < 0x80) {
+          codepoint = c;
+          i += 1;
+      } else if (c < 0xE0) {
+          codepoint = ((c & 0x1F) << 6) | (utf8[i + 1] & 0x3F);
+          i += 2;
+      } else if (c < 0xF0) {
+          codepoint = ((c & 0x0F) << 12) | ((utf8[i + 1] & 0x3F) << 6) | (utf8[i + 2] & 0x3F);
+          i += 3;
+      } else {
+          codepoint = ((c & 0x07) << 18) | ((utf8[i + 1] & 0x3F) << 12) | ((utf8[i + 2] & 0x3F) << 6) | (utf8[i + 3] & 0x3F);
+          i += 4;
+      }
+      codepoints.push_back(codepoint);
+  }
+  return codepoints;
+}
+
+static inline std::string codepointToUtf8(char32_t codepoint) {
+    std::string utf8_string;
+
+    if (codepoint <= 0x7F) {
+      utf8_string += static_cast<char>(codepoint);
+    } else if (codepoint <= 0x7FF) {
+      utf8_string += static_cast<char>(0xC0 | ((codepoint >> 6) & 0x1F));
+      utf8_string += static_cast<char>(0x80 | (codepoint & 0x3F));
+    } else if (codepoint <= 0xFFFF) {
+      utf8_string += static_cast<char>(0xE0 | ((codepoint >> 12) & 0x0F));
+      utf8_string += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+      utf8_string += static_cast<char>(0x80 | (codepoint & 0x3F));
+    } else if (codepoint <= 0x10FFFF) {
+      utf8_string += static_cast<char>(0xF0 | ((codepoint >> 18) & 0x07));
+      utf8_string += static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F));
+      utf8_string += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+      utf8_string += static_cast<char>(0x80 | (codepoint & 0x3F));
+    }
+
+    return utf8_string;
+}
+
+static inline int lconToCjamo(int ch) {
+    static const std::vector<int> table = {
+        0x3131, 0x3132, 0x3134, 0x3137, 0x3138, 0x3139, 0x3141, 0x3142,
+        0x3143, 0x3145, 0x3146, 0x3147, 0x3148, 0x3149, 0x314a, 0x314b,
+        0x314c, 0x314d, 0x314e
+    };
+    if (ch < 0x1100 || ch > 0x1112) {
+        if (ch == 0x1140) return 0x317f;
+        else if (ch == 0x114C) return 0x3181;
+        else if (ch == 0x1159) return 0x3186;
+        return ch;
+    }
+    return table[ch - 0x1100];
+}
+
+static inline int mvowToCjamo(int ch) {
+    static const std::vector<int> table = {
+        0x314f, 0x3150, 0x3151, 0x3152, 0x3153, 0x3154, 0x3155, 0x3156,
+        0x3157, 0x3158, 0x3159, 0x315a, 0x315b, 0x315c, 0x315d, 0x315e,
+        0x315f, 0x3160, 0x3161, 0x3162, 0x3163
+    };
+    if (ch < 0x1161 || ch > 0x1175) {
+        if (ch == 0x119E) return 0x318D;
+        return ch;
+    }
+    return table[ch - 0x1161];
+}
+
+static inline int fconToCjamo(int ch) {
+    static const std::vector<int> table = {
+        0x3131, 0x3132, 0x3133, 0x3134, 0x3135, 0x3136, 0x3137, 0x3139,
+        0x313a, 0x313b, 0x313c, 0x313d, 0x313e, 0x313f, 0x3140, 0x3141,
+        0x3142, 0x3144, 0x3145, 0x3146, 0x3147, 0x3148, 0x314a, 0x314b,
+        0x314c, 0x314d, 0x314e
+    };
+    if (ch < 0x11a8 || ch > 0x11c2) {
+        if (ch == 0x11EB) return 0x317f;
+        else if (ch == 0x11F0) return 0x3181;
+        else if (ch == 0x11F9) return 0x3186;
+        return ch;
+    }
+    return table[ch - 0x11a8];
+}
+
+static inline std::string normalizeJamo(uint32_t code) {
+  code = lconToCjamo(code);
+  code = mvowToCjamo(code);
+  code = fconToCjamo(code);
+
+  static const std::unordered_map<std::string, std::string> _complexJamo = {
+    {"ㅘ", "ㅗㅏ"}, {"ㅙ", "ㅗㅐ"}, {"ㅚ", "ㅗㅣ"}, {"ㅝ", "ㅜㅓ"},
+    {"ㅞ", "ㅜㅔ"}, {"ㅟ", "ㅜㅣ"}, {"ㅢ", "ㅡㅣ"},
+    {"ㄳ", "ㄱㅅ"}, {"ㄵ", "ㄴㅈ"}, {"ㄶ", "ㄴㅎ"}, {"ㄺ", "ㄹㄱ"},
+    {"ㄻ", "ㄹㅁ"}, {"ㄼ", "ㄹㅂ"}, {"ㄽ", "ㄹㅅ"}, {"ㄾ", "ㄹㅌ"},
+    {"ㄿ", "ㄹㅍ"}, {"ㅀ", "ㄹㅎ"}, {"ㅄ", "ㅂㅅ"},
+    {"ㄲ", "ㄱㄱ"}, {"ㄸ", "ㄷㄷ"}, {"ㅃ", "ㅂㅂ"}, {"ㅆ", "ㅅㅅ"}, {"ㅉ", "ㅈㅈ"}
+  };
+  static const std::unordered_map<uint32_t, std::string> complexJamo = [] {
+    std::unordered_map<uint32_t, std::string> result;
+    for (const auto& [key, value] : _complexJamo) {
+      const uint32_t code = utf8ToCodepoints(key)[0];
+      result[code] = value;
+    }
+    return result;
+  }();
+
+  if (complexJamo.find(code) != complexJamo.end()) {
+    return complexJamo.at(code);
+  }
+  return codepointToUtf8(code);
+}
+
+static inline std::string normalize(const std::string& word) {
+  std::string result;
+  std::vector<uint32_t> codepoints = utf8ToCodepoints(word);
+
+  const auto append = [&](const std::string& str) {
+    auto codepoints = utf8ToCodepoints(str);
+    for (uint32_t code : codepoints) {
+      result += normalizeJamo(code);
+    }
+  };
+
+  for (uint32_t code : codepoints) {
+    if (code >= 'A' && code <= 'Z') {
+      result.push_back(code - 'A' + 'a');
+    } else if ((code >= 'a' && code <= 'z') || (code >= '0' && code <= '9')) {
+      result.push_back(code);
+    } else if (code >= 0xAC00 && code <= 0xD7A3) {
+      int code_offset = code - 0xAC00;
+      int initial = code_offset / (21 * 28);
+      int medial = (code_offset % (21 * 28)) / 28;
+      int final = code_offset % 28;
+
+      static const std::vector<std::string> initialJamos = {
+        "ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ",
+        "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"
+      };
+      static const std::vector<std::string> medialJamos = {
+        "ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", "ㅘ",
+        "ㅙ", "ㅚ", "ㅛ", "ㅜ", "ㅝ", "ㅞ", "ㅟ", "ㅠ", "ㅡ", "ㅢ", "ㅣ"
+      };
+      static const std::vector<std::string> finalJamos = {
+        "", "ㄱ", "ㄲ", "ㄳ", "ㄴ", "ㄵ", "ㄶ", "ㄷ", "ㄹ", "ㄺ",
+        "ㄻ", "ㄼ", "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅁ", "ㅂ", "ㅄ", "ㅅ",
+        "ㅆ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"
+      };
+
+      append(initialJamos[initial]);
+      append(medialJamos[medial]);
+      if (final != 0) {
+        append(finalJamos[final]);
+      }
+    } else {
+      append(codepointToUtf8(code));
+    }
+  }
+  return result;
+}
+
+static inline std::string shorten(const std::string& word) {
+  std::string result;
+  std::vector<uint32_t> codepoints = utf8ToCodepoints(word);
+
+  const uint32_t HANGUL_SYLLABLES_START = 0xAC00;
+  const uint32_t HANGUL_SYLLABLES_END = 0xD7A3;
+  const uint32_t CHOSUNG_BASE = 0x1100;
+
+  bool containsKorean = false;
+  for (uint32_t codepoint : codepoints) {
+    if (codepoint >= HANGUL_SYLLABLES_START && codepoint <= HANGUL_SYLLABLES_END) {
+      containsKorean = true;
+      break;
+    }
+  }
+
+  if (containsKorean) {
+    for (uint32_t codepoint : codepoints) {
+      if (codepoint >= HANGUL_SYLLABLES_START && codepoint <= HANGUL_SYLLABLES_END) {
+        uint32_t chosungIndex = (codepoint - HANGUL_SYLLABLES_START) / (21 * 28);
+        uint32_t chosungCodepoint = CHOSUNG_BASE + chosungIndex;
+        result += normalizeJamo(chosungCodepoint);
+      }
+    }
+  } else {
+    bool newWord = true;
+    for (uint32_t c : codepoints) {
+      if (std::isspace(c)) {
+        newWord = true;
+      } else if (newWord && c >= 'a' && c <= 'z') {
+        result += c;
+        result += ' ';
+        newWord = false;
+      }
+    }
+  }
+  return result;
+}
+
+
 class Database {
 public:
   std::string name;
-  std::deque<std::string> literals;
+  LiteralManager lieteralManager;
   std::vector<Word> words;
   Database(const std::string& name) : name(name) {}
   void load(const std::string& csvData) {
     words.clear();
-    literals.clear();
+    lieteralManager.literals.clear();
     std::istringstream iss(csvData);
     std::string line;
     while (std::getline(iss, line)) {
@@ -112,43 +350,15 @@ public:
       if (word.size() > MAX_WORD_LEN || redirect.size() > MAX_WORD_LEN) {
         continue;
       }
-      words.emplace_back(getLiteral(normalize(word)), getLiteral(word), getLiteral(redirect), freq, category, 0);
+      words.emplace_back(getLiteral(normalize(word)), getLiteral(shorten(word)), getLiteral(word), getLiteral(redirect), freq, category, 0);
     }
   }
 
-  std::string normalize(const std::string& word) {
-    std::string result;
-    for (char c : word) {
-      if (c >= 'A' && c <= 'Z') {
-        result.push_back(c - 'A' + 'a');
-      } else if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
-        result.push_back(c);
-      } else {
-        result.push_back(c);
-      }
-    }
-    /* const std::set<std::string> stopWords = { */
-    /*   "a", "an", "the", "of", "in", "on", "at", "to", "for", "by", "with", "as", "and", "or", "but", */
-    /*   "under", "over", "above", "below", "between", "among", "through", "into", "onto", "from", "since", */
-    /*   "after", "before", "during", "while", "until", "throughout", "within", "without", "about", "against", */
-    /*   "along", "around", "before", "behind", "beneath", "beside", "besides", "beyond", "inside", "outside"}; */
-    /* const auto words = split(result, ' '); */
-    /* std::vector<std::string> filteredWords; */
-    /* for (const auto& word : words) { */
-    /*   if (stopWords.find(word) == stopWords.end()) { */
-    /*     filteredWords.push_back(word); */
-    /*   } */
-    /* } */
-    /* return join(filteredWords, ' '); */
-    return result;
+  std::wstring_view getLiteral(const std::string& word) {
+    return lieteralManager.getLiteral(word);
   }
 
-  std::string_view getLiteral(const std::string& word) {
-    literals.push_back(word);
-    return literals.back();
-  }
-
-  inline static bool isSubsequence(std::string_view small, std::string_view large) {
+  inline static bool isSubsequence(std::wstring_view small, std::wstring_view large) {
     int i = 0, j = 0;
     while (i < small.size() && j < large.size()) {
       if (small[i] == large[j]) {
@@ -160,12 +370,13 @@ public:
   }
 
   std::vector<Word> search(const std::string& word) {
-    const std::string normalized = normalize(word);
+    std::wcerr << utf8ToCodepoints(word)[0] << L"\n";
+    const std::wstring normalized = utf8ToUtf16(normalize(word));
     std::vector<Word> result_;
-    std::unordered_set<std::string_view> seen;
+    std::unordered_set<std::wstring_view> seen;
     for (const auto& item : words) {
       if (isSubsequence(normalized, item.normalized)) {
-        if (item.redirect == "null")
+        if (item.redirect == L"null")
           seen.insert(item.word);
         result_.push_back(item);
       }
@@ -175,13 +386,13 @@ public:
     }
     std::vector<Word> result;
     for (const auto& item : result_) {
-      if (item.redirect == "null" || seen.find(item.redirect) == seen.end()) {
+      if (item.redirect == L"null" || seen.find(item.redirect) == seen.end()) {
         result.push_back(item);
       }
     }
-    std::vector<std::tuple<int,int,int>> scores;
+    std::vector<std::tuple<int,int,int,int>> scores;
     for (const auto& item : result) {
-      scores.push_back({calcGapMatch(normalized, item.normalized), -item.priority, -item.freq});
+      scores.push_back({calcGapMatch(normalized, item.shortened), calcGapMatch(normalized, item.normalized), -item.priority, -item.freq});
     }
     std::vector<int> idx(result.size());
     std::iota(idx.begin(), idx.end(), 0);
@@ -245,9 +456,10 @@ class SDSAddOn : public Napi::Addon<SDSAddOn> {
     Napi::Array output = Napi::Array::New(env, result.size());
     for (size_t i = 0; i < result.size(); i++) {
       Napi::Object obj = Napi::Object::New(env);
-      obj.Set("normalized", Napi::String::New(env, std::string(result[i].normalized)));
-      obj.Set("word", Napi::String::New(env, std::string(result[i].word)));
-      obj.Set("redirect", Napi::String::New(env, std::string(result[i].redirect)));
+      obj.Set("normalized", Napi::String::New(env, utf16ToUtf8(result[i].normalized)));
+      obj.Set("shortened", Napi::String::New(env, utf16ToUtf8(result[i].shortened)));
+      obj.Set("word", Napi::String::New(env, utf16ToUtf8(result[i].word)));
+      obj.Set("redirect", Napi::String::New(env, utf16ToUtf8(result[i].redirect)));
       obj.Set("freq", Napi::Number::New(env, result[i].freq));
       obj.Set("priority", Napi::Number::New(env, result[i].priority));
       obj.Set("category", Napi::Number::New(env, result[i].category));
