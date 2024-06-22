@@ -195,7 +195,8 @@
       "**\\*.{node,dll}",
       "**/node_modules/sharp/**/*",
       "**/node_modules/sdsnative/**/*",
-      "**/node_modules/@img/**/*"
+      "**/node_modules/@img/**/*",
+      "**/node_modules/chokidar/**/*"
     ],
     "files": [
       "dist",
