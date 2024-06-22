@@ -372,6 +372,7 @@ ipcMain.handle('watch-image', async (event, inputPath) => {
     });
 
     handle.on('change', async (changedPath: string) => {
+      console.log('File changed:', changedPath);
       const candPath = path.join(dir, path.basename(changedPath));
       if (watchHandles.has(candPath)) {
         console.log('Image changed:', changedPath);
