@@ -21,6 +21,7 @@ import {
   getMainImage,
   gameService,
   encodeContextAlt,
+  dataUriToBase64,
 } from './models';
 import { AppContext } from './App';
 import { FloatView } from './FloatView';
@@ -227,11 +228,12 @@ const SceneCell = ({
 interface QueueControlProps {
   type: 'scene' | 'inpaint';
   filterFunc?: (scene: GenericScene) => boolean;
+  onClose?: (x: number) => void;
   showPannel?: boolean;
   className?: string;
 }
 
-const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueControlProps) => {
+const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }: QueueControlProps) => {
   const ctx = useContext(AppContext)!;
   const curSession = ctx.curSession!;
   const [_, rerender] = useState<{}>({});
@@ -388,7 +390,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
           },
           {
             text: (path) => {
-              return isMainImage(path) ? '메인 이미지 해제' : '메인 이미지 지정';
+              return isMainImage(path) ? '즐겨찾기 해제' : '즐겨찾기 지정';
             },
             className: 'bg-orange-400',
             onClick: async (scene, path, close) => {
@@ -406,40 +408,19 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
           },
         ]
       : [
+
           {
-            text: '인페인팅 씬 생성',
+            text: '해당 이미지로 인페인트',
             className: 'bg-orange-400',
-            onClick: async (scene: InPaintScene, path, close) => {
+            onClick: async (scene, path, close) => {
               let image = await imageService.fetchImage(path);
-              image = image.replace(/^data:image\/(png|jpeg);base64,/, '');
-              const sceneName = scene.sceneRef ? scene.sceneRef : scene.name;
-              const name =
-                sceneName +
-                '_inpaint_' +
-                Date.now().toString();
-              let prompt, uc;
-              try {
-                const [prompt_, seed, scale, sampler, steps, uc_] = await extractPromptDataFromBase64(image);
-                prompt = prompt_;
-                uc = uc_;
-              } catch(e) {
-                prompt = '';
-                uc = '';
-              }
-              const newScene: InPaintScene = {
-                type: 'inpaint',
-                name: name,
-                prompt,
-                uc,
-                resolution: scene.resolution,
-                sceneRef: scene.sceneRef ? scene.sceneRef : undefined,
-                game: undefined,
-              };
-              await sessionService.saveInpaintImages(curSession!, newScene, image, '');
-              curSession!.inpaints[name] = newScene;
+              image = dataUriToBase64(image);
+              let mask =  await imageService.fetchImage(sessionService.getInpaintMaskPath(curSession!, scene as InPaintScene));
+              mask = dataUriToBase64(mask);
+              await sessionService.saveInpaintImages(curSession!, scene, image, mask);
               close();
               updateScenes();
-              setInpaintEditScene(newScene);
+              setInpaintEditScene(scene as InPaintScene);
               sessionService.inPaintHook();
             },
           },
@@ -466,6 +447,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
               );
               imageService.refresh(curSession!, orgScene);
               setDisplayScene(undefined);
+              if (onClose) onClose(0);
               close();
             },
           },
@@ -481,6 +463,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
               <InPaintEditor
                 editingScene={inpaintEditScene}
                 onConfirm={() => {
+                  if (resultViewerRef.current) resultViewerRef.current.setInpaintTab();
                   setInpaintEditScene(undefined);
                 }}
                 onDelete={() => {
@@ -620,6 +603,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
       })
     };
 
+  const resultViewerRef = useRef<any>(null);
   const resultViewer = useMemo(() => {
     if (displayScene) return <FloatView
           priority={2}
@@ -631,6 +615,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
           }}
         >
           <ResultViewer
+            ref={resultViewerRef}
             scene={displayScene}
             isMainImage={isMainImage}
             onFilenameChange={onFilenameChange}
@@ -662,7 +647,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc }: QueueCon
               className={`${roundButton} ${primaryColor}`}
               onClick={exportPackage}
             >
-              모든 메인 이미지 내보내기
+              모든 즐겨찾기 이미지 내보내기
             </button>
           )}
         </div>

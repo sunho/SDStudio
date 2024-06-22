@@ -131,6 +131,35 @@ export default function App() {
       sessionService.markUpdated(curSession!.name);
       sessionService.sceneOrderChanged();
     });
+    const removeImageChangedListener = ipcRenderer.on('image-changed', async (path: string) => {
+      console.log('image-changed', path);
+      imageService.invalidateCache(path);
+    });
+    const removeDuplicateImageListener = ipcRenderer.on('duplicate-image', async (ctx: ContextAlt) => {
+      const tmp = ctx.path.slice(0, ctx.path.lastIndexOf('/'));
+      const dir = tmp.split('/').pop();
+      const parDir = tmp.slice(0, tmp.lastIndexOf('/')) as any;
+      const field = parDir.startsWith('outs') ? 'scenes' : 'inpaints';
+      console.log(parDir);
+      const scene = (curSession! as any)[field][dir];
+      if (!scene) {
+        return;
+      }
+
+      await invoke(
+        'copy-file',
+        ctx.path,
+        tmp +
+          '/' +
+          Date.now().toString() +
+          '.png',
+      );
+      imageService.refresh(curSession!, scene);
+      pushDialog({
+        type: 'yes-only',
+        text: '이미지를 복제했습니다',
+      });
+    });
     const removeCopyImageListener = ipcRenderer.on('copy-image', (ctx: ContextAlt) => {
       pushDialog({
         type: 'dropdown',
@@ -202,6 +231,8 @@ export default function App() {
       removeCopyImageListener();
       removeMoveSceneFrontListener();
       removeMoveSceneBackListener();
+      removeImageChangedListener();
+      removeDuplicateImageListener();
       removeDuplicateSceneListener();
     };
   },[curSession]);
@@ -386,7 +417,6 @@ export default function App() {
 
   const tabs = [
     { label: '이미지생성', content: <QueueControl type="scene" showPannel/> },
-    { label: '인페인팅', content: <QueueControl type="inpaint" showPannel/> },
     { label: '프롬프트조각', content: <PieceEditor /> },
   ];
 

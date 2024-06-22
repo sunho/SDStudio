@@ -4,7 +4,7 @@ import { createRef, useCallback, useContext, useEffect, useRef, useState } from 
 import { AppContext } from './App';
 import Denque from 'denque';
 import { WordTag, calcGapMatch, highlightPrompt, invoke, promptService } from './models';
-import { FaBook, FaBox, FaBrush, FaDatabase, FaPaintBrush, FaTag } from 'react-icons/fa';
+import { FaBook, FaBox, FaBrush, FaDatabase, FaExpand, FaPaintBrush, FaTag, FaTimes, FaTimesCircle } from 'react-icons/fa';
 import { FaPerson, FaStar } from "react-icons/fa6";
 import { FixedSizeList as List } from 'react-window';
 
@@ -667,7 +667,7 @@ const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSe
 
 interface PromptEditTextAreaProps {
   value: string;
-  className?: string;
+  whiteBg?: boolean;
   innerRef?: any;
   disabled?: boolean;
   onChange: (value: string) => void;
@@ -700,7 +700,7 @@ const PromptEditTextArea = ({
   value,
   onChange,
   disabled,
-  className,
+  whiteBg,
   innerRef,
 }: PromptEditTextAreaProps) => {
   const { curSession } = useContext(AppContext)!;
@@ -720,6 +720,7 @@ const PromptEditTextArea = ({
   const cntRef = useRef(0);
   const selectedTagRef = useLatest(selectedTag);
   const curWordRef = useLatest(curWord);
+  const [fullScreen, setFullScreen] = useState(false);
 
   const closeAutoComplete = () => {
     setTags([]);
@@ -836,12 +837,28 @@ const PromptEditTextArea = ({
     closeAutoComplete();
   };
 
+  let bgColor = whiteBg ? 'bg-gray-100' : 'bg-gray-200';
+  if (fullScreen)
+    bgColor = 'bg-white shadow-lg'
+
   return (
+    <>
     <div
       ref={innerRef}
       spellCheck={false}
-      className={className + ' overflow-hidden h-full'}
+      className={bgColor + (!fullScreen ? ' overflow-hidden h-full relative' : ' left-0 m-4 p-2 overflow-hidden fixed z-30 h-96 prompt-full')}
     >
+    <div className="absolute right-0 top-0">
+      <button
+        onClick={() => {
+          if(!disabled)
+            setFullScreen(!fullScreen);
+        }}
+        className="text-gray-500 hover:text-gray-600 opacity-50 mr-1 mt-1"
+      >
+        {!fullScreen ? <FaExpand></FaExpand> : <FaTimes></FaTimes>}
+      </button>
+    </div>
     <div ref={containerRef} className="overflow-auto h-full">
       <div
         className={'w-full min-h-full focus:outline-0 whitespace-pre-wrap align-middle'}
@@ -856,8 +873,9 @@ const PromptEditTextArea = ({
       value=''
       onChange={(e) => {e.target.value=''}}></textarea>
     </div>
+     {fullScreen && <div className="fixed bg-black opacity-15 w-screen h-screen top-0 left-0 z-20" onClick={() => {setFullScreen(false);}}></div>}
+     </>
     );
 };
-
 
 export default PromptEditTextArea;

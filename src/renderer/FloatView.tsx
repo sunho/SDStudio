@@ -87,20 +87,6 @@ export const FloatViewProvider: React.FC<FloatViewProviderProps> = ({ children }
   );
 };
 
-    {/* <div className={className ?? 'floating-component'}> */}
-    {/*   <div className="content flex flex-col"> */}
-    {/*     <div className="flex-none"> */}
-    {/*       <button className="button" onClick={onClose}> */}
-    {/*         <FaTimes size={20} /> */}
-    {/*       </button> */}
-    {/*     </div> */}
-    {/*     <div className="w-full flex-1 flex flex-col overflow-hidden"> */}
-    {/*       {children} */}
-    {/*     </div> */}
-    {/*   </div> */}
-    {/* </div> */}
-    {/**/}
-    {/**/}
 interface FloatViewProps {
   children: ReactNode;
   priority: number;

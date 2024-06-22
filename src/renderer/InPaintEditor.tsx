@@ -12,6 +12,7 @@ import {
   extractMiddlePrompt,
   extractPromptDataFromBase64,
   imageService,
+  invoke,
   promptService,
   sessionService,
   toPARR,
@@ -22,7 +23,7 @@ import PromptEditTextArea from './PromptEditTextArea';
 import { Resolution, resolutionMap } from '../main/imageGen';
 
 interface Props {
-  editingScene: InPaintScene | undefined;
+  editingScene: InPaintScene;
   onConfirm: () => void;
   onDelete: () => void;
 }
@@ -46,37 +47,34 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
   const [currentUC, setCurrentUC] = useState('');
   const [originalImage, setOriginalImage] = useState(false);
   useEffect(() => {
-    if (editingScene) {
-      setImage('');
-      setMask(undefined);
-      setTaskName(editingScene.name);
-      setResolution(editingScene.resolution);
-      setCurrentPrompt(editingScene.prompt);
-      setCurrentUC(editingScene.uc);
-      setOriginalImage(editingScene.originalImage ?? false);
-      async function loadImage() {
-        try {
-          const data = await imageService.fetchImage(sessionService.getInpaintOrgPath(curSession!, editingScene as InPaintScene));
-          setImage(dataUriToBase64(data));
-        } catch (e) {
-          pushMessage('인페인트 이미지를 불러오는데 실패했습니다.');
-        }
-        try {
-          const data = await imageService.fetchImage(sessionService.getInpaintMaskPath(curSession!, editingScene as InPaintScene));
-          setMask(dataUriToBase64(data));
-        } catch (e) {
-        }
+    setImage('');
+    setMask(undefined);
+    setTaskName(editingScene.name);
+    setResolution(editingScene.resolution);
+    setCurrentPrompt(editingScene.prompt);
+    setCurrentUC(editingScene.uc);
+    setOriginalImage(editingScene.originalImage ?? false);
+    async function loadImage() {
+      try {
+        const data = await imageService.fetchImage(sessionService.getInpaintOrgPath(curSession!, editingScene as InPaintScene));
+        setImage(dataUriToBase64(data));
+      } catch (e) {
+        pushMessage('인페인트 이미지를 불러오는데 실패했습니다.');
       }
-      loadImage();
-    } else {
-      setImage('');
-      setMask(undefined);
-      setTaskName('');
-      setCurrentPrompt('');
-      setResolution('portrait');
-      setCurrentUC('');
-      setOriginalImage(false);
     }
+    async function loadMask() {
+      try {
+        const data = await imageService.fetchImage(sessionService.getInpaintMaskPath(curSession!, editingScene as InPaintScene));
+        setMask(dataUriToBase64(data));
+      } catch (e) {
+      }
+    }
+    loadImage();
+    loadMask();
+    imageService.addEventListener('image-cache-invalidated', loadImage);
+    return () => {
+      imageService.removeEventListener('image-cache-invalidated', loadImage);
+    };
   }, [editingScene]);
   useEffect(() => {
     getImageDimensions(image)
@@ -110,42 +108,13 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
       return;
     }
     const mask = brushTool.current!.getMaskBase64();
-    if (editingScene) {
-      editingScene.resolution = resolution;
-      editingScene.prompt = currentPrompt;
-      editingScene.uc = currentUC;
-      editingScene.originalImage = originalImage;
-      await sessionService.saveInpaintImages(curSession!, editingScene, image, mask);
-      sessionService.markUpdated(curSession!.name);
-    } else {
-      if (!taskName || taskName === '') return;
-      if (taskName in curSession!.inpaints) {
-        pushMessage('이미 존재하는 씬 이름입니다.');
-        return;
-      }
-
-      const newScene: InPaintScene = {
-        type: 'inpaint',
-        name: taskName,
-        prompt: currentPrompt,
-        uc: currentUC,
-        resolution: resolution,
-        game: undefined,
-      };
-      curSession!.inpaints[taskName] = newScene;
-      await sessionService.saveInpaintImages(curSession!, newScene, image, mask);
-      sessionService.markUpdated(curSession!.name);
-    }
+    editingScene.resolution = resolution;
+    editingScene.prompt = currentPrompt;
+    editingScene.uc = currentUC;
+    editingScene.originalImage = originalImage;
+    await sessionService.saveInpaintImages(curSession!, editingScene, image, mask);
+    sessionService.markUpdated(curSession!.name);
     onConfirm();
-  };
-  const createPrompt = async () => {
-    const prompt = toPARR(currentPrompt);
-    const expanded = promptService.expandPARR(
-      prompt,
-      curSession!,
-      editingScene,
-    );
-    return expanded.join(', ');
   };
 
   const brushTool = useRef<BrushToolRef | null>(null);
@@ -191,12 +160,19 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
                 } catch(e) {
                   pushMessage("NAI 에서 생성된 이미지가 아닙니다.")
                   setImage(file);
-                  setCurrentPrompt('');
-                  setCurrentUC('');
                 }
               }}
             ></FileUploadBase64>
           </div>
+          <button
+            className={`${roundButton} ${primaryColor}`}
+            onClick={() => {
+              const path = sessionService.getInpaintOrgPath(curSession!, editingScene as InPaintScene);
+              invoke('open-image-editor', path);
+              invoke('watch-image', path);
+            }}>
+            이미지 편집
+          </button>
         </div>
         <div className="flex-none flex whitespace-nowrap gap-3 items-center">
           <span>해상도:</span>
@@ -227,21 +203,23 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
         </div>
         <div className="mt-auto flex-none">
           <div className="text-xl mb-2">프롬프트:</div>
+          <div className="h-36 mb-2">
           <PromptEditTextArea
             value={currentPrompt}
             onChange={(txt) => {
               setCurrentPrompt(txt);
             }}
-            className="bg-gray-200 h-48 mb-2"
           />
+          </div>
           <div className="text-xl mb-2">네거티브 프롬프트:</div>
+          <div className="h-36 mb-2">
           <PromptEditTextArea
             value={currentUC}
             onChange={(txt) => {
               setCurrentUC(txt);
             }}
-            className="bg-gray-200 h-48 mb-2"
           />
+          </div>
         </div>
         <div className="flex items-center gap-4 ml-auto pb-2">
           <label htmlFor="brushSize">브러시 크기: {brushSize}</label>

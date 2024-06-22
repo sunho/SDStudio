@@ -148,7 +148,6 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
       </div>
       <div className="flex-1 min-h-0">
         <PromptEditTextArea
-          className="w-full h-full bg-gray-200"
           value={selectedPreset.frontPrompt}
           disabled={props.middlePromptMode && presetEditLock}
           onChange={frontPromptChange}
@@ -160,7 +159,6 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
         </div>
         <div className="flex-1 min-h-0">
           <PromptEditTextArea
-            className="w-full h-full bg-gray-200"
             value={props.getMiddlePrompt ? props.getMiddlePrompt() : ''}
             onChange={(txt) => {
               if (props.onMiddlePromptChange) props.onMiddlePromptChange(txt);
@@ -174,7 +172,6 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
       </div>
       <div className="flex-1 min-h-0">
         <PromptEditTextArea
-          className="w-full h-full bg-gray-200"
           value={selectedPreset.backPrompt}
           disabled={props.middlePromptMode && presetEditLock}
           onChange={backPromptChange}
@@ -185,7 +182,6 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
       </div>
       <div className="flex-1 min-h-0">
         <PromptEditTextArea
-          className="w-full h-full bg-gray-200"
           value={selectedPreset.uc}
           disabled={props.middlePromptMode && presetEditLock}
           onChange={ucPromptChange}

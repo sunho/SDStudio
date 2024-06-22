@@ -15,7 +15,7 @@
 #include <codecvt>
 
 const int INITIAL_CUTOFF = 1600;
-const int FINAL_CUTOF = 128;
+const int FINAL_CUTOF = 256;
 
 class Word {
 public:
@@ -370,7 +370,6 @@ public:
   }
 
   std::vector<Word> search(const std::string& word) {
-    std::wcerr << utf8ToCodepoints(word)[0] << L"\n";
     const std::wstring normalized = utf8ToUtf16(normalize(word));
     std::vector<Word> result_;
     std::unordered_set<std::wstring_view> seen;

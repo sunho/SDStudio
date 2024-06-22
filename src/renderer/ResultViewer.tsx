@@ -296,6 +296,7 @@ const ResultDetailView = ({
   const [selectedIndex, setSelectedIndex] = useState<number>(initialSelectedIndex);
   const [filename, setFilename] = useState<string>(paths[selectedIndex].split('/').pop()!);
   const [image, setImage] = useState<string | undefined>(undefined);
+  const watchedImages = useRef(new Set<string>());
   const [middlePrompt, setMiddlePrompt] = useState<string>('');
   const [seed, setSeed] = useState<string>('');
   const [scale, setScale] = useState<string>('');
@@ -338,7 +339,19 @@ const ResultDetailView = ({
       }
     };
     fetchImage();
+    imageService.addEventListener('image-cache-invalidated', fetchImage);
+    return () => {
+      imageService.removeEventListener('image-cache-invalidated', fetchImage);
+    };
   }, [selectedIndex]);
+
+  useEffect(() => {
+    return () => {
+      watchedImages.current.forEach((path) => {
+        invoke('unwatch-image', path);
+      });
+    }
+  });
 
   return (
       <div className="z-10 bg-white w-full h-full flex overflow-hidden">
@@ -352,6 +365,14 @@ const ResultDetailView = ({
             >
               파일 위치 열기
             </button>
+            <button
+              className={`${roundButton} bg-sky-500`}
+              onClick={() => {
+                invoke('open-image-editor', paths[selectedIndex]);
+                watchedImages.current.add(paths[selectedIndex]);
+                invoke('watch-image', paths[selectedIndex]);
+              }}
+            >이미지 편집</button>
             <button
               className={`${roundButton} bg-red-500`}
               onClick={() => {
@@ -443,6 +464,11 @@ const ResultDetailView = ({
   );
 };
 
+interface ResultVieweRef {
+  setImageTab: () => void;
+  setInpaintTab: () => void;
+}
+
 interface ResultViewerProps {
   scene: GenericScene;
   buttons: ResultDetailViewButton[];
@@ -452,27 +478,36 @@ interface ResultViewerProps {
   starScene?: Scene;
 }
 
-const ResultViewer = ({
+const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
   scene,
   onFilenameChange,
   onEdit,
   starScene,
   isMainImage,
   buttons,
-}: ResultViewerProps) => {
+}: ResultViewerProps, ref) => {
   const { curSession, selectedPreset, samples, pushDialog } = useContext(AppContext)!;
   const [_, forceUpdate] = useState<{}>({});
   const [tournament, setTournament] = useState<boolean>(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | undefined>(
     undefined,
   );
-  const imagesSizes = [{ name: '스몰', size: 200 }, { name: '미디엄', size: 400 }, { name: '라지', size: 500}]
+  const imagesSizes = [{ name: 'S', size: 200 }, { name: 'M', size: 400 }, { name: 'L', size: 500}]
   const [imageSize, setImageSize] = useState<number>(1);
   const [selectedTab, setSelectedTab] = useState<number>(0);
-  const tabNames = ['이미지 리스트', '인페인트 리스트', '메인 이미지 리스트'];
+  const tabNames = ['이미지', '인페인트 씬', '즐겨찾기'];
   useEffect(() => {
     imageService.refresh(curSession!, scene);
   }, []);
+
+  useImperativeHandle(ref, () => ({
+    setImageTab: () => {
+      setSelectedTab(0);
+    },
+    setInpaintTab: () => {
+      setSelectedTab(1);
+    },
+  }));
 
   useEffect(() => {
     const handleGameChanged = () => {
@@ -499,7 +534,7 @@ const ResultViewer = ({
           value: 'all'
         },
         {
-          text: '메인 제외 n등 이하 이미지 삭제',
+          text: '즐겨찾기 제외 n등 이하 이미지 삭제',
           value: 'n'
         },
       ],
@@ -526,7 +561,6 @@ const ResultViewer = ({
         }
       }
     })
-
   };
 
   return (
@@ -546,9 +580,9 @@ const ResultViewer = ({
         </FloatView>
       )}
       <div className="flex-none p-4 border-b border-gray-300">
-        <div className="mb-4">
+        <div className="mb-4 flex items-center">
           <span className="font-bold text-xl">
-            {scene.type === "inpaint" ? "인페인트 " : "일반 "} 씬 {scene.name}의 생성된 이미지
+            {scene.type === "inpaint" ? "🖌️ 인페인트 " : "🖼️ 일반 "} 씬 {scene.name}의 생성된 이미지
           </span>
         </div>
         <div className="flex justify-between items-center mt-4">
@@ -596,27 +630,19 @@ const ResultViewer = ({
               <FaTrash/>
             </button>
           </div>
-          <div className="flex gap-3">
-            {selectedTab !== 1 && imagesSizes.map((size, index) => (
-              <button
-                key={index}
-                className={`${roundButton} ${
-                  imageSize === index ? 'bg-sky-500' : 'bg-gray-400'
-                }`}
-                onClick={() => {
-                  setImageSize(index);
-                }}
-              >
-                {size.name}
-              </button>
+
+          {scene.type === 'scene' && <span className="flex ml-auto gap-2">
+            {tabNames.map((tabName, index) => (
+            <button className={`${roundButton} ` + (selectedTab === index ? 'bg-sky-500' : 'bg-gray-400')} onClick={() => setSelectedTab(index)}>
+              {tabName}
+            </button>
             ))}
-            {scene.type === 'scene' && <button className={`${roundButton} bg-sky-500`} onClick={() => setSelectedTab((selectedTab + 1) % tabNames.length)}>
-              {tabNames[selectedTab]}
-            </button>}
+          </span>}
+          <div className="flex gap-3">
           </div>
         </div>
       </div>
-      <div className="flex-1 pt-4 pb-4 relative h-full overflow-hidden">
+      <div className="flex-1 pt-2 relative h-full overflow-hidden">
         <ImageGallery
           scene={scene}
           onFilenameChange={onFilenameChange}
@@ -627,6 +653,7 @@ const ResultViewer = ({
           onSelected={onSelected}
         />
         <QueueControl type='inpaint' className={selectedTab === 1 ? 'px-4 ' : 'hidden'}
+          onClose={(x)=>{setSelectedTab(x)}}
           filterFunc={(x: InPaintScene) => {
             return x.sceneRef && x.sceneRef === scene.name;
           }}
@@ -655,8 +682,24 @@ const ResultViewer = ({
           onSelected={onSelected}
         />
       </div>
+      <div className="flex absolute gap-1 m-2 bottom-0 bg-white p-1 right-0 opacity-15 hover:opacity-100 transition-all">
+      {selectedTab !== 1 && imagesSizes.map((size, index) => (
+        <button
+          key={index}
+          className={`text-white w-8 h-8 hover:brightness-95 active:brightness-90
+          ${
+            imageSize === index ? 'bg-gray-500' : 'bg-gray-400'
+          }`}
+          onClick={() => {
+            setImageSize(index);
+          }}
+        >
+          {size.name}
+        </button>
+      ))}
+      </div>
     </div>
   );
-};
+});
 
 export default ResultViewer;

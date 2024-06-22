@@ -23,7 +23,10 @@ export type Channels =
   | 'open-web-page'
   | 'search-tags'
   | 'load-pieces-db'
-  | 'search-pieces';
+  | 'search-pieces'
+  | 'open-image-editor'
+  | 'watch-image'
+  | 'unwatch-image';
 
 const electronHandler = {
   ipcRenderer: {

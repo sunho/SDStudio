@@ -90,10 +90,6 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
     const curImageRef = useRef<any>(undefined);
     const brushColor = 'rgba(0, 0, 255, 1)';
 
-    const getTop = () => {
-      return historyRef.current[historyRef.current.length - 1];
-    };
-
     useImperativeHandle(ref, () => ({
       getMaskBase64() {
         return maskToBase64(curImageRef.current, imageWidth, imageHeight);
