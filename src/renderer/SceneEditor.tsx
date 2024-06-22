@@ -259,17 +259,17 @@ const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
               onDrop={(e) => onDrop(e, slotIndex, pieceIndex)}
               className={'p-3 m-2 bg-gray-200 rounded-xl'}
             >
+              <div className={"mb-3 " + (big ? ' h-56 w-96' : ' h-24 w-48')}>
               <PromptEditTextArea
+                whiteBg
                 innerRef={textAreaRef.current[slotIndex]?.[pieceIndex]}
-                className={
-                  'bg-gray-100 mb-3' + (big ? ' h-56 w-96' : ' h-24 w-48')
-                }
                 value={scene.slots[slotIndex][pieceIndex].prompt}
                 onChange={(s) => {
                   scene.slots[slotIndex][pieceIndex].prompt = s;
                   onChanged && onChanged();
                 }}
               />
+              </div>
               <div className="flex gap-2">
                 <label>활성화</label>
                 <input

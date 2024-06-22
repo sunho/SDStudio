@@ -5,7 +5,6 @@
 팔찌 : bracelet
 뱅글 : bangle
 스파이크 팔찌 : spiked bracelet
-신부용 건틀릿 : bridal gauntlets
 분리형 소매 : detached sleeves
 팔 워머 : arm warmers
 복싱 글러브 : boxing gloves
@@ -30,7 +29,6 @@
 맨어깨 : bare shoulders
 오프숄더 : off shoulder
 어깨 노출 : shoulder cutout
-소매 걷어올림 : sleeves rolled up
 민소매 : sleeveless
 낮은 암홀 : low-cut armhole
 소매 밀어올림 : sleeves pushed up

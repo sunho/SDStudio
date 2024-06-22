@@ -706,6 +706,7 @@ export class ImageService extends EventTarget {
       }
       this.releaseMutex(path);
     }
+    this.dispatchEvent(new CustomEvent('image-cache-invalidated', { detail: { path } }));
   }
 
   async fetchImage(path: string, holdMutex = true) {
@@ -1514,8 +1515,11 @@ export const highlightPrompt = (session: Session, text: string) => {
   let [parenFine, lastPos] = parenCheck(text);
   let offset = 0;
   const words = text
-    .split(',')
+    .split(/([,\n])/)
     .map((word: string, index) => {
+      if (word === ',' || word === '\n') {
+        return word;
+      }
       const classNames = ['syntax-word'];
       let leftTrimPos = 0;
       while (leftTrimPos < word.length && isWhitespace(word[leftTrimPos])) {
@@ -1576,7 +1580,7 @@ export const highlightPrompt = (session: Session, text: string) => {
       offset += word.length + 1;
       return res;
     })
-    .join(',');
+    .join('');
   return `${words}`;
 };
 

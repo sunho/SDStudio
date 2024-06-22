@@ -191,8 +191,8 @@ const PieceEditor = () => {
                   <FaTrash size={20} color="#ef4444" />
                 </button>
               </div>
+              <div className="h-20">
               <PromptEditTextArea
-                className="bg-gray-200 h-20"
                 innerRef={elementsRef.current[key]}
                 value={value}
                 onChange={(txt) => {
@@ -200,6 +200,7 @@ const PieceEditor = () => {
                   sessionService.markUpdated(curSession!.name);
                 }}
               />
+              </div>
             </div>
           ))}
           <button

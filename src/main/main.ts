@@ -22,6 +22,9 @@ import webpackPaths from '../../.erb/configs/webpack.paths';
 
 import contextMenu from 'electron-context-menu';
 
+const { exiftool } = require('exiftool-vendored');
+const chokidar = require('chokidar');
+
 interface DataBaseConns {
   tagDBId: number;
   pieceDBId: number;
@@ -222,6 +225,105 @@ ipcMain.handle(
   },
 );
 
+const { exec } = require('child_process');
+
+const dirWatchHandles = new Map<string, any>();
+const watchHandles = new Map<string, any>();
+let isWritingExifData = false;
+
+async function openImageEditor(inputPath: string) {
+  const commonPaths = [
+    'C:\\Program Files\\Adobe\\Adobe Photoshop CC 2019\\Photoshop.exe',
+    'C:\\Program Files\\Adobe\\Adobe Photoshop CC 2020\\Photoshop.exe',
+    'C:\\Program Files\\Adobe\\Adobe Photoshop CC 2021\\Photoshop.exe',
+    'C:\\Program Files\\Adobe\\Adobe Photoshop 2022\\Photoshop.exe',
+    'C:\\Program Files\\Adobe\\Adobe Photoshop 2023\\Photoshop.exe',
+    'C:\\Program Files\\Adobe\\Adobe Photoshop 2024\\Photoshop.exe',
+    '/Applications/Adobe Photoshop CC 2019/Adobe Photoshop CC 2019.app',
+    '/Applications/Adobe Photoshop CC 2020/Adobe Photoshop CC 2020.app',
+    '/Applications/Adobe Photoshop CC 2021/Adobe Photoshop CC 2021.app',
+    '/Applications/Adobe Photoshop 2022/Adobe Photoshop 2022.app',
+    '/Applications/Adobe Photoshop 2023/Adobe Photoshop 2023.app',
+    '/Applications/Adobe Photoshop 2024/Adobe Photoshop 2024.app',
+  ];
+
+  async function findPhotoshopPath(paths: string[]) {
+    for (let photoshopPath of paths) {
+      if (await fs.access(photoshopPath).then(() => true).catch(() => false)) {
+        return photoshopPath;
+      }
+    }
+    return null;
+  }
+
+  const photoshopPath = await findPhotoshopPath(commonPaths);
+  if (!photoshopPath) {
+    console.error('Photoshop not found. Please ensure it is installed.');
+  }
+  console.log(`Opening Photoshop at ${photoshopPath}`);
+
+  const command = `open -a "${photoshopPath}" "${path.resolve(inputPath)}"`;
+
+  exec(command, (err: any) => {
+    if (err) {
+      console.error(`Error opening Photoshop: ${err.message}`);
+      return;
+    }
+    console.log('Photoshop opened successfully.');
+  });
+}
+
+ipcMain.handle('open-image-editor', async (event, inputPath) => {
+  await openImageEditor(APP_DIR + '/' + inputPath);
+});
+
+ipcMain.handle('watch-image', async (event, inputPath) => {
+  const orgDir = inputPath.split('/').slice(0, -1).join('/');
+  inputPath = APP_DIR + '/' + inputPath;
+  const dir = path.dirname(inputPath);
+  console.log(orgDir);
+  const curPath = path.join(dir, path.basename(inputPath));
+  let tags = null;
+  try {
+    tags = await exiftool.read(curPath);
+  } catch (e) {
+  }
+  if (!dirWatchHandles.has(dir)) {
+    const handle = chokidar.watch(dir, {
+      persistent: true,
+      ignoreInitial: true,
+    });
+
+    handle.on('change', async (changedPath: string) => {
+      const candPath = path.join(dir, path.basename(changedPath));
+      if (watchHandles.has(candPath)) {
+        console.log('Image changed:', changedPath);
+        if (!isWritingExifData) {
+          if (watchHandles.get(candPath) !== 'null') {
+            try {
+              isWritingExifData = true;
+              await exiftool.write(candPath, watchHandles.get(candPath));
+            } catch(e) {
+            } finally {
+              isWritingExifData = false;
+            }
+          }
+          mainWindow!.webContents.send('image-changed', orgDir + '/' + changedPath.split('/').pop());
+        }
+      }
+    });
+
+    dirWatchHandles.set(dir, handle);
+  }
+  watchHandles.set(curPath, tags ?? 'null');
+});
+
+ipcMain.handle('unwatch-image', async (event, inputPath) => {
+  const dir = path.dirname(inputPath);
+  const curPath = path.join(dir, path.basename(inputPath));
+  watchHandles.delete(curPath);
+});
+
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
   sourceMapSupport.install();
@@ -291,6 +393,12 @@ const createWindow = async () => {
               label: '해당 이미지를 다른 씬으로 복사',
               click: () => {
                 mainWindow!.webContents.send('copy-image', altContext);
+              },
+            },
+            {
+              label: '해당 이미지를 복제',
+              click: () => {
+                mainWindow!.webContents.send('duplicate-image', altContext);
               },
             },
           ];
@@ -399,7 +507,7 @@ if (!gotTheLock) {
     // Someone tried to run a second instance, we should focus our window.
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore()
-      mainWindow.focus()
+      mainWindow.focus();
     }
   })
   /**

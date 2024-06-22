@@ -4,20 +4,17 @@
 등이 트인 드레스 : Backless Dress
 밴드 유니폼 : Band Uniform
 야구 저지 : Baseball Jersey
-수영복 : Bathing Suit
 목욕 가운 : Bathrobe
 벨바텀 바지 : Bell Bottoms
 베레모 : Beret
 버뮤다 반바지 : Bermuda Shorts
-비키니 : Bikini
 블레이저 : Blazer
 블루머 : Bloomers
 블라우스 : Blouse
 바디스타킹 : Body Stocking
-바디슈트 : Bodysuit
 보머 재킷 : Bomber Jacket
-부츠 : Boots
-복서 반바지 : Boxer Shorts
+부츠 : Boos
+복서 반바지  Boxer Shorts
 보이쇼츠 : Boyshorts
 브래지어 : Bra
 부루마 : Buruma
@@ -34,7 +31,6 @@
 챕스 : Chaps
 중세 정강이 갑옷 : Chausses
 치어리더 복장 : Cheerleader Outfit
-중국 드레스 : China Dress
 코트 : Coat
 칵테일 드레스 : Cocktail Dress
 크롭탑 : Croptop
@@ -73,13 +69,11 @@
 쥬바 (사우디 옷) : Jubbah
 점퍼 : Jumper
 킬트 : Kilt
-기모노 : Kimono
 키텔 : Kittel
 실험 가운 : Lab Coat
 가죽 재킷 : Leather Jacket
 레더호젠 : Lederhosen
 레깅스 : Leggings
-레오타드 : Leotard
 롱코트 : Long coat
 마이요 : Maillot
 메이드 복 : maid uniform
@@ -96,7 +90,6 @@
 오버스커트 : Overskirt
 파자마 : Pajamas
 팔라초 팬츠 : Palazzo Pants
-팬티 : Panties
 패러슈트 팬츠 : Parachute Pants
 파카 : Parka
 골반 커튼 : Pelvic curtain
@@ -111,7 +104,6 @@
 사리 (인도 여성복) : Sari
 사롱 (허리에 두른 천) : Sarong
 요대 : Sash
-스카프 : Scarf
 수술복 : Scrubs
 세라피 (멕시코 남성 모포) : Serape
 숄 : Shawl
@@ -122,7 +114,6 @@
 치마 : Skirt
 슬랙스 (바지) : Slacks
 스목 (유치원복 상의) : Smock
-양말 : Socks
 라이크라 (쫄쫄이 원단) : Spandex
 스포츠 브라 : Sports Bra
 스타킹 : Stockings
@@ -144,7 +135,6 @@
 트렁크 수영복 : Swimming Trunks
 티셔츠 : T-shirt
 끈 팬티 : Thong
-넥타이 : Tie
 타이츠 : pantyhose
 토가 (고대 로마 전통의상) : Toga
 실크 모자 : Top Hat
@@ -173,7 +163,6 @@
 롱 스커트 : long skirt
 로우레그 스커트 : lowleg skirt
 마이크로 스커트 : microskirt
-미니 스커트 : miniskirt
 격자무늬 치마 : plaid skirt
 주름 치마 : pleated skirt
 멜빵 스커트 : suspender skirt
@@ -184,7 +173,7 @@
 바이크 슈트 : bikesuit
 레이싱 슈트 : racing suit
 바디 스타킹 : bodystocking
-보디슈트 : bodysuit
+바디 슈트 : bodysuit
 점프수트 : jumpsuit
 짧은 점프수트 : short jumpsuit
 레오타드 : leotard
@@ -261,12 +250,10 @@
 금 테두리 : gold trim
 레이스 테두리 : lace trim
 리본 테두리 : ribbon trim
-비치는 (씨스루) : see-through
 은 테두리 : silver trim
 팽팽한 셔츠 : taut shirt
 찢어진 옷 : torn clothes
 안대 : Blindfold
-바디슈트 : Bodysuit
 고무 슈트 : Gimp suit
 본디지 의상 : bondage outfit
 라텍스 : Latex
@@ -283,12 +270,10 @@
 엉덩이 노출 수영복 : assless swimsuit
 등 노출 팬티 : backless panties
 등 노출 바지 : backless pants
-가슴 : Breasts
 가슴 노출 옷 : breastless clothes
 젖꼭지 노출 옷 : nippleless clothes
 컵 없는 비키니 : cupless bikini
 컵 없는 브라 : cupless bra
-노출 의상 : revealing clothes
 역방향 옷 : reverse outfit
 역비키니 아머 : reverse bikini armor
 역바니 : reverse bunnysuit

@@ -13,6 +13,16 @@ body {
   z-index: 3000;
 }
 
+.prompt-full {
+  width: 60vw;
+  left: 17vw;
+  top: 20vh;
+}
+
+.z-back {
+  z-index: -1;
+}
+
 .confirm-window {
   position: fixed;
   top: 0;
