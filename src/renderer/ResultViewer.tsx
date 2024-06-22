@@ -584,7 +584,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
         <div className="mb-4 flex items-center">
           <span className="font-bold text-2xl">
             {scene.type === "inpaint" ? <span className="inline-flex items-center gap-1">
-                <BiBrush size={32}></BiBrush>인페인트 씬 {scene.name}의 생성된 이미지</span> : <span className="inline-flex items-center gap-1"><BiImage size={32}></BiImage>일반 씬 {scene.name}의 생성된 이미지</span>}
+                🖌️ 인페인트 씬 {scene.name}의 생성된 이미지</span> : <span className="inline-flex items-center gap-1">🖼️ 일반 씬 {scene.name}의 생성된 이미지</span>}
           </span>
         </div>
         <div className="flex justify-between items-center mt-4">

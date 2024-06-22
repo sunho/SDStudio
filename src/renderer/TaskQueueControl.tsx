@@ -153,6 +153,10 @@ export const TaskProgressBar = ({fast}: TaskProgressBarProps) => {
     </div>
 }
 
+const TaskQueueList = () => {
+  return <div></div>
+};
+
 const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
   const ctx = useContext(AppContext)!;
   const [_, rerender] = useState<{}>({});

@@ -82,6 +82,7 @@ const configuration: webpack.Configuration = {
   externals: {
     sharp: 'commonjs sharp',
     sdsnative: 'commonjs sdsnative',
+    fsevents: 'commonjs fsevents',
   },
 };
 
