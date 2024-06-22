@@ -19,6 +19,10 @@ body {
   top: 20vh;
 }
 
+.prog-list {
+  height: 50vh;
+}
+
 .z-back {
   z-index: -1;
 }

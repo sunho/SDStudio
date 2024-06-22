@@ -14,6 +14,7 @@ import { FaSpinner } from 'react-icons/fa';
 import { FaPlay, FaRegCalendarTimes, FaStop } from 'react-icons/fa';
 import { FaTimes } from 'react-icons/fa';
 import { FaRegClock } from 'react-icons/fa';
+import { Task } from 'electron/renderer';
 
 interface Props {
   setSamples: (nw: number) => void;
@@ -153,13 +154,56 @@ export const TaskProgressBar = ({fast}: TaskProgressBarProps) => {
     </div>
 }
 
-const TaskQueueList = () => {
-  return <div></div>
+
+const TaskQueueList = ({onClose}: {onClose?: () => void}) => {
+  const [tasks, setTasks] = useState<any[]>([]);
+  useEffect(() => {
+    const onChange = () => {
+      setTasks([...taskQueueService.queue]);
+    };
+    taskQueueService.addEventListener('start', onChange);
+    taskQueueService.addEventListener('stop', onChange);
+    taskQueueService.addEventListener('progress', onChange);
+    taskQueueService.addEventListener('complete', onChange);
+    taskQueueService.addEventListener('error', onChange);
+    onChange();
+    return () => {
+      taskQueueService.removeEventListener('start', onChange);
+      taskQueueService.removeEventListener('stop', onChange);
+      taskQueueService.removeEventListener('progress', onChange);
+      taskQueueService.removeEventListener('complete', onChange);
+      taskQueueService.removeEventListener('error', onChange);
+    };
+  }, []);
+  return <div className="absolute bottom-0 mb-20 bg-white w-96 z-20 shadow-lg prog-list flex flex-col overflow-hidden">
+    <button
+      className="ml-auto mt-2 mr-2 text-gray-500 hover:text-gray-700 flex-none"
+      onClick={() => {
+        onClose?.();
+      }}
+      >
+      <FaTimes size={20} />
+    </button>
+    <div className="flex-1 overflow-hidden pb-2">
+      <div className="h-full overflow-auto">
+        {tasks.map((task, i) => (
+          <div key={i} className="flex mt-2 items-center gap-2 p-2 border-gray-300 border mx-2 rounded-lg">
+            <div className="flex-none">
+              {task!.type === 'generate' ? '🖼️' : '🖌️'}
+            </div>
+            <div className="flex-1 truncate">{task!.scene}</div>
+            <div className="flex-none ml-auto p-2 bg-gray-300 rounded-lg font-medium text-sm text-gray-500">{task!.done}/{task!.total}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
 };
 
 const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
   const ctx = useContext(AppContext)!;
   const [_, rerender] = useState<{}>({});
+  const [showList, setShowList] = useState(false);
   useEffect(() => {
     const onChange = () => {
       rerender({});
@@ -180,6 +224,11 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
 
   return (
     <div className="flex gap-4 items-center">
+      {showList && <TaskQueueList
+        onClose={() => {
+          setShowList(false);
+        }}
+      />}
       <div className="whitespace-nowrap">
         <span className="whitespace-nowrap">
         추가개수:
@@ -200,7 +249,13 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
           }}
         />
       </div>
+      <div
+        className="relative cursor-pointer hover:brightness-95 active:brightness-90"
+        onClick={()=>{
+        setShowList(!showList);
+      }}>
       <TaskProgressBar />
+      </div>
       <button
         className={`${roundButton} bg-gray-500 h-8 px-6`}
         onClick={() => {
