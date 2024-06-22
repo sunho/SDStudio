@@ -41,7 +41,6 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
     ctx.selectedPreset ?? Object.values(curSession.presets)[0];
   const frontPromptChange = (txt: string) => {
     selectedPreset.frontPrompt = txt;
-    console.log(selectedPreset.frontPrompt);
     updatePresets();
   };
   const backPromptChange = (txt: string) => {
@@ -62,15 +61,10 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
     rerender({});
   }, [curSession]);
 
-
   const [displayVibe, setDisplayVibe] = useState<string|undefined>(undefined);
   const [samplerSetting, setSamplerSetting] = useState(false);
   const [vibeSetting, setVibeSetting] = useState(false);
-  const vibeImageShow = (
-    <button className={`${roundButton} bg-gray-500 h-8`}>
-      <FaImage size={18} />{' '}
-    </button>
-  );
+
   return (
     <div
       key={selectedPreset ? getPresetName(selectedPreset) : ''}

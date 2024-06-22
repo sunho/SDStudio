@@ -31,20 +31,6 @@ const Tooltip = ({ text, x, y }: Props) => {
       let adjustedX = x;
       let adjustedY = y;
 
-      console.log(
-        'x:',
-        x,
-        'y:',
-        y,
-        'tooltipWidth:',
-        tooltipWidth,
-        'tooltipHeight:',
-        tooltipHeight,
-        'windowWidth:',
-        windowWidth,
-        'windowHeight:',
-        windowHeight,
-      );
       // Adjust x coordinate
       if (x + tooltipWidth > windowWidth) {
         adjustedX = windowWidth - tooltipWidth - 10;
@@ -65,7 +51,7 @@ const Tooltip = ({ text, x, y }: Props) => {
   }, [text, x, y]);
 
   return text ? (
-    <div ref={tooltipRef} style={tooltipStyle} className="text-white p-1 w-60">
+    <div ref={tooltipRef} style={tooltipStyle} className="text-white p-1 w-68 whitespace-pre-wrap max-h-screen">
       {text}
     </div>
   ) : (
