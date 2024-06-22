@@ -245,18 +245,19 @@ const { exec } = require('child_process');
 
 const dirWatchHandles = new Map<string, any>();
 const watchHandles = new Map<string, any>();
+const exclusiveCounter = new Map<string, number>();
 let isWritingExifData = false;
 const os = require('os');
 
 async function openImageEditor(inputPath: string) {
   const editor = config.imageEditor ?? 'photoshop';
-
-  async function findGimpPath() {
+  const homeDir = os.homedir();
+  const gimpBaseDirCand1 = path.join(homeDir, 'AppData', 'Local', 'Programs');
+  const gimpBaseDirCand2 = "C:\\Program Files";
+  async function findGimpPath(baseDir: string) {
     const platform = os.platform();
-    const homeDir = os.homedir();
 
     if (platform === 'win32') {
-      const baseDir = path.join(homeDir, 'AppData', 'Local', 'Programs');
       const gimpDir = 'GIMP 2';
       const binDir = 'bin';
       const gimpPath = path.join(baseDir, gimpDir, binDir);
@@ -302,7 +303,7 @@ async function openImageEditor(inputPath: string) {
   editorsToTry.splice(editorsToTry.indexOf(editor), 1);
   editorsToTry.unshift(editor);
   const runProgram = async (program: string) => {
-    const command = `open -a "${program}" "${path.resolve(inputPath)}"`;
+    const command = os.platform() === 'win32' ? `"${program}" "${path.resolve(inputPath)}"` : `open -a "${program}" "${path.resolve(inputPath)}"`;
 
     exec(command, (err: any) => {
       if (err) {
@@ -324,14 +325,24 @@ async function openImageEditor(inputPath: string) {
         } catch(e){}
         break;
       case 'gimp':
-        const gimpPath = await findGimpPath();
-        if (gimpPath) {
-          runProgram(gimpPath);
-          return;
-        }
+        try {
+          const gimpPath = await findGimpPath(gimpBaseDirCand1);
+          if (gimpPath) {
+            runProgram(gimpPath);
+            return;
+          }
+        } catch(e){}
+        try {
+          const gimpPath = await findGimpPath(gimpBaseDirCand2);
+          if (gimpPath) {
+            runProgram(gimpPath);
+            return;
+          }
+        } catch(e){}
         break;
       case 'mspaint':
         if (os.platform() === 'win32') {
+          runProgram('mspaint');
           return;
         }
         break;
@@ -366,15 +377,32 @@ ipcMain.handle('watch-image', async (event, inputPath) => {
         console.log('Image changed:', changedPath);
         if (!isWritingExifData) {
           if (watchHandles.get(candPath) !== 'null') {
-            try {
-              isWritingExifData = true;
-              await exiftool.write(candPath, watchHandles.get(candPath));
-            } catch(e) {
-            } finally {
-              isWritingExifData = false;
-            }
+            const trigger = (dur: number, retry: boolean) => {
+              const myCounter = (exclusiveCounter.get(changedPath) ?? 0)+1;
+              exclusiveCounter.set(changedPath, myCounter);
+              setTimeout(async () => {
+                if (exclusiveCounter.get(changedPath) !== myCounter) {
+                  return;
+                }
+                try {
+                  isWritingExifData = true;
+                  await exiftool.write(changedPath, watchHandles.get(candPath));
+                  mainWindow!.webContents.send('image-changed', orgDir + '/' +  path.basename(changedPath));
+                } catch(e) {
+                } finally {
+                  isWritingExifData = false;
+                  exclusiveCounter.delete(changedPath);
+                }
+                if (retry) {
+                  setTimeout(() => {
+                    trigger(0, false);
+                  }, dur);
+                }
+              }, 1000);
+            };
+            trigger(4000, true);
+            mainWindow!.webContents.send('image-changed', orgDir + '/' +  path.basename(changedPath));
           }
-          mainWindow!.webContents.send('image-changed', orgDir + '/' + changedPath.split('/').pop());
         }
       }
     });

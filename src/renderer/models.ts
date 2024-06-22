@@ -2071,9 +2071,8 @@ class AppUpdateNoticeService extends EventTarget {
     while (true) {
       try {
         if (this.current === '') this.current = await invoke('get-version');
-
-        const latest = await this.getLatestRelease('sunho', 'SDStudio');
-        console.log("latst", this.current, latest);
+        let latest = await this.getLatestRelease('sunho', 'SDStudio');
+        console.log("latest", this.current, latest);
         if (this.isOutdated(this.current, latest)) {
           this.outdated = true;
           this.dispatchEvent(new CustomEvent('updated', { detail: { } }));
