@@ -97,14 +97,85 @@ static inline int calcGapMatch(std::wstring_view small, std::wstring_view large)
 }
 
 static inline std::wstring utf8ToUtf16(const std::string& utf8) {
-  std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-  return converter.from_bytes(utf8);
+  std::wstring utf16;
+  for (size_t i = 0; i < utf8.size();) {
+    uint32_t codepoint = 0;
+    size_t additionalBytes = 0;
+    
+    if ((utf8[i] & 0x80) == 0) {
+      codepoint = utf8[i];
+      additionalBytes = 0;
+    } else if ((utf8[i] & 0xE0) == 0xC0) {
+      codepoint = utf8[i] & 0x1F;
+      additionalBytes = 1;
+    } else if ((utf8[i] & 0xF0) == 0xE0) {
+      codepoint = utf8[i] & 0x0F;
+      additionalBytes = 2;
+    } else if ((utf8[i] & 0xF8) == 0xF0) {
+      codepoint = utf8[i] & 0x07;
+      additionalBytes = 3;
+    } else {
+      return L"";
+    }
+
+    if (i + additionalBytes >= utf8.size()) {
+      return L"";
+    }
+
+    for (size_t j = 0; j < additionalBytes; ++j) {
+      codepoint = (codepoint << 6) | (utf8[i + j + 1] & 0x3F);
+    }
+
+    if (codepoint <= 0xFFFF) {
+      utf16.push_back(static_cast<wchar_t>(codepoint));
+    } else {
+      codepoint -= 0x10000;
+      utf16.push_back(static_cast<wchar_t>(0xD800 + (codepoint >> 10)));
+      utf16.push_back(static_cast<wchar_t>(0xDC00 + (codepoint & 0x3FF)));
+    }
+
+    i += additionalBytes + 1;
+  }
+
+  return utf16;
 }
 
 static inline std::string utf16ToUtf8(const std::wstring& utf16) {
-  std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-  return converter.to_bytes(utf16);
+    std::string utf8;
+    for (size_t i = 0; i < utf16.size(); ++i) {
+        uint32_t codepoint;
+
+        if (utf16[i] >= 0xD800 && utf16[i] <= 0xDBFF) {
+            if (i + 1 >= utf16.size() || utf16[i + 1] < 0xDC00 || utf16[i + 1] > 0xDFFF) {
+                return "";
+            }
+
+            codepoint = 0x10000 + ((utf16[i] - 0xD800) << 10) + (utf16[i + 1] - 0xDC00);
+            ++i;
+        } else {
+            codepoint = utf16[i];
+        }
+
+        if (codepoint <= 0x7F) {
+            utf8.push_back(static_cast<char>(codepoint));
+        } else if (codepoint <= 0x7FF) {
+            utf8.push_back(static_cast<char>((codepoint >> 6) | 0xC0));
+            utf8.push_back(static_cast<char>((codepoint & 0x3F) | 0x80));
+        } else if (codepoint <= 0xFFFF) {
+            utf8.push_back(static_cast<char>((codepoint >> 12) | 0xE0));
+            utf8.push_back(static_cast<char>(((codepoint >> 6) & 0x3F) | 0x80));
+            utf8.push_back(static_cast<char>((codepoint & 0x3F) | 0x80));
+        } else {
+            utf8.push_back(static_cast<char>((codepoint >> 18) | 0xF0));
+            utf8.push_back(static_cast<char>(((codepoint >> 12) & 0x3F) | 0x80));
+            utf8.push_back(static_cast<char>(((codepoint >> 6) & 0x3F) | 0x80));
+            utf8.push_back(static_cast<char>((codepoint & 0x3F) | 0x80));
+        }
+    }
+
+    return utf8;
 }
+
 
 static inline std::string utf16ToUtf8(std::wstring_view utf16) {
   return utf16ToUtf8(std::wstring(utf16));
