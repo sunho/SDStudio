@@ -178,7 +178,7 @@ const SceneCell = ({
             {getSceneQueueCount(scene)}
           </span>
         )}
-        <span className="text-lg overflow-auto no-scrollbars"
+        <span className="text-lg overflow-auto no-scrollbars dark:text-gray-700"
         >{scene.name}</span>
         <div className="w-full flex mt-auto justify-center items-center gap-2">
           <button
@@ -357,11 +357,13 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
             className: 'bg-green-500',
             onClick: async (scene, path, close) => {
               let image = await imageService.fetchImage(path);
-              image = image.replace(/^data:image\/(png|jpeg);base64,/, '');
-              const name =
-                scene.name +
-                '_inpaint_' +
-                Date.now().toString();
+              image = dataUriToBase64(image);
+              let cnt = 0;
+              const newName = () => (scene.name + '_inpaint_' + cnt.toString());
+              while (newName() in curSession!.inpaints) {
+                cnt++;
+              }
+              const name = newName();
               let prompt, uc;
               try {
                 const [prompt_, seed, scale, sampler, steps, uc_] = await extractPromptDataFromBase64(image);

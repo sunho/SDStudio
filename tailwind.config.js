@@ -2,5 +2,6 @@ module.exports = {
   content: ['./src/renderer/**/*.{js,jsx,ts,tsx}'],
   theme: {},
   variants: {},
-  plugins: [],
+  // dark: "class",
+  plugins: [require("nightwind")],
 };

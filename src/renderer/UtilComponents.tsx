@@ -167,7 +167,6 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs }) => {
           'flex p-2 flex-none gap-2 items-center ' + (!left ? 'ml-auto' : '')
         }
       >
-        <b>탭: </b>
         <div className="flex gap-1">
           {tabs.map((tab, index) => (
             <button

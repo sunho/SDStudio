@@ -1,11 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { invoke } from './models';
 
 interface ConfigScreenProps {
   onSave: () => void;
 }
 
-const BatchProcess = ({ onSave }: ConfigScreenProps) => {
+const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
   const [imageEditor, setImageEditor] = useState('');
+  useEffect(() => {
+    (async () => {
+      const config = await invoke('get-config');
+      setImageEditor(config.imageEditor ?? 'photoshop');
+    })();
+  }, []);
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="bg-white p-6 rounded shadow-md w-full max-w-md">
@@ -20,7 +27,6 @@ const BatchProcess = ({ onSave }: ConfigScreenProps) => {
             value={imageEditor}
             onChange={(e) => setImageEditor(e.target.value)}
           >
-            <option value="">Select an editor</option>
             <option value="photoshop">포토샵</option>
             <option value="gimp">GIMP</option>
             <option value="mspaint">그림판</option>
@@ -29,6 +35,7 @@ const BatchProcess = ({ onSave }: ConfigScreenProps) => {
         <button
           className="w-full bg-sky-500 text-white py-2 rounded hover:brightness-95 active:brightness-90"
           onClick={() => {
+            invoke('set-config', { imageEditor });
             onSave();
           }}
         >
@@ -39,4 +46,4 @@ const BatchProcess = ({ onSave }: ConfigScreenProps) => {
   );
 };
 
-export default BatchProcess;
+export default ConfigScreen;

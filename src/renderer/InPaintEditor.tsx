@@ -18,7 +18,7 @@ import {
   toPARR,
 } from './models';
 import { AppContext } from './App';
-import { grayInput, primaryColor, roundButton } from './styles';
+import { grayInput, grayLabel, primaryColor, roundButton } from './styles';
 import PromptEditTextArea from './PromptEditTextArea';
 import { Resolution, resolutionMap } from '../main/imageGen';
 
@@ -46,7 +46,11 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
   const [currentPrompt, setCurrentPrompt] = useState('');
   const [currentUC, setCurrentUC] = useState('');
   const [originalImage, setOriginalImage] = useState(false);
+  const [sceneName, setSceneName] = useState('');
   useEffect(() => {
+    if (!editingScene) {
+      return;
+    }
     setImage('');
     setMask(undefined);
     setTaskName(editingScene.name);
@@ -54,6 +58,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
     setCurrentPrompt(editingScene.prompt);
     setCurrentUC(editingScene.uc);
     setOriginalImage(editingScene.originalImage ?? false);
+    setSceneName(editingScene.name);
     async function loadImage() {
       try {
         const data = await imageService.fetchImage(sessionService.getInpaintOrgPath(curSession!, editingScene as InPaintScene));
@@ -202,19 +207,26 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
           <input type="checkbox" checked={originalImage} onChange={(e) => {setOriginalImage(e.target.checked)}} />
         </div>
         <div className="mt-auto flex-none">
-          <div className="text-xl mb-2">프롬프트:</div>
+          <div className={"pt-2 pb-1 " + grayLabel}>
+            프롬프트
+          </div>
           <div className="h-36 mb-2">
           <PromptEditTextArea
             value={currentPrompt}
+            key={sceneName}
             onChange={(txt) => {
               setCurrentPrompt(txt);
             }}
           />
           </div>
-          <div className="text-xl mb-2">네거티브 프롬프트:</div>
+
+        <div className={"pt-2 pb-1 " + grayLabel}>
+          네거티브 프롬프트
+        </div>
           <div className="h-36 mb-2">
           <PromptEditTextArea
             value={currentUC}
+            key={sceneName}
             onChange={(txt) => {
               setCurrentUC(txt);
             }}

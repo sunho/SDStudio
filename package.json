@@ -102,6 +102,7 @@
     "libsodium-wrappers-sumo": "^0.7.13",
     "memoize-one": "^6.0.0",
     "nan": "^2.20.0",
+    "nightwind": "^1.1.13",
     "node-fetch": "^3.3.2",
     "react": "^18.2.0",
     "react-custom-scrollbars-2": "^4.5.0",
