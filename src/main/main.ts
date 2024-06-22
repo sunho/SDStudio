@@ -388,6 +388,7 @@ ipcMain.handle('watch-image', async (event, inputPath) => {
                 try {
                   isWritingExifData = true;
                   await exiftool.write(changedPath, watchHandles.get(candPath));
+                  console.log('Exif data written:', orgDir + '/' +  path.basename(changedPath));
                   mainWindow!.webContents.send('image-changed', orgDir + '/' +  path.basename(changedPath));
                 } catch(e) {
                 } finally {
