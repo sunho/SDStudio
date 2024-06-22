@@ -29,14 +29,15 @@ import {
   swapImages,
   taskQueueService,
 } from './models';
+import { BiBrush, BiImage } from "react-icons/bi";
 import { FixedSizeGrid as Grid, GridChildComponentProps, areEqual } from 'react-window';
 import ResizeObserver from 'resize-observer-polyfill';
 import { AppContext } from './App';
 import { userInfo } from 'os';
 import { CustomScrollbars } from './UtilComponents';
 import Tournament from './Tournament';
-import { roundButton } from './styles';
-import { FaFolder, FaStar, FaTrash } from 'react-icons/fa';
+import { grayLabel, roundButton } from './styles';
+import { FaFolder, FaPaintBrush, FaStar, FaTrash } from 'react-icons/fa';
 import { PromptHighlighter } from './SceneEditor';
 import QueueControl from './SceneQueueControl';
 import { FloatView } from './FloatView';
@@ -348,7 +349,7 @@ const ResultDetailView = ({
   useEffect(() => {
     return () => {
       watchedImages.current.forEach((path) => {
-        invoke('unwatch-image', path);
+        // invoke('unwatch-image', path);
       });
     }
   });
@@ -399,32 +400,32 @@ const ResultDetailView = ({
               </button>
             ))}
           </div>
-          <div className="w-full mb-2">
-            <div className="font-bold">프롬프트: </div>
-            <PromptHighlighter text={middlePrompt} className="w-full h-24 overflow-auto"/>
-          </div>
-          <div className="w-full mb-2">
-            <span className="font-bold">시드: </span>
-            {seed}
-          </div>
-          <div className="max-w-full">
-            <span className="font-bold">파일이름: </span>
+          <div className="max-w-full mb-2">
+            <span className={grayLabel}>파일이름: </span>
             <span>{filename}</span>
           </div>
           <div className="w-full mb-2">
-            <div className="font-bold">네거티브 프롬프트: </div>
+            <div className={grayLabel}>프롬프트 </div>
+            <PromptHighlighter text={middlePrompt} className="w-full h-24 overflow-auto"/>
+          </div>
+          <div className="w-full mb-2">
+            <div className={grayLabel}>네거티브 프롬프트 </div>
             <PromptHighlighter text={uc} className="w-full h-24 overflow-auto"/>
           </div>
           <div className="w-full mb-2">
-            <span className="font-bold">프롬프트 가이던스: </span>
+            <span className={grayLabel}>시드: </span>
+            {seed}
+          </div>
+          <div className="w-full mb-2">
+            <span className={grayLabel}>프롬프트 가이던스: </span>
             {scale}
           </div>
           <div className="w-full mb-2">
-            <span className="font-bold">샘플러: </span>
+            <span className={grayLabel}>샘플러: </span>
             {sampler}
           </div>
           <div className="w-full mb-2">
-            <span className="font-bold">스텝: </span>
+            <span className={grayLabel}>스텝: </span>
             {steps}
           </div>
         </div>
@@ -581,8 +582,9 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
       )}
       <div className="flex-none p-4 border-b border-gray-300">
         <div className="mb-4 flex items-center">
-          <span className="font-bold text-xl">
-            {scene.type === "inpaint" ? "🖌️ 인페인트 " : "🖼️ 일반 "} 씬 {scene.name}의 생성된 이미지
+          <span className="font-bold text-2xl">
+            {scene.type === "inpaint" ? <span className="inline-flex items-center gap-1">
+                <BiBrush size={32}></BiBrush>인페인트 씬 {scene.name}의 생성된 이미지</span> : <span className="inline-flex items-center gap-1"><BiImage size={32}></BiImage>일반 씬 {scene.name}의 생성된 이미지</span>}
           </span>
         </div>
         <div className="flex justify-between items-center mt-4">
@@ -682,7 +684,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
           onSelected={onSelected}
         />
       </div>
-      <div className="flex absolute gap-1 m-2 bottom-0 bg-white p-1 right-0 opacity-15 hover:opacity-100 transition-all">
+      <div className="flex absolute gap-1 m-2 bottom-0 bg-white p-1 right-0 opacity-30 hover:opacity-100 transition-all">
       {selectedTab !== 1 && imagesSizes.map((size, index) => (
         <button
           key={index}

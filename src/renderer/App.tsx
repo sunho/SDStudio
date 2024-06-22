@@ -422,7 +422,7 @@ export default function App() {
 
   return (
     <AppContext.Provider value={ctx}>
-      <div className="flex flex-col relative h-screen">
+      <div className="flex flex-col relative h-screen bg-white">
         <ErrorBoundary
           onErr={(error, errorInfo) => {
             pushMessage(`${error.message}`);

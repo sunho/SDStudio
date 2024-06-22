@@ -11,7 +11,7 @@ import { Sampling } from '../main/imageGen';
 import { PreSet, getDefaultPreset, sessionService } from './models';
 import { Context, AppContext } from './App';
 import { base64ToDataUri } from './BrushTool';
-import { grayInput, primaryColor, roundButton } from './styles';
+import { grayInput, grayLabel, primaryColor, roundButton } from './styles';
 import PromptEditTextArea from './PromptEditTextArea';
 import { FaImage, FaTrash } from 'react-icons/fa';
 import { FloatView } from './FloatView';
@@ -143,8 +143,8 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
           삭제
         </button>
       </div>)}
-      <div className="py-2">
-        <b> 상위 프롬프트:</b>
+      <div className={"pt-2 pb-1 " + grayLabel}>
+        상위 프롬프트
       </div>
       <div className="flex-1 min-h-0">
         <PromptEditTextArea
@@ -154,8 +154,8 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
         ></PromptEditTextArea>
       </div>
       {props.middlePromptMode && ( <>
-        <div className="py-2">
-          <b> 중위 프롬프트 (이 씬에만 적용됨):</b>
+        <div className="pt-2 pb-1">
+          <b> 중위 프롬프트 (이 씬에만 적용됨)</b>
         </div>
         <div className="flex-1 min-h-0">
           <PromptEditTextArea
@@ -167,8 +167,9 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
         </div>
         </>
       )}
-      <div className="py-2">
-        <b> 하위 프롬프트:</b>
+
+      <div className={"pt-2 pb-1 " + grayLabel}>
+        하위 프롬프트
       </div>
       <div className="flex-1 min-h-0">
         <PromptEditTextArea
@@ -177,8 +178,9 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
           onChange={backPromptChange}
         ></PromptEditTextArea>
       </div>
-      <div className="py-2">
-        <b> 네거티브 프롬프트:</b>
+
+      <div className={"pt-2 pb-1 " + grayLabel}>
+        네거티브 프롬프트
       </div>
       <div className="flex-1 min-h-0">
         <PromptEditTextArea
@@ -190,7 +192,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
       {!samplerSetting && !vibeSetting &&
         <div className="flex-none mt-3">
       <div className="mt-auto flex gap-2 items-center">
-        <span className="font-bold flex-none">시드: </span>
+        <span className={"flex-none " + grayLabel}>시드: </span>
         <input
           className={`w-full ${grayInput}`}
           disabled={props.middlePromptMode && presetEditLock}
@@ -219,7 +221,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
         }
         {selectedPreset.vibes.length > 0 &&
         <div className="w-full flex items-center">
-          <div className="font-bold lg flex-none mr-2">바이브 설정:</div>
+          <div className={"flex-none mr-2 " + grayLabel}>바이브 설정:</div>
           <img src={base64ToDataUri(selectedPreset.vibes[0].image)} className="flex-1 h-14 rounded-xl object-cover cursor-pointer hover:brightness-95 active:brightness-90" onClick={()=>{setVibeSetting(true)}}/>
         </div>
         }
@@ -233,7 +235,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
       {samplerSetting &&
        <div className="flex-none">
       <div className="mt-auto pt-2 flex gap-2 items-center">
-        <span className="font-bold flex-none">샘플러 </span>
+        <span className={"flex-none " + grayLabel}>샘플러: </span>
         <DropdownSelect
           selectedOption={selectedPreset.sampling}
           disabled={props.middlePromptMode && presetEditLock}
@@ -246,13 +248,13 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
         />
       </div>
       <div className="mt-auto pt-2 flex gap-2 items-center pr-1">
-        <span className="font-bold flex-none">SMEA: </span>
+        <span className={"flex-none " + grayLabel}>SMEA: </span>
         <input  type="checkbox" checked={!selectedPreset.smeaOff} onChange={(e) => {
           selectedPreset.smeaOff = !e.target.checked;
           updatePresets();
         }} disabled={props.middlePromptMode && presetEditLock}
             />
-        <span className="font-bold flex-none">DYN: </span>
+        <span className={"flex-none " + grayLabel}>DYN: </span>
         <input type="checkbox" checked={selectedPreset.dynOn} onChange={(e) => {
           selectedPreset.dynOn = e.target.checked;
           updatePresets();
@@ -261,8 +263,8 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
             />
       </div>
       <div className="mt-auto pt-2 flex gap-2 items-center pr-1">
-        <span className="font-bold flex-none">프롬프트 가이던스: </span>
-        <span className="flex-none w-6">{selectedPreset.promptGuidance ?? 5}</span>
+        <span className={"flex-none " + grayLabel}>프롬프트 가이던스: </span>
+        <span className="bg-gray-100 p-1 flex-none w-8 text-center">{selectedPreset.promptGuidance ?? 5}</span>
         <input
         className="flex-1"
           type="range"
@@ -278,9 +280,9 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
         />
       </div>
       <div className="relative mt-auto pt-2 flex gap-2 items-center pr-1">
-        <span className="font-bold flex-none">스탭: </span>
+        <span className={"flex-none " + grayLabel}>스탭: </span>
         {selectedPreset!.steps && selectedPreset!.steps > 28 &&<span className="absolute text-white bg-red-700 right-0 bottom-16 px-4">Anlas가 소모되는 세팅입니다 (유료임)</span>}
-        <span className="flex-none w-6">{selectedPreset!.steps ?? 28}</span>
+        <span className="bg-gray-100 p-1 flex-none w-8 text-center">{selectedPreset.steps ?? 28}</span>
         <input
         className="flex-1"
           type="range"
@@ -311,7 +313,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
                 <img src={base64ToDataUri(vibe.image)} className="flex-none w-28 h-28 object-cover"/>
                 <div className="flex gap-2 flex-col w-full">
                   <div className="flex items-cente">
-                    <div className="w-36 font-bold">정보 추출률 (IS):</div>
+                    <div className={"w-36 " + grayLabel}>정보 추출률 (IS):</div>
                     <input className="flex-1" type="range" step="0.01" min="0" max="1" value={vibe.info} onChange={(e) => {
                       vibe.info = parseFloat(e.target.value);
                       updatePresets();
@@ -321,7 +323,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
                     <div className="w-11 text-lg text-center">{vibe.info}</div>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-36 font-bold flex-none">레퍼런스 강도 (RS):</div>
+                    <div className={"w-36 flex-none " + grayLabel}>레퍼런스 강도 (RS):</div>
                     <input className="flex-1" type="range" step="0.01" min="0" max="1" value={vibe.strength} onChange={(e) => {
                       vibe.strength = parseFloat(e.target.value);
                       updatePresets();

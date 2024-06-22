@@ -19,6 +19,7 @@ import { NovelAiImageGenService } from './genVendors/nai';
 const sharp = require('sharp');
 const native = require('sdsnative');
 import webpackPaths from '../../.erb/configs/webpack.paths';
+import { Config } from './config';
 
 import contextMenu from 'electron-context-menu';
 
@@ -91,6 +92,16 @@ async function readFileAsDataURL(filePath: any) {
 const APP_DIR = app.getPath('userData') + '/' + 'SDStudio';
 
 let saveCompleted = false;
+let config: Config = {};
+
+ipcMain.handle('get-config', async (event) => {
+  return config;
+});
+
+ipcMain.handle('set-config', async (event, newConfig) => {
+  config = newConfig;
+  await fs.writeFile(path.join(APP_DIR, 'config.json'), JSON.stringify(config), 'utf-8');
+});
 
 ipcMain.handle('get-version', async (event) => {
   return app.getVersion();
@@ -189,10 +200,15 @@ ipcMain.handle('write-data-file', async (event, filename, data) => {
 });
 
 ipcMain.handle('rename-file', async (event, oldfile, newfile) => {
+  const oldPath = path.join(APP_DIR,oldfile);
+  const newPath = path.join(APP_DIR,newfile);
+  watchHandles.delete(oldPath);
+  watchHandles.delete(newPath);
   return await fs.rename(APP_DIR + '/' + oldfile, APP_DIR + '/' + newfile);
 });
 
 ipcMain.handle('rename-dir', async (event, oldfile, newfile) => {
+
   return await fs.rename(APP_DIR + '/' + oldfile, APP_DIR + '/' + newfile);
 });
 
@@ -230,8 +246,34 @@ const { exec } = require('child_process');
 const dirWatchHandles = new Map<string, any>();
 const watchHandles = new Map<string, any>();
 let isWritingExifData = false;
+const os = require('os');
 
 async function openImageEditor(inputPath: string) {
+  const editor = config.imageEditor ?? 'photoshop';
+
+  async function findGimpPath() {
+    const platform = os.platform();
+    const homeDir = os.homedir();
+
+    if (platform === 'win32') {
+      const baseDir = path.join(homeDir, 'AppData', 'Local', 'Programs');
+      const gimpDir = 'GIMP 2';
+      const binDir = 'bin';
+      const gimpPath = path.join(baseDir, gimpDir, binDir);
+      const files = await fs.readdir(gimpPath);
+      const gimpExecutable = files.find((file: string) => file.startsWith('gimp-') && file.endsWith('.exe'));
+      if (gimpExecutable) {
+        return path.join(gimpPath, gimpExecutable);
+      } else {
+        throw new Error('GIMP executable not found.');
+      }
+    } else if (platform === 'darwin') {
+      return '/Applications/GIMP.app';
+    } else {
+      throw new Error('Unsupported platform: ' + platform);
+    }
+  }
+
   const commonPaths = [
     'C:\\Program Files\\Adobe\\Adobe Photoshop CC 2019\\Photoshop.exe',
     'C:\\Program Files\\Adobe\\Adobe Photoshop CC 2020\\Photoshop.exe',
@@ -256,21 +298,45 @@ async function openImageEditor(inputPath: string) {
     return null;
   }
 
-  const photoshopPath = await findPhotoshopPath(commonPaths);
-  if (!photoshopPath) {
-    console.error('Photoshop not found. Please ensure it is installed.');
-  }
-  console.log(`Opening Photoshop at ${photoshopPath}`);
+  const editorsToTry = ['photoshop', 'gimp', 'mspaint'];
+  editorsToTry.splice(editorsToTry.indexOf(editor), 1);
+  editorsToTry.unshift(editor);
+  const runProgram = async (program: string) => {
+    const command = `open -a "${program}" "${path.resolve(inputPath)}"`;
 
-  const command = `open -a "${photoshopPath}" "${path.resolve(inputPath)}"`;
-
-  exec(command, (err: any) => {
-    if (err) {
-      console.error(`Error opening Photoshop: ${err.message}`);
-      return;
+    exec(command, (err: any) => {
+      if (err) {
+        console.error(`Error opening Photoshop: ${err.message}`);
+        return;
+      }
+      console.log('Image editor opened successfully.');
+    });
+  };
+  for (const edi of editorsToTry) {
+    switch(edi) {
+      case 'photoshop':
+        try {
+          const photoshopPath = await findPhotoshopPath(commonPaths);
+          if (photoshopPath) {
+            runProgram(photoshopPath);
+            return;
+          }
+        } catch(e){}
+        break;
+      case 'gimp':
+        const gimpPath = await findGimpPath();
+        if (gimpPath) {
+          runProgram(gimpPath);
+          return;
+        }
+        break;
+      case 'mspaint':
+        if (os.platform() === 'win32') {
+          return;
+        }
+        break;
     }
-    console.log('Photoshop opened successfully.');
-  });
+  }
 }
 
 ipcMain.handle('open-image-editor', async (event, inputPath) => {
@@ -492,6 +558,9 @@ const dataDir = isDebug
 
 (async () => {
   await fs.mkdir(APP_DIR, { recursive: true });
+  try {
+    config = JSON.parse(await fs.readFile(path.join(APP_DIR, 'config.json'), 'utf-8'));
+  } catch(e) {}
   const dbCsvContent = await fs.readFile(path.join(dataDir, 'db.csv'), 'utf-8');
   databases.tagDBId = native.createDB('danbooru');
   native.loadDB(databases.tagDBId, dbCsvContent);

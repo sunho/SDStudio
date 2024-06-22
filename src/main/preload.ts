@@ -26,7 +26,9 @@ export type Channels =
   | 'search-pieces'
   | 'open-image-editor'
   | 'watch-image'
-  | 'unwatch-image';
+  | 'unwatch-image'
+  | 'get-config'
+  | 'set-config';
 
 const electronHandler = {
   ipcRenderer: {
