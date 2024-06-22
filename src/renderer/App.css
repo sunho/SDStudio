@@ -250,10 +250,23 @@ input[type='number']::-webkit-outer-spin-button {
   font-weight: 800;
 }
 
+.syntax-multi-wildcard {
+  color: #22c55e;
+  font-size: 1.05em;
+  font-weight: 800;
+}
+
 .syntax-word {
 }
 
 .syntax-line {
+  display: flex;
+  width: 100%;
+  margin-top: 1px;
+  margin-bottom: 1px;
+  height: 1px;
+  opacity: 0.4;
+  background-color: gray;
 }
 
 .progress-transition {

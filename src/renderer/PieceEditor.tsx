@@ -184,6 +184,7 @@ const PieceEditor = () => {
                   className="ml-auto"
                   onClick={() => {
                     delete curPieceLibrary.pieces[key];
+                    delete curPieceLibrary.multi[key];
                     onUpdated();
                     sessionService.reloadPieceLibraryDB(curSession!);
                   }}
@@ -194,12 +195,21 @@ const PieceEditor = () => {
               <div className="h-20">
               <PromptEditTextArea
                 innerRef={elementsRef.current[key]}
+                lineHighlight
                 value={value}
                 onChange={(txt) => {
                   curPieceLibrary.pieces[key] = txt;
                   sessionService.markUpdated(curSession!.name);
                 }}
               />
+              </div>
+              <div className="mt-1">
+              랜덤 줄 선택 모드: <input checked={curPieceLibrary.multi[key]} type="checkbox"
+                  onChange={(e) => {
+                    curPieceLibrary.multi[key] = e.target.checked;
+                    onUpdated();
+                  }}
+                />
               </div>
             </div>
           ))}
