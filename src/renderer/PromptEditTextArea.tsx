@@ -535,6 +535,7 @@ class CursorMemorizeEditor {
       const collapsed = range.collapsed;
       this.clipboard.focus();
       await new Promise(resolve => requestAnimationFrame(resolve));
+      await new Promise(resolve => requestAnimationFrame(resolve));
       await this.handleInput(e.data || '', collapsed, [start, end]);
     });
   }
