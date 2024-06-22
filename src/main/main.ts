@@ -364,6 +364,7 @@ ipcMain.handle('watch-image', async (event, inputPath) => {
   try {
     tags = await exiftool.read(curPath);
   } catch (e) {
+    console.error("Could not read exif:", curPath, e);
   }
   if (!dirWatchHandles.has(dir)) {
     const handle = chokidar.watch(dir, {
@@ -403,8 +404,8 @@ ipcMain.handle('watch-image', async (event, inputPath) => {
               }, 1000);
             };
             trigger(4000, true);
-            mainWindow!.webContents.send('image-changed', orgDir + '/' +  path.basename(changedPath));
           }
+          mainWindow!.webContents.send('image-changed', orgDir + '/' +  path.basename(changedPath));
         }
       }
     });
