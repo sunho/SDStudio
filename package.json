@@ -95,7 +95,6 @@
     "electron-updater": "^6.1.4",
     "exif-js": "^2.3.0",
     "exifreader": "^4.23.2",
-    "exiftool-vendored": "^27.0.0",
     "hangul": "^1.0.0",
     "hangul-js": "^0.2.6",
     "libsodium-wrappers": "^0.7.13",
@@ -196,7 +195,9 @@
       "**/node_modules/sharp/**/*",
       "**/node_modules/sdsnative/**/*",
       "**/node_modules/@img/**/*",
-      "**/node_modules/chokidar/**/*"
+      "**/node_modules/chokidar/**/*",
+      "**/node_modules/exif-vendored/**/*",
+      "**/node_modules/exif-vendored.*/**/*"
     ],
     "files": [
       "dist",
