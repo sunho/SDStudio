@@ -116,7 +116,7 @@ const PieceEditor = () => {
                   pushMessage('조각그룹이 이미 존재합니다');
                   return;
                 }
-                curSession!.library[name] = { pieces: {}, description: name };
+                curSession!.library[name] = { pieces: {}, description: name, multi: {} };
                 setSelectedPieceLibrary(name);
                 sessionService.reloadPieceLibraryDB(curSession!);
                 onUpdated();
