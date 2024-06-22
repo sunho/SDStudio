@@ -356,7 +356,7 @@ ipcMain.handle('open-image-editor', async (event, inputPath) => {
 
 ipcMain.handle('watch-image', async (event, inputPath) => {
   const orgDir = inputPath.split('/').slice(0, -1).join('/');
-  inputPath = APP_DIR + '/' + inputPath;
+  inputPath = path.join(APP_DIR, inputPath);
   const dir = path.dirname(inputPath);
   console.log(orgDir);
   const curPath = path.join(dir, path.basename(inputPath));
