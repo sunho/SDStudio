@@ -69,6 +69,7 @@ export interface PreSet {
 export interface PieceLibrary {
   description: string;
   pieces: { [key: string]: string };
+  multi:  { [key: string]: boolean };
 }
 
 export interface PromptPiece {
@@ -511,6 +512,12 @@ export class SessionService extends ResourceSyncService<Session> {
         inpaint.landscape = undefined;
       }
     }
+
+    for (const library of Object.values(session.library)) {
+      if (!library.multi) {
+        library.multi = {};
+      }
+    }
   }
 
   async saveInpaintImages(seesion: Session, inpaint: InPaintScene, image: string, mask: string) {
@@ -945,6 +952,7 @@ export class PromptService extends ResourceSyncService<PieceLibrary> {
     return {
       description: name,
       pieces: {},
+      multi: {}
     };
   }
 
@@ -981,6 +989,22 @@ export class PromptService extends ResourceSyncService<PieceLibrary> {
       return lib.pieces[parts[1]];
     }
     throw new Error('조각이 아닙니다 "' + p + '" (' + errorInfo + ')');
+  }
+
+  isMulti(p: string, session: Session) {
+    if (p.charAt(0) !== '<' || p.charAt(p.length - 1) !== '>') {
+      return false;
+    }
+    p = p.substring(1, p.length - 1);
+    const parts = p.split('.');
+    if (parts.length !== 2) {
+      return false;
+    }
+    const lib = session.library[parts[0]];
+    if (!lib) {
+      return false;
+    }
+    return lib.multi[parts[1]] ?? false;
   }
 
   expandPARR(
@@ -1511,13 +1535,16 @@ const isWhitespace = (c: string) => {
   return c === ' ' || nbsp === c;
 };
 
-export const highlightPrompt = (session: Session, text: string) => {
+export const highlightPrompt = (session: Session, text: string, lineHighlight: boolean = false) => {
   let [parenFine, lastPos] = parenCheck(text);
   let offset = 0;
   const words = text
     .split(/([,\n])/)
     .map((word: string, index) => {
-      if (word === ',' || word === '\n') {
+      if (word === '\n'){
+        return word + (lineHighlight ? '<span class="syntax-line"></span>' : '');
+      }
+      if (word === ',') {
         return word;
       }
       const classNames = ['syntax-word'];
@@ -1565,7 +1592,11 @@ export const highlightPrompt = (session: Session, text: string) => {
       if (pword.startsWith('<') && pword.endsWith('>')) {
         try {
           promptService.tryExpandPiece(pword, session);
-          classNames.push('syntax-wildcard');
+          if (promptService.isMulti(pword, session))
+            classNames.push('syntax-multi-wildcard');
+          else
+            classNames.push('syntax-wildcard');
+
           js =
             'onmousemove="window.promptService.showPromptTooltip(\'' +
             pword +

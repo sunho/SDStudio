@@ -671,6 +671,7 @@ interface PromptEditTextAreaProps {
   whiteBg?: boolean;
   innerRef?: any;
   disabled?: boolean;
+  lineHighlight?: boolean;
   onChange: (value: string) => void;
 }
 
@@ -702,6 +703,7 @@ const PromptEditTextArea = ({
   onChange,
   disabled,
   whiteBg,
+  lineHighlight,
   innerRef,
 }: PromptEditTextAreaProps) => {
   const { curSession } = useContext(AppContext)!;
@@ -780,7 +782,7 @@ const PromptEditTextArea = ({
           });
         }
       }
-      return highlightPrompt(curSession!, text);
+      return highlightPrompt(curSession!, text, lineHighlight ?? false);
     }
 
     const onEnter = (me: CursorMemorizeEditor) => {
