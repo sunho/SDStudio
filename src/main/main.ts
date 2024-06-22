@@ -279,6 +279,12 @@ const createWindow = async () => {
                 mainWindow!.webContents.send('move-scene-back', altContext);
               },
             },
+            {
+              label: '해당 씬을 복제',
+              click: () => {
+                mainWindow!.webContents.send('duplicate-scene', altContext);
+              },
+            }
           ];
         }
       };

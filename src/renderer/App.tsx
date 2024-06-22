@@ -114,6 +114,23 @@ export default function App() {
     };
   },[]);
   useEffect(() => {
+    const removeDuplicateSceneListener = ipcRenderer.on('duplicate-scene', async (ctx: SceneContextAlt) => {
+      const field = ctx.sceneType === 'scene' ? 'scenes' : 'inpaints';
+      const scene = curSession![field][ctx.name];
+      if (!scene) {
+        return;
+      }
+      const newScene = JSON.parse(JSON.stringify(scene));
+      let cnt = 0;
+      const newName = () => (ctx.name + '_copy' + (cnt === 0 ? '' : cnt.toString()));
+      while (newName() in curSession![field]) {
+        cnt++;
+      }
+      newScene.name = newName();
+      curSession![field][newName()] = newScene;
+      sessionService.markUpdated(curSession!.name);
+      sessionService.sceneOrderChanged();
+    });
     const removeCopyImageListener = ipcRenderer.on('copy-image', (ctx: ContextAlt) => {
       pushDialog({
         type: 'dropdown',
@@ -185,6 +202,7 @@ export default function App() {
       removeCopyImageListener();
       removeMoveSceneFrontListener();
       removeMoveSceneBackListener();
+      removeDuplicateSceneListener();
     };
   },[curSession]);
   useEffect(() => {
