@@ -688,7 +688,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
       {selectedTab !== 1 && imagesSizes.map((size, index) => (
         <button
           key={index}
-          className={`text-white w-8 h-8 hover:brightness-95 active:brightness-90
+          className={`text-white w-8 h-8 hover:brightness-95 active:brightness-90 cursor-pointer
           ${
             imageSize === index ? 'bg-gray-500' : 'bg-gray-400'
           }`}

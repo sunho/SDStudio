@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react';
 import {
+    PromptNode,
   PromptPiece,
   PromptPieceSlot,
   Scene,
@@ -15,6 +16,7 @@ import {
   getMainImage,
   highlightPrompt,
   imageService,
+  lowerPromptNode,
   promptService,
   queueScenePrompt,
   renameScene,
@@ -334,7 +336,7 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
     rerender({});
   };
 
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [previews, setPreviews] = useState<PromptNode[]>([]);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const PromptPreview = previewError ? (
     <div className="bg-red-500 p-2 m-2">{previewError}</div>
@@ -344,7 +346,7 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
         <PromptHighlighter
           className="inline-block word-breaks p-2 m-2"
           key={index}
-          text={preview}
+          text={lowerPromptNode(preview)}
         />
       ))}
     </div>

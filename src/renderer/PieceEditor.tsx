@@ -3,7 +3,7 @@ import { AppContext } from './App';
 import { PieceLibrary, invoke, promptService, sessionService } from './models';
 import { DropdownSelect } from './UtilComponents';
 import PromptEditTextArea from './PromptEditTextArea';
-import { primaryColor, roundButton } from './styles';
+import { grayLabel, primaryColor, roundButton } from './styles';
 import {
   FaArrowCircleUp,
   FaFileExport,
@@ -203,7 +203,7 @@ const PieceEditor = () => {
                 }}
               />
               </div>
-              <div className="mt-1">
+              <div className={"mt-1 " + grayLabel}>
               랜덤 줄 선택 모드: <input checked={curPieceLibrary.multi[key]} type="checkbox"
                   onChange={(e) => {
                     curPieceLibrary.multi[key] = e.target.checked;

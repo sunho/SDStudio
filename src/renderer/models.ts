@@ -187,7 +187,7 @@ export const isValidSession = (session: any) => {
 };
 
 export interface BakedPreSet {
-  prompt: string;
+  prompt: PromptNode;
   resolution: Resolution;
   uc: string;
   vibes: VibeItem[];
@@ -1007,51 +1007,70 @@ export class PromptService extends ResourceSyncService<PieceLibrary> {
     return lib.multi[parts[1]] ?? false;
   }
 
-  expandPARR(
-    parr: PARR,
+  parseWord(
+    word: string,
     session: Session,
     scene: InPaintScene | Scene | undefined = undefined,
     visited: { [key: string]: boolean } | undefined = undefined,
-  ): PARR {
+  ): PromptNode {
     if (!visited) {
       visited = {};
     }
-    const res: PARR = [];
-    for (let p of parr) {
-      if (p.charAt(0) === '<' && p.charAt(p.length - 1) === '>') {
-        let newp = this.tryExpandPiece(p, session, scene).split(',');
-        newp = cleanPARR(newp);
-        for (const x of newp) {
-          res.push(x);
+    if (word.charAt(0) === '<' && word.charAt(word.length - 1) === '>') {
+      const res: PromptGroupNode = {
+        type: 'group',
+        children: [],
+      };
+      if (visited[word]) {
+        throw new Error('Cyclic detected at ' + word);
+      }
+      visited[word] = true;
+      if (this.isMulti(word, session)) {
+        const expanded = this.tryExpandPiece(word, session, scene);
+        const lines = expanded.split('\n');
+        const randNode : PromptRandomNode = {
+          type: 'random',
+          options: [],
+        };
+        for (const line of lines) {
+          const parr = toPARR(line);
+          const newNode : PromptGroupNode = {
+            type: 'group',
+            children: [],
+          };
+          for (const p of parr) {
+            newNode.children.push(this.parseWord(p, session, scene, visited));
+          }
+          randNode.options.push(newNode);
         }
+        res.children.push(randNode);
       } else {
-        res.push(p);
-      }
-    }
-    let found = false;
-    for (const p of res) {
-      if (p.charAt(0) === '<' && p.charAt(p.length - 1) === '>') {
-        if (visited[p]) {
-          throw new Error('Cyclic detected at ' + p);
+        let newp = toPARR(this.tryExpandPiece(word, session, scene));
+        for (const p of newp) {
+          res.children.push(this.parseWord(p, session, scene, visited));
         }
-        visited[p] = true;
       }
+      return res;
+    } else {
+      return {
+        type: 'text',
+        text: word
+      };
     }
-    for (const p of res) {
-      if (p.charAt(0) === '<' && p.charAt(p.length - 1) === '>') {
-        visited[p] = true;
-      }
-    }
-    if (found) return this.expandPARR(res, session, scene, visited);
-    else return res;
   }
 
   showPromptTooltip(piece: string, e: any) {
     try {
       const expanded = this.tryExpandPiece(piece, window.curSession);
+      let txt = '';
+      if (this.isMulti(piece, window.curSession)) {
+        txt = '이 중 한 줄 랜덤 선택:\n' + expanded.split('\n').slice(0, 32).join('\n');
+      } else {
+        txt = expanded;
+      }
       this.dispatchEvent(
         new CustomEvent('prompt-tooltip', {
-          detail: { text: expanded, x: e.clientX, y: e.clientY },
+          detail: { text: txt, x: e.clientX, y: e.clientY },
         }),
       );
     } catch (e: any) {
@@ -1263,7 +1282,9 @@ export class TaskQueueService extends EventTarget {
   }
 
   async genImage(task: GenerateTask, outPath: string) {
-    const prompt = task.preset.prompt.replace(String.fromCharCode(160), ' ');
+    let prompt = lowerPromptNode(task.preset.prompt);
+    prompt = prompt.replace(String.fromCharCode(160), ' ');
+    console.log("lowered prompt: " + prompt);
     const uc = task.preset.uc.replace(String.fromCharCode(160), ' ');
     const arg: ImageGenInput = {
       prompt: prompt,
@@ -1283,7 +1304,9 @@ export class TaskQueueService extends EventTarget {
   }
 
   async inPaintImage(task: InPaintTask, outPath: string) {
-    const prompt = task.preset.prompt.replace(String.fromCharCode(160), ' ');
+    let prompt = lowerPromptNode(task.preset.prompt);
+    prompt = prompt.replace(String.fromCharCode(160), ' ');
+    console.log("lowered prompt: " + prompt);
     const uc = task.preset.uc.replace(String.fromCharCode(160), ' ');
     const arg: ImageGenInput = {
       prompt: prompt,
@@ -1428,6 +1451,42 @@ export class TaskQueueService extends EventTarget {
   }
 }
 
+export interface PromptGroupNode {
+  type: 'group';
+  children: PromptNode[];
+}
+
+export interface PromptTextNode {
+  type: 'text';
+  text: string;
+}
+
+export interface PromptRandomNode {
+  type: 'random';
+  options: PromptNode[];
+}
+
+export type PromptNode = PromptGroupNode | PromptTextNode | PromptRandomNode;
+
+export function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+export function reformat(text: string) {
+  return toPARR(text).join(', ');
+}
+
+export function lowerPromptNode(node: PromptNode): string {
+  if (node.type === 'text') {
+    return node.text;
+  }
+  if (node.type === 'random') {
+    return lowerPromptNode(pickRandom(node.options));
+  }
+  return reformat(node.children.map(lowerPromptNode).join(','));
+}
+
+
 export const taskQueueService = new TaskQueueService();
 
 export const createPrompts = async (
@@ -1436,7 +1495,7 @@ export const createPrompts = async (
   scene: Scene,
 ) => {
   const promptComb: string[] = [];
-  const res: string[] = [];
+  const res: PromptNode[] = [];
   const dfs = async () => {
     if (promptComb.length === scene.slots.length) {
       let cur = toPARR(preset.frontPrompt);
@@ -1444,10 +1503,14 @@ export const createPrompts = async (
         cur = cur.concat(toPARR(comb));
       }
       cur = cur.concat(toPARR(preset.backPrompt));
-      cur = promptService.expandPARR(cur, session, scene);
-      cur = cur.filter((x) => x.length > 0);
-      const prompt = cur.join(', ');
-      res.push(prompt);
+      const newNode: PromptNode = {
+        type: 'group',
+        children: [],
+      }
+      for (const word of cur) {
+        newNode.children.push(promptService.parseWord(word, session, scene));
+      }
+      res.push(newNode);
       return;
     }
     const level = promptComb.length;
@@ -1619,7 +1682,7 @@ export const queueScenePrompt = (
   session: Session,
   preset: PreSet,
   scene: Scene,
-  prompt: string,
+  prompt: PromptNode,
   samples: number,
   nodelay: boolean = false,
   onComplete: ((path: string) => void) | undefined = undefined,
@@ -1666,9 +1729,15 @@ export const createInPaintPrompt = async (
   preset: PreSet,
   scene: InPaintScene,
 ) => {
-  let prompt = toPARR(scene.prompt);
-  const expanded = promptService.expandPARR(prompt, session, scene);
-  return expanded.join(', ');
+  let parr = toPARR(scene.prompt);
+  const newNode: PromptNode = {
+    type: 'group',
+    children: [],
+  }
+  for (const word of parr) {
+    newNode.children.push(promptService.parseWord(word, session, scene));
+  }
+  return newNode;
 };
 
 export const queueInPaint = async (
