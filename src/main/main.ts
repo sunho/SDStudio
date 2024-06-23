@@ -360,11 +360,16 @@ ipcMain.handle('watch-image', async (event, inputPath) => {
   const dir = path.dirname(inputPath);
   console.log(orgDir);
   const curPath = path.join(dir, path.basename(inputPath));
+
   let tags = null;
-  try {
-    tags = await exiftool.read(curPath);
-  } catch (e) {
-    console.error("Could not read exif:", curPath, e);
+  if (watchHandles.has(curPath) && watchHandles.get(curPath) !== 'null'){
+    tags = watchHandles.get(curPath);
+  } else {
+    try {
+      tags = await exiftool.read(curPath);
+    } catch (e) {
+      console.error("Could not read exif:", curPath, e);
+    }
   }
   if (!dirWatchHandles.has(dir)) {
     const handle = chokidar.watch(dir, {
