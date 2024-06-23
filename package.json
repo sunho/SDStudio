@@ -196,8 +196,8 @@
       "**/node_modules/sdsnative/**/*",
       "**/node_modules/@img/**/*",
       "**/node_modules/chokidar/**/*",
-      "**/node_modules/exif-vendored/**/*",
-      "**/node_modules/exif-vendored.*/**/*"
+      "**/node_modules/exiftool-vendored/**/*",
+      "**/node_modules/exiftool-vendored.*/**/*"
     ],
     "files": [
       "dist",
