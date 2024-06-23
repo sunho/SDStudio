@@ -49,6 +49,14 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
   const [sceneName, setSceneName] = useState('');
   useEffect(() => {
     if (!editingScene) {
+      setImage('');
+      setMask(undefined);
+      setTaskName('');
+      setCurrentPrompt('');
+      setResolution('portrait');
+      setCurrentUC('');
+      setOriginalImage(false);
+      setSceneName('');
       return;
     }
     setImage('');
@@ -113,13 +121,34 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
       return;
     }
     const mask = brushTool.current!.getMaskBase64();
-    editingScene.resolution = resolution;
-    editingScene.prompt = currentPrompt;
-    editingScene.uc = currentUC;
-    editingScene.originalImage = originalImage;
-    await sessionService.saveInpaintImages(curSession!, editingScene, image, mask);
-    sessionService.markUpdated(curSession!.name);
+    if (editingScene) {
+      editingScene.resolution = resolution;
+      editingScene.prompt = currentPrompt;
+      editingScene.uc = currentUC;
+      editingScene.originalImage = originalImage;
+      await sessionService.saveInpaintImages(curSession!, editingScene, image, mask);
+      sessionService.markUpdated(curSession!.name);
+      onConfirm();
+    } else {
+      if (!taskName || taskName === '') return;
+      if (taskName in curSession!.inpaints) {
+        pushMessage('이미 존재하는 씬 이름입니다.');
+        return;
+      }
+
+      const newScene: InPaintScene = {
+        type: 'inpaint',
+        name: taskName,
+        prompt: currentPrompt,
+        uc: currentUC,
+        resolution: resolution,
+        game: undefined,
+      };
+      curSession!.inpaints[taskName] = newScene;
+      await sessionService.saveInpaintImages(curSession!, newScene, image, mask);
+      sessionService.markUpdated(curSession!.name);
     onConfirm();
+    }
   };
 
   const brushTool = useRef<BrushToolRef | null>(null);
