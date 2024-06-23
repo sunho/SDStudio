@@ -213,10 +213,15 @@
       "entitlementsInherit": "assets/entitlements.mac.plist",
       "gatekeeperAssess": false,
       "mergeASARs": false,
-      "target": {
-        "target": "default",
-        "arch": "universal"
-      },
+      "target": [
+        {
+          "target": "default",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
       "singleArchFiles": "**/sharp-darwin-arm64v8.node",
       "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
     },
