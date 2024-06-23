@@ -417,6 +417,7 @@ export default function App() {
 
   const tabs = [
     { label: '이미지생성', content: <QueueControl type="scene" showPannel/> },
+    { label: '인페인트', content: <QueueControl type="inpaint" showPannel/> },
     { label: '프롬프트조각', content: <PieceEditor /> },
   ];
 
