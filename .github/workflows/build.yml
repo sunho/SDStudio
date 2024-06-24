@@ -22,6 +22,7 @@ jobs:
           pip install pipenv --user
           cd src/localai
           python -m pipenv install
+          python -m pipenv run pip install pywin32-ctypes
           python -m pipenv run python build.py
           cd ../..
 
