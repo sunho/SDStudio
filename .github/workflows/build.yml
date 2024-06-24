@@ -18,8 +18,8 @@ jobs:
         run: |
           pip install pipenv --user
           cd src/localai
-          pipenv install
-          pipenv shell
+          python -m pipenv install
+          python -m pipenv shell
           python build.py
           cd ../..
           cd src/native
@@ -83,8 +83,8 @@ jobs:
         run: |
           pip install pipenv --user
           cd src/localai
-          pipenv install
-          pipenv shell
+          python -m pipenv install
+          python -m pipenv shell
           python build.py
           cd ../..
           cd src/native
