@@ -84,6 +84,7 @@
     }
   },
   "dependencies": {
+    "@types/node-fetch": "^2.6.11",
     "adm-zip": "^0.5.12",
     "axios": "^1.7.2",
     "chokidar": "^3.6.0",
@@ -197,7 +198,8 @@
       "**/node_modules/@img/**/*",
       "**/node_modules/chokidar/**/*",
       "**/node_modules/exiftool-vendored/**/*",
-      "**/node_modules/exiftool-vendored.*/**/*"
+      "**/node_modules/exiftool-vendored.*/**/*",
+      "release/app/localai"
     ],
     "files": [
       "dist",

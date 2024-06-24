@@ -7,14 +7,16 @@ import {
   queueScene,
   sessionService,
   taskQueueService,
+  Task,
   toPARR,
+  getSceneKey,
+  GenerateImageTaskParams,
 } from './models';
 import { grayInput, primaryColor, roundButton } from './styles';
 import { FaSpinner } from 'react-icons/fa';
 import { FaPlay, FaRegCalendarTimes, FaStop } from 'react-icons/fa';
 import { FaTimes } from 'react-icons/fa';
 import { FaRegClock } from 'react-icons/fa';
-import { Task } from 'electron/renderer';
 
 interface Props {
   setSamples: (nw: number) => void;
@@ -80,10 +82,9 @@ export const TaskProgressBar = ({fast}: TaskProgressBarProps) => {
     }
   };
   const getProgressText = () => {
-    const stats = taskQueueService.totalStats;
+    const stats = taskQueueService.statsAllTasks();
     const remain = stats.total - stats.done;
-    const est = (fast && remain === 1) ? taskQueueService.fastTimeEstimator.estimateMean()! : taskQueueService.timeEstimator.estimateMedian()!;
-    let ms = remain * est;
+    const ms = taskQueueService.estimateTime('mean');
     const timeEstimate = formatTime(ms);
     return `${remain}개 남음 (예상 ${timeEstimate})`;
   };
@@ -106,7 +107,7 @@ export const TaskProgressBar = ({fast}: TaskProgressBarProps) => {
       nextKey();
       setIsError(false);
       setError('');
-      setDuration(taskQueueService.timeEstimator.estimateMedian()! / 1000);
+      setDuration(taskQueueService.estimateTopTaskTime('mean') / 1000);
       if (!taskQueueService.isRunning()) {
         setDuration(0);
       }
@@ -115,7 +116,7 @@ export const TaskProgressBar = ({fast}: TaskProgressBarProps) => {
       nextKey();
       setIsError(false);
       setError('');
-      setDuration(taskQueueService.timeEstimator.estimateMedian()! / 1000);
+      setDuration(taskQueueService.estimateTopTaskTime('mean') / 1000);
       if (!taskQueueService.isRunning()) {
         setDuration(0);
       }
@@ -175,6 +176,21 @@ const TaskQueueList = ({onClose}: {onClose?: () => void}) => {
       taskQueueService.removeEventListener('error', onChange);
     };
   }, []);
+
+  const getEmoji = (task: Task) => {
+    if (task.type === 'generate' || task.type === 'generate-fast') {
+      return '🖼️';
+    } else if (task.type === 'inpaint') {
+      return '🖌️';
+    }
+  };
+
+  const getTaskText = (task: Task) => {
+    if (task.type === 'generate' || task.type === 'generate-fast' || task.type === 'inpaint') {
+      const params: GenerateImageTaskParams = task.params;
+      return params.scene;
+    }
+  };
   return <div className="absolute bottom-0 mb-20 bg-white w-96 z-20 shadow-lg prog-list flex flex-col overflow-hidden">
     <button
       className="ml-auto mt-2 mr-2 text-gray-500 hover:text-gray-700 flex-none"
@@ -189,9 +205,9 @@ const TaskQueueList = ({onClose}: {onClose?: () => void}) => {
         {tasks.map((task, i) => (
           <div key={i} className="flex mt-2 items-center gap-2 p-2 border-gray-300 border mx-2 rounded-lg">
             <div className="flex-none">
-              {task!.type === 'generate' ? '🖼️' : '🖌️'}
+              {getEmoji(task)}
             </div>
-            <div className="flex-1 truncate">{task!.scene}</div>
+            <div className="flex-1 truncate">{getTaskText(task)}</div>
             <div className="flex-none ml-auto p-2 bg-gray-300 rounded-lg font-medium text-sm text-gray-500">{task!.done}/{task!.total}</div>
           </div>
         ))}
