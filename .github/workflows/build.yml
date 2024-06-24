@@ -195,7 +195,7 @@ jobs:
           name: localai-mac-arm64-build
 
   build-localai-mac-x64:
-    runs-on: macos-latest-large
+    runs-on: macos-13
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
