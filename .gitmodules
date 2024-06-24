@@ -1,0 +1,3 @@
+[submodule "src/localai/BiRefNet"]
+	path = src/localai/BiRefNet
+	url = https://github.com/ZhengPeng7/BiRefNet.git
