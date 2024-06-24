@@ -16,11 +16,11 @@ jobs:
 
       - name: Build local AI and install dependencies
         run: |
+          python3 -m pip install setuptools --break-system-packages
           pip install pipenv --user
           cd src/localai
           python -m pipenv install
-          python -m pipenv shell
-          python build.py
+          python -m pipenv run build.py
           cd ../..
           cd src/native
           npm install
@@ -81,11 +81,11 @@ jobs:
 
       - name: Install dependencies
         run: |
+          python3 -m pip install setuptools --break-system-packages
           pip install pipenv --user
           cd src/localai
           python -m pipenv install
-          python -m pipenv shell
-          python build.py
+          python -m pipenv run build.py
           cd ../..
           cd src/native
           rm package-lock.json
