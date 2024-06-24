@@ -20,11 +20,13 @@ const sharp = require('sharp');
 const native = require('sdsnative');
 import webpackPaths from '../../.erb/configs/webpack.paths';
 import { Config } from './config';
+import { spawn } from 'child_process';
 
 import contextMenu from 'electron-context-menu';
 
 const { exiftool } = require('exiftool-vendored');
 const chokidar = require('chokidar');
+import LocalAIService from './localai';
 
 interface DataBaseConns {
   tagDBId: number;
@@ -426,6 +428,14 @@ ipcMain.handle('unwatch-image', async (event, inputPath) => {
   watchHandles.delete(curPath);
 });
 
+ipcMain.handle('load-model', async (event, modelPath, cuda) => {
+  await localAI.loadModel(modelPath, cuda);
+});
+
+ipcMain.handle('remove-bg', async (event, inputImageBase64, boxSize, outputPath) => {
+  await localAI.runModel(inputImageBase64, boxSize, outputPath);
+});
+
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
   sourceMapSupport.install();
@@ -592,7 +602,13 @@ const dataDir = isDebug
   ? path.join(webpackPaths.appPath, 'data')
   : path.join(__dirname, '../../data');
 
-(async () => {
+const localAIDir = isDebug
+  ? path.join(webpackPaths.appPath, 'localai')
+  : path.join(__dirname, '../../localai');
+
+const localAI = new LocalAIService('http://localhost:5353');
+
+async function init() {
   await fs.mkdir(APP_DIR, { recursive: true });
   try {
     config = JSON.parse(await fs.readFile(path.join(APP_DIR, 'config.json'), 'utf-8'));
@@ -601,7 +617,16 @@ const dataDir = isDebug
   databases.tagDBId = native.createDB('danbooru');
   native.loadDB(databases.tagDBId, dbCsvContent);
   databases.pieceDBId = native.createDB('pieces');
-})();
+  const localaiProcess = spawn(path.join(localAIDir, 'localai'), ['--port', '5353'], {
+    stdio: 'inherit'
+  });
+
+  localaiProcess.on('close', (code) => {
+    console.log(`Local AI process exited with code ${code}`);
+  });
+}
+
+init();
 
 const gotTheLock = app.requestSingleInstanceLock()
 

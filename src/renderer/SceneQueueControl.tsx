@@ -122,11 +122,11 @@ const SceneCell = ({
   };
 
   const removeFromQueue = (scene: GenericScene) => {
-    removeTaskFromGenericScene(scene);
+    removeTaskFromGenericScene(curSession!, scene);
   };
 
   const getSceneQueueCount = (scene: GenericScene) => {
-    const stats = statsGenericSceneTasks(scene);
+    const stats = statsGenericSceneTasks(curSession!, scene);
     return stats.total - stats.done;
   };
 
@@ -359,7 +359,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
               let image = await imageService.fetchImage(path);
               image = dataUriToBase64(image);
               let cnt = 0;
-              const newName = () => (scene.name + '_inpaint_' + cnt.toString());
+              const newName = () => (scene.name + '_inpaint_' + cnt);
               while (newName() in curSession!.inpaints) {
                 cnt++;
               }
