@@ -199,13 +199,14 @@
       "**/node_modules/chokidar/**/*",
       "**/node_modules/exiftool-vendored/**/*",
       "**/node_modules/exiftool-vendored.*/**/*",
-      "release/app/localai"
+      "**/localai/**/*"
     ],
     "files": [
       "dist",
       "node_modules",
       "package.json",
-      "data"
+      "data",
+      "localai"
     ],
     "afterSign": ".erb/scripts/notarize.js",
     "mac": {
