@@ -162,7 +162,7 @@ const Cell = memo(({
               starable: true,
             })}
             className={
-              'image relative cursor-pointer hover:brightness-95 active:brightness-90 ' +
+              'image relative cursor-pointer hover:brightness-95 active:brightness-90 bg-checkboard ' +
               (isMain ? 'border-2 border-yellow-400' : '')
             }
           />
@@ -304,6 +304,7 @@ const ResultDetailView = ({
   const [sampler, setSampler] = useState<string>('');
   const [steps, setSteps] = useState<string>('');
   const [uc, setUc] = useState<string>('');
+  const [_, forceUpdate] = useState<{}>({});
   useEffect(() => {
     const fetchImage = async () => {
       try {
@@ -339,9 +340,14 @@ const ResultDetailView = ({
         setFilename('');
       }
     };
+    const rerender = () => {
+      forceUpdate({});
+    };
     fetchImage();
+    sessionService.addEventListener('main-image-updated', rerender);
     imageService.addEventListener('image-cache-invalidated', fetchImage);
     return () => {
+      sessionService.removeEventListener('main-image-updated', rerender);
       imageService.removeEventListener('image-cache-invalidated', fetchImage);
     };
   }, [selectedIndex]);
@@ -439,7 +445,7 @@ const ResultDetailView = ({
                 scene: scene.name,
                 starable: true,
               })}
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain bg-checkboard"
             />
           )}
           <div className="absolute top-10 right-0 flex gap-3 p-4">

@@ -19,6 +19,7 @@ import {
   imageService,
   ContextAlt,
   SceneContextAlt,
+  localAIService,
 } from './models';
 import SessionSelect from './SessionSelect';
 import PreSetEditor from './PreSetEdtior';
@@ -114,6 +115,10 @@ export default function App() {
     };
   },[]);
   useEffect(() => {
+    const removeDonwloadProgressListener = ipcRenderer.on('download-progress', (progress: any) => {
+      console.log(progress);
+      localAIService.notifyDownloadProgress(progress.percent);
+    });
     const removeDuplicateSceneListener = ipcRenderer.on('duplicate-scene', async (ctx: SceneContextAlt) => {
       const field = ctx.sceneType === 'scene' ? 'scenes' : 'inpaints';
       const scene = curSession![field][ctx.name];
@@ -228,6 +233,7 @@ export default function App() {
       sessionService.sceneOrderChanged();
     });
     return () => {
+      removeDonwloadProgressListener();
       removeCopyImageListener();
       removeMoveSceneFrontListener();
       removeMoveSceneBackListener();

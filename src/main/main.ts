@@ -18,15 +18,15 @@ import { v4 as uuidv4 } from 'uuid';
 import { NovelAiImageGenService } from './genVendors/nai';
 const sharp = require('sharp');
 const native = require('sdsnative');
+const { exiftool } = require('exiftool-vendored');
+const chokidar = require('chokidar');
 import webpackPaths from '../../.erb/configs/webpack.paths';
 import { Config } from './config';
 import { spawn } from 'child_process';
+import LocalAIService from './localai';
 
 import contextMenu from 'electron-context-menu';
-
-const { exiftool } = require('exiftool-vendored');
-const chokidar = require('chokidar');
-import LocalAIService from './localai';
+import * as electronDL from 'electron-dl';
 
 interface DataBaseConns {
   tagDBId: number;
@@ -210,7 +210,6 @@ ipcMain.handle('rename-file', async (event, oldfile, newfile) => {
 });
 
 ipcMain.handle('rename-dir', async (event, oldfile, newfile) => {
-
   return await fs.rename(APP_DIR + '/' + oldfile, APP_DIR + '/' + newfile);
 });
 
@@ -226,6 +225,41 @@ ipcMain.handle('close', async (event) => {
   saveCompleted = true;
   mainWindow!.close();
 });
+
+ipcMain.handle('exist-file', async (event, filename) => {
+  try {
+    await fs.access(APP_DIR + '/' + filename);
+    return true;
+  } catch (e) {
+    return false;
+  }
+});
+
+ipcMain.handle('download', async (event, url, dest, filename) => {
+  dest = path.join(APP_DIR, dest);
+  const win = BrowserWindow.getFocusedWindow();
+  if (!win) {
+    return;
+  }
+  const options = {
+    directory: dest,
+    saveAs: false,
+    openFolderWhenDone: false,
+    filename,
+    onProgress: (progress) => {
+      win.webContents.send('download-progress', progress);
+    }
+  };
+  try {
+    await electronDL.download(win, url, options);
+  } catch (e) {
+    if (!(e instanceof electronDL.CancelError)) {
+      console.error(e);
+    }
+  }
+});
+
+
 
 ipcMain.handle(
   'resize-image',
@@ -428,12 +462,22 @@ ipcMain.handle('unwatch-image', async (event, inputPath) => {
   watchHandles.delete(curPath);
 });
 
-ipcMain.handle('load-model', async (event, modelPath, cuda) => {
-  await localAI.loadModel(modelPath, cuda);
+ipcMain.handle('load-model', async (event, modelPath) => {
+  modelPath =  path.resolve(path.join(APP_DIR, modelPath));
+  await localAI.loadModel(modelPath, config.useCUDA ?? false);
 });
 
-ipcMain.handle('remove-bg', async (event, inputImageBase64, boxSize, outputPath) => {
-  await localAI.runModel(inputImageBase64, boxSize, outputPath);
+const qualityMap: any = {
+  'low': 320,
+  'normal': 640,
+  'high': 1024,
+  'veryhigh': 2048,
+
+}
+
+ipcMain.handle('remove-bg', async (event, inputImageBase64, outputPath) => {
+  outputPath = path.join(APP_DIR, outputPath);
+  await localAI.runModel(inputImageBase64, qualityMap[config.removeBgQuality ?? 'normal'], outputPath);
 });
 
 if (process.env.NODE_ENV === 'production') {
@@ -606,7 +650,7 @@ const localAIDir = isDebug
   ? path.join(webpackPaths.appPath, 'localai')
   : path.join(__dirname, '../../localai');
 
-const localAI = new LocalAIService('http://localhost:5353');
+const localAI = new LocalAIService('http://127.0.0.1:5353');
 
 async function init() {
   await fs.mkdir(APP_DIR, { recursive: true });

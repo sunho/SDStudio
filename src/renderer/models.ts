@@ -5,6 +5,7 @@ import { CircularQueue } from './circularQueue';
 import { v4 as uuidv4 } from 'uuid';
 import ExifReader from 'exifreader';
 import { setInterval } from 'timers/promises';
+import { Config } from '../main/config';
 
 const PROMPT_SERVICE_INTERVAL = 5000;
 const UPDATE_SERVICE_INTERVAL = 60*1000;
@@ -1263,8 +1264,44 @@ class GenerateImageTaskHandler implements TaskHandler {
   }
 }
 
+export interface RemoveBgTaskParams {
+  session: Session;
+  scene: string;
+  image: string;
+  ouputPath: string;
+  onComplete?: (path: string) => void;
+}
 
-export type TaskType = 'generate' | 'generate-fast' | 'inpaint';
+class RemoveBgTaskHandler implements TaskHandler {
+  createTimeEstimator() {
+    return new TaskTimeEstimator(TASK_TIME_ESTIMATOR_SAMPLE_COUNT, TASK_DEFAULT_ESTIMATE);
+  }
+
+  async handleDelay(task: Task, numTry: number): Promise<void> {
+    return;
+  }
+
+  async handleTask(task: Task) {
+    const params: RemoveBgTaskParams = task.params;
+    const outputFilePath = params.ouputPath + '/' + Date.now().toString() + '.png';
+    await localAIService.removeBg(params.image, outputFilePath);
+    if (params.onComplete)
+      params.onComplete(outputFilePath);
+    imageService.onAddImage(params.session, params.scene, outputFilePath);
+    return true;
+  }
+
+  getNumTries(task: Task) {
+    return 1;
+  }
+
+  getSceneKey(task: Task) {
+    const params: GenerateImageTaskParams = task.params;
+    return getSceneKey(params.session, params.scene);
+  }
+}
+
+export type TaskType = 'generate' | 'generate-fast' | 'inpaint' | 'remove-bg';
 
 export class TaskQueueService extends EventTarget {
   queue: CircularQueue<Task>;
@@ -1532,6 +1569,7 @@ const tasksHandlerMap = {
   'generate': new GenerateImageTaskHandler(false, false),
   'generate-fast': new GenerateImageTaskHandler(true, false),
   'inpaint': new GenerateImageTaskHandler(false, true),
+  'remove-bg': new RemoveBgTaskHandler(),
 }
 
 export const taskQueueService = new TaskQueueService(tasksHandlerMap);
@@ -1757,6 +1795,22 @@ export const queueScenePrompt = (
   } else {
     taskQueueService.addTask('generate', samples, params);
   }
+}
+
+export const queueRemoveBg = async (
+  session: Session,
+  scene: Scene,
+  image: string,
+  onComplete?: (path:string) => void
+) => {
+  const params: RemoveBgTaskParams = {
+    session,
+    scene: scene.name,
+    image,
+    ouputPath: imageService.getImageDir(session, scene),
+    onComplete
+  };
+  taskQueueService.addTask('remove-bg', 1, params);
 }
 
 export const queueScene = async (
@@ -2103,7 +2157,9 @@ export const removeTaskFromGenericScene = (session: Session, scene: GenericScene
 
 export const statsGenericSceneTasks = (session: Session, scene: GenericScene) => {
   if (scene.type === 'scene') {
-    return taskQueueService.statsTasksFromScene('generate', getSceneKey(session, scene.name));
+    const stats = taskQueueService.statsTasksFromScene('generate', getSceneKey(session, scene.name));
+    const stats2 = taskQueueService.statsTasksFromScene('remove-bg', getSceneKey(session, scene.name));
+    return { done: stats.done + stats2.done, total: stats.total + stats2.total };
   }
   return taskQueueService.statsTasksFromScene('inpaint', getSceneKey(session, scene.name));
 };
@@ -2414,3 +2470,74 @@ export function calcGapMatch(small: string, large: string) {
   return { result, path };
 }
 
+const FAST_DOWNLOAD_LINK = 'https://github.com/sunho/BiRefNet/releases/download/sdstudio/fast';
+const QUALITY_DOWNLOAD_LINK = 'https://github.com/sunho/BiRefNet/releases/download/sdstudio/quality';
+
+class LocalAIService extends EventTarget {
+  downloading: boolean;
+  modelLoaded: boolean;
+  ready: boolean;
+  constructor() {
+    super();
+    this.downloading = false;
+    this.modelLoaded = false;
+    this.ready = false;
+  }
+
+  notifyDownloadProgress(percent: number) {
+    this.dispatchEvent(new CustomEvent('progress', { detail: { percent } }));
+  }
+
+  modelChanged() {
+    this.modelLoaded = false;
+  }
+
+  async download() {
+    this.downloading = true;
+    try {
+    await invoke('download', QUALITY_DOWNLOAD_LINK, 'models', 'quality');
+    await this.statsModels();
+    } finally {
+      this.downloading = false;
+    }
+  }
+
+  async statsModels() {
+    const avail: any = {
+      'fast': false,
+      'quality': false,
+    }
+    for (const model of ['fast', 'quality']) {
+      try {
+        avail[model] = await invoke('exist-file', "models/" + model);
+      } catch (e: any) {
+        console.error(e);
+      }
+    }
+    if (avail.quality) {
+      this.ready = true;
+    } else {
+      this.ready = false;
+    }
+    this.dispatchEvent(new CustomEvent('updated', {}));
+  }
+
+  async loadModel() {
+    if (!this.ready)
+      return;
+    const modelType = 'quality';
+    this.modelLoaded = false;
+    await invoke('load-model', 'models/' + modelType);
+    this.modelLoaded = true;
+  }
+
+
+  async removeBg(image: string, outputFilePath: string) {
+    if (!this.modelLoaded)
+      await this.loadModel();
+    await invoke('remove-bg', image, outputFilePath);
+  }
+}
+
+export const localAIService = new LocalAIService();
+localAIService.statsModels();

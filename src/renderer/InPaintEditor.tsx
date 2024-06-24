@@ -147,7 +147,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
       curSession!.inpaints[taskName] = newScene;
       await sessionService.saveInpaintImages(curSession!, newScene, image, mask);
       sessionService.markUpdated(curSession!.name);
-    onConfirm();
+      onConfirm();
     }
   };
 

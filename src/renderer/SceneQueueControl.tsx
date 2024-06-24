@@ -22,6 +22,8 @@ import {
   gameService,
   encodeContextAlt,
   dataUriToBase64,
+  queueRemoveBg,
+  localAIService,
 } from './models';
 import { AppContext } from './App';
 import { FloatView } from './FloatView';
@@ -178,8 +180,10 @@ const SceneCell = ({
             {getSceneQueueCount(scene)}
           </span>
         )}
-        <span className="text-lg overflow-auto no-scrollbars dark:text-gray-700"
-        >{scene.name}</span>
+        <div className="overflow-auto no-scrollbars">
+          <span className="text-lg text-black inline-block text-glow"
+          >{scene.name}</span>
+        </div>
         <div className="w-full flex mt-auto justify-center items-center gap-2">
           <button
             className={`${roundButton} bg-green-500`}
@@ -218,7 +222,7 @@ const SceneCell = ({
             sceneType: scene.type,
             name: scene.name,
           })}
-          className="top-0 left-0 absolute w-full h-full object-cover z-0"
+          className="top-0 left-0 absolute w-full h-full object-cover z-0 bg-checkboard"
         />
       )}
     </div>
@@ -353,6 +357,23 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
     type === 'scene'
       ? [
           {
+            text: (path) => {
+              return isMainImage(path) ? '즐겨찾기 해제' : '즐겨찾기 지정';
+            },
+            className: 'bg-orange-400',
+            onClick: async (scene, path, close) => {
+              const filename = path.split('/').pop()!;
+              if (isMainImage(path)) {
+                scene.mains = scene.mains.filter((x) => x !== filename);
+              } else {
+                scene.mains.push(filename);
+              }
+              updateScenes();
+              refreshSceneImageFuncs.current[scene.name]();
+              sessionService.mainImageUpdated();
+            },
+          },
+          {
             text: '인페인팅 씬 생성',
             className: 'bg-green-500',
             onClick: async (scene, path, close) => {
@@ -391,22 +412,17 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
             },
           },
           {
-            text: (path) => {
-              return isMainImage(path) ? '즐겨찾기 해제' : '즐겨찾기 지정';
-            },
-            className: 'bg-orange-400',
+            text: '배경 제거 예약',
+            className: 'bg-gray-500',
             onClick: async (scene, path, close) => {
-              const filename = path.split('/').pop()!;
-              if (isMainImage(path)) {
-                scene.mains = scene.mains.filter((x) => x !== filename);
-              } else {
-                scene.mains.push(filename);
+              if (!localAIService.ready) {
+                ctx.pushMessage('환경설정에서 배경 제거 기능을 활성화해주세요');
+                return;
               }
-              updateScenes();
-              refreshSceneImageFuncs.current[scene.name]();
-              sessionService.mainImageUpdated();
-              close();
-            },
+              let image = await imageService.fetchImage(path);
+              image = dataUriToBase64(image);
+              queueRemoveBg(curSession!, scene, image);
+            }
           },
         ]
       : [
@@ -605,6 +621,40 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
       })
     };
 
+  const removeBg = async () => {
+    if (!localAIService.ready) {
+      ctx.pushMessage('환경설정에서 배경 제거 기능을 활성화해주세요');
+      return;
+    }
+    for (const scene of Object.values(curSession!.scenes)) {
+      if (scene.mains.length === 0) {
+        const images = gameService.getOutputs(curSession!, scene);
+        if (!images.length)
+          continue;
+        let image = await imageService.fetchImage(images[0]);
+        image = dataUriToBase64(image);
+        queueRemoveBg(curSession!, scene, image);
+      } else {
+        const mains = scene.mains;
+        for (const main of mains) {
+          const path = imageService.getImageDir(curSession!, scene) + '/' + main;
+          let image = await imageService.fetchImage(path);
+          image = dataUriToBase64(image);
+          queueRemoveBg(curSession!, scene, image, (newPath: string) => {
+            for (let j = 0; scene.mains.length; j++) {
+              if (scene.mains[j] === main) {
+                scene.mains[j] = newPath.split('/').pop()!;
+                break;
+              }
+            }
+            updateScenes();
+            sessionService.mainImageUpdated();
+          });
+        }
+      }
+    }
+  }
+
   const resultViewerRef = useRef<any>(null);
   const resultViewer = useMemo(() => {
     if (displayScene) return <FloatView
@@ -642,14 +692,22 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
             className={`${roundButton} ${primaryColor}`}
             onClick={addAllToQueue}
           >
-            모든 씬 예약추가
+            모두 예약추가
           </button>
           {type === 'scene' && (
             <button
               className={`${roundButton} ${primaryColor}`}
               onClick={exportPackage}
             >
-              모든 즐겨찾기 이미지 내보내기
+              모두 내보내기
+            </button>
+          )}
+          {type === 'scene' && (
+            <button
+              className={`${roundButton} ${primaryColor}`}
+              onClick={removeBg}
+            >
+              모두 배경제거
             </button>
           )}
         </div>

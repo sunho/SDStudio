@@ -52,12 +52,8 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSamples }) => {
 
   const selectSession = (opt: Option<string>) => {
     (async () => {
-      if (!taskQueueService.isEmpty()) {
-        ctx.pushMessage('프로젝트를 전환하기 전에 작업 큐를 비워주세요.');
-      } else {
-        const session = await sessionService.get(opt.value);
-        if (session) setCurSession(session);
-      }
+      const session = await sessionService.get(opt.value);
+      if (session) setCurSession(session);
     })();
   };
 
