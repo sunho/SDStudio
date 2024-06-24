@@ -20,7 +20,7 @@ jobs:
           pip install pipenv --user
           cd src/localai
           python -m pipenv install
-          python -m pipenv run build.py
+          python -m pipenv run python build.py
           cd ../..
           cd src/native
           npm install
@@ -85,7 +85,7 @@ jobs:
           pip install pipenv --user
           cd src/localai
           python -m pipenv install
-          python -m pipenv run build.py
+          python -m pipenv python run build.py
           cd ../..
           cd src/native
           rm package-lock.json
