@@ -35,14 +35,14 @@ jobs:
 
       - name: Rename and zip the build
         run: |
-          mv src/localai/dist "LocalAI-${{ env.version }}-${{ env.commit_hash }}-windows"
-          7z a "LocalAI-${{ env.version }}-${{ env.commit_hash }}-windows.zip" "LocalAI-${{ env.version }}-${{ env.commit_hash }}-windows"
+          mv src/localai/dist "LocalAI-windows"
+          7z a "LocalAI-windows.zip" "LocalAI-windows"
 
       - name: Upload Windows build
         uses: actions/upload-artifact@v3
         with:
           name: localai-windows-build
-          path: "LocalAI-${{ env.version }}-${{ env.commit_hash }}-windows.zip"
+          path: "LocalAI-windows.zip"
           if-no-files-found: error
 
   build-windows:
@@ -187,8 +187,8 @@ jobs:
 
       - name: Rename and zip the build
         run: |
-          mv src/localai/dist "LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-arm64"
-          7z a "LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-arm64.zip" "LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-arm64"
+          mv src/localai/dist "LocalAI-mac-arm64"
+          7z a "LocalAI-mac-arm64.zip" "LocalAI-mac-arm64"
 
       - name: Upload Mac build
         uses: actions/upload-artifact@v3
@@ -229,18 +229,18 @@ jobs:
 
       - name: Rename and zip the build
         run: |
-          mv src/localai/dist "LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-x64"
-          7z a "LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-x64.zip" "LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-x64"
+          mv src/localai/dist "LocalAI-mac-x64"
+          7z a "LocalAI-mac-x64.zip" "LocalAI-mac-x64"
 
       - name: Upload Mac build
         uses: actions/upload-artifact@v3
         with:
           name: localai-mac-x64-build
-          path: "LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-x64.zip"
+          path: "LocalAI-mac-x64.zip"
           if-no-files-found: error
 
   create-release:
-    needs: [build-windows, build-mac]
+    needs: [build-windows, build-mac, build-localai-mac-arm64, build-localai-mac-x64, build-localai-windows]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -331,8 +331,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-x64.zip
-          asset_name: LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-x64.zip
+          asset_path: ./dist/LocalAI-mac-x64.zip
+          asset_name: LocalAI-mac-x64.zip
           asset_content_type: application/zip
 
       - name: Upload mac arm64 local AI build to Release
@@ -341,8 +341,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-arm64.zip
-          asset_name: LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-arm64.zip
+          asset_path: ./dist/LocalAI-mac-arm64.zip
+          asset_name: LocalAI-mac-arm64.zip
           asset_content_type: application/zip
 
       - name: Upload windows local AI build to Release
@@ -351,7 +351,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/LocalAI-${{ env.version }}-${{ env.commit_hash }}-windows.zip
-          asset_name: LocalAI-${{ env.version }}-${{ env.commit_hash }}-windows.zip
+          asset_path: ./dist/LocalAI-windows.zip
+          asset_name: LocalAI-windows.zip
           asset_content_type: application/zip
 
