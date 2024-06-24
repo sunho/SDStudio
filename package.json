@@ -84,13 +84,13 @@
     }
   },
   "dependencies": {
-    "@types/node-fetch": "^2.6.11",
     "adm-zip": "^0.5.12",
     "axios": "^1.7.2",
     "chokidar": "^3.6.0",
     "denque": "^2.1.0",
     "electron-context-menu": "^3.6.1",
     "electron-debug": "^3.2.0",
+    "electron-dl": "^3.5.2",
     "electron-log": "^4.4.8",
     "electron-prompt": "^1.7.0",
     "electron-updater": "^6.1.4",

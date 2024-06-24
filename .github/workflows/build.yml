@@ -14,8 +14,14 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install dependencies
+      - name: Build local AI and install dependencies
         run: |
+          pip install pipenv --user
+          cd src/localai
+          pipenv install
+          pipenv shell
+          python build.py
+          cd ../..
           cd src/native
           npm install
           cd ../..
@@ -71,10 +77,16 @@ jobs:
       #     APPLE_ID: ${{ secrets.APPLE_ID }}
       #     APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
       #   run: echo "KEYCHAIN=build.keychain" >> $GITHUB_ENV
+          # python3 -m pip install setuptools --break-system-packages
 
       - name: Install dependencies
         run: |
-          python3 -m pip install setuptools --break-system-packages
+          pip install pipenv --user
+          cd src/localai
+          pipenv install
+          pipenv shell
+          python build.py
+          cd ../..
           cd src/native
           rm package-lock.json
           npm install

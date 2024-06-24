@@ -122,7 +122,7 @@ def run_model_route():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-    return jsonify({"message": "Model run successfully", "result": result})
+    return jsonify({"message": "Model run successfully"})
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Flask service for model loading and running.')

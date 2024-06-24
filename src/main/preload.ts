@@ -28,7 +28,11 @@ export type Channels =
   | 'watch-image'
   | 'unwatch-image'
   | 'get-config'
-  | 'set-config';
+  | 'set-config'
+  | 'remove-bg'
+  | 'load-model'
+  | 'exist-file'
+  | 'download';
 
 const electronHandler = {
   ipcRenderer: {
