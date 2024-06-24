@@ -32,12 +32,12 @@ jobs:
       - name: Rename and zip the build
         run: |
           mv src/localai/dist "LocalAI-${{ env.version }}-${{ env.commit_hash }}-windows"
-          7z a "LocalAI-${{ env.version }}-${{ env.commit_hash }}-windows.zip" "SDStudio-${{ env.version }}-${{ env.commit_hash }}-windows"
+          7z a "LocalAI-${{ env.version }}-${{ env.commit_hash }}-windows.zip" "LocalAI-${{ env.version }}-${{ env.commit_hash }}-windows"
 
       - name: Upload Windows build
         uses: actions/upload-artifact@v3
         with:
-          name: windows-build
+          name: localai-windows-build
           path: "LocalAI-${{ env.version }}-${{ env.commit_hash }}-windows.zip"
           if-no-files-found: error
 
@@ -55,11 +55,6 @@ jobs:
       - name: Build local AI and install dependencies
         run: |
           python3 -m pip install setuptools --break-system-packages
-          pip install pipenv --user
-          cd src/localai
-          python -m pipenv install
-          python -m pipenv run python build.py
-          cd ../..
           cd src/native
           npm install
           cd ../..
@@ -120,11 +115,6 @@ jobs:
       - name: Install dependencies
         run: |
           python3 -m pip install setuptools --break-system-packages
-          pip install pipenv --user
-          cd src/localai
-          python -m pipenv install
-          python -m pipenv run python build.py
-          cd ../..
           cd src/native
           rm package-lock.json
           npm install
@@ -161,7 +151,7 @@ jobs:
           path: "release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}-mac-*.dmg"
           if-no-files-found: error
 
-  build-localai-mac:
+  build-localai-mac-arm64:
     runs-on: macos-latest
     steps:
       - name: Checkout code
@@ -189,13 +179,50 @@ jobs:
 
       - name: Rename and zip the build
         run: |
-          mv src/localai/dist "LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac"
-          7z a "LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac.zip" "SDStudio-${{ env.version }}-${{ env.commit_hash }}-mac"
+          mv src/localai/dist "LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-arm64"
+          7z a "LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-arm64.zip" "LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-arm64"
 
       - name: Upload Mac build
         uses: actions/upload-artifact@v3
         with:
-          name: mac-build
+          name: localai-mac-arm64-build
+
+  build-localai-mac-x64:
+    runs-on: macos-latest-large
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Build local AI
+        run: |
+          pip install pipenv --user
+          cd src/localai
+          python -m pipenv install
+          python -m pipenv run python build.py
+          cd ../..
+
+      - name: Get version and commit hash
+        id: get-version
+        run: |
+          node get-version.js
+          echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Rename and zip the build
+        run: |
+          mv src/localai/dist "LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-x64"
+          7z a "LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-x64.zip" "LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-x64"
+
+      - name: Upload Mac build
+        uses: actions/upload-artifact@v3
+        with:
+          name: localai-mac-x64-build
+
 
 
   create-release:
@@ -215,6 +242,24 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: mac-build
+          path: ./dist
+
+      - name: Download local AI mac arm64 build artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: localai-mac-arm64-build
+          path: ./dist
+
+      - name: Download local AI mac x64 build artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: localai-mac-x64-build
+          path: ./dist
+
+      - name: Download local AI windows build artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: localai-windows-build
           path: ./dist
 
       - name: Get version and commit hash
@@ -266,14 +311,24 @@ jobs:
           asset_name: SDStudio-${{ env.version }}-${{ env.commit_hash }}-mac-arm64.dmg
           asset_content_type: application/x-apple-diskimage
 
-      - name: Upload mac local AI build to Release
+      - name: Upload mac x64 local AI build to Release
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac.zip
-          asset_name: LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac.zip
+          asset_path: ./dist/LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-x64.zip
+          asset_name: LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-x64.zip
+          asset_content_type: application/zip
+
+      - name: Upload mac arm64 local AI build to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-arm64.zip
+          asset_name: LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-arm64.zip
           asset_content_type: application/zip
 
       - name: Upload windows local AI build to Release
