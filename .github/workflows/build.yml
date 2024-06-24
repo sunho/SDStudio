@@ -193,6 +193,8 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: localai-mac-arm64-build
+          path: "LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-arm64.zip"
+          if-no-files-found: error
 
   build-localai-mac-x64:
     runs-on: macos-13
@@ -233,8 +235,8 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: localai-mac-x64-build
-
-
+          path: "LocalAI-${{ env.version }}-${{ env.commit_hash }}-mac-x64.zip"
+          if-no-files-found: error
 
   create-release:
     needs: [build-windows, build-mac]
