@@ -90,6 +90,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
             <option value="normal">보통</option>
             <option value="high">높음</option>
             <option value="veryhigh">매우높음</option>
+            <option value="veryveryhigh">최고 (메모리 최소 8기가)</option>
           </select>
         </div>
         </>}

@@ -486,18 +486,22 @@ async function spawnLocalAI() {
   });
 }
 
-ipcMain.handle('start-local-ai', async (event) => {
+ipcMain.handle('spawn-local-ai', async (event) => {
   if (!localAIRunning) {
     await spawnLocalAI();
   }
+});
+
+ipcMain.handle('is-local-ai-running', async (event) => {
+  return localAIRunning;
 });
 
 const qualityMap: any = {
   'low': 320,
   'normal': 640,
   'high': 1024,
-  'veryhigh': 2048,
-
+  'veryhigh': 1536,
+  'veryveryhigh': 2048
 }
 
 ipcMain.handle('remove-bg', async (event, inputImageBase64, outputPath) => {
