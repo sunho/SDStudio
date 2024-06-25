@@ -2470,7 +2470,19 @@ export function calcGapMatch(small: string, large: string) {
   return { result, path };
 }
 
-const FAST_DOWNLOAD_LINK = 'https://github.com/sunho/BiRefNet/releases/download/sdstudio/fast';
+async function getPlatform() {
+  const platform = window.navigator.platform;
+  if (platform.startsWith('Win')) return 'windows';
+  const arch = await navigator.userAgentData.getHighEntropyValues(['architecture'])
+  if (arch.architecture === 'arm64') return 'mac-arm64';
+  return 'mac-x64';
+}
+
+async function getLocalAIDownloadLink() {
+  const platform = await getPlatform();
+  const version = await invoke('get-version');
+  return `https://github.com/sunho/SDStudio/releases/download/${version}/LocalAI-${platform}.zip`;
+}
 const QUALITY_DOWNLOAD_LINK = 'https://github.com/sunho/BiRefNet/releases/download/sdstudio/quality';
 
 class LocalAIService extends EventTarget {
@@ -2495,8 +2507,12 @@ class LocalAIService extends EventTarget {
   async download() {
     this.downloading = true;
     try {
-    await invoke('download', QUALITY_DOWNLOAD_LINK, 'models', 'quality');
-    await this.statsModels();
+      let ldl = await getLocalAIDownloadLink();
+      ldl = 'https://github.com/sunho/BiRefNet/releases/download/d/LocalAI-windows.zip'
+      await invoke('download', ldl, 'tmp', 'localai.zip');
+      await invoke('extract-zip', 'tmp/localai.zip', 'localai');
+      await invoke('download', QUALITY_DOWNLOAD_LINK, 'models', 'quality');
+      await this.statsModels();
     } finally {
       this.downloading = false;
     }
@@ -2507,6 +2523,12 @@ class LocalAIService extends EventTarget {
       'fast': false,
       'quality': false,
     }
+    let availExec = false;
+    try {
+      availExec = await invoke('exist-file', "localai");
+    } catch (e: any) {
+      console.error(e);
+    }
     for (const model of ['fast', 'quality']) {
       try {
         avail[model] = await invoke('exist-file', "models/" + model);
@@ -2514,7 +2536,7 @@ class LocalAIService extends EventTarget {
         console.error(e);
       }
     }
-    if (avail.quality) {
+    if (availExec && avail.quality) {
       this.ready = true;
     } else {
       this.ready = false;

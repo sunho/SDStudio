@@ -467,6 +467,31 @@ ipcMain.handle('load-model', async (event, modelPath) => {
   await localAI.loadModel(modelPath, config.useCUDA ?? false);
 });
 
+ipcMain.handle('extract-zip', async (event, zipPath, outPath) => {
+  const zip = new AdmZip(path.join(APP_DIR, zipPath));
+  const dir = path.join(APP_DIR, outPath);
+  await fs.mkdir(dir, { recursive: true });
+  await zip.extractAllTo(dir, true);
+});
+
+let localAIRunning = false;
+
+async function spawnLocalAI() {
+  const localaiProcess = spawn(path.join(APP_DIR, 'localai', 'localai'), ['--port', '5353'], {
+    stdio: 'inherit'
+  });
+  localAIRunning = true;
+  localaiProcess.on('close', (code) => {
+    localAIRunning = false;
+  });
+}
+
+ipcMain.handle('start-local-ai', async (event) => {
+  if (!localAIRunning) {
+    await spawnLocalAI();
+  }
+});
+
 const qualityMap: any = {
   'low': 320,
   'normal': 640,
@@ -661,16 +686,10 @@ async function init() {
   databases.tagDBId = native.createDB('danbooru');
   native.loadDB(databases.tagDBId, dbCsvContent);
   databases.pieceDBId = native.createDB('pieces');
-  const localaiProcess = spawn(path.join(localAIDir, 'localai'), ['--port', '5353'], {
-    stdio: 'inherit'
-  });
-
-  localaiProcess.on('close', (code) => {
-    console.log(`Local AI process exited with code ${code}`);
-  });
 }
 
 init();
+
 
 const gotTheLock = app.requestSingleInstanceLock()
 

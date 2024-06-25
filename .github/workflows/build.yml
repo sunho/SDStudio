@@ -36,8 +36,8 @@ jobs:
 
       - name: Rename and zip the build
         run: |
-          mv src/localai/dist "LocalAI-windows"
-          7z a "LocalAI-windows.zip" "LocalAI-windows"
+          mv src/localai/dist/localai localai
+          7z a "LocalAI-windows.zip" localai
 
       - name: Upload Windows build
         uses: actions/upload-artifact@v3
@@ -189,8 +189,8 @@ jobs:
 
       - name: Rename and zip the build
         run: |
-          mv src/localai/dist "LocalAI-mac-arm64"
-          7z a "LocalAI-mac-arm64.zip" "LocalAI-mac-arm64"
+          mv src/localai/dist/localai localai
+          7z a "LocalAI-mac-arm64.zip" localai
 
       - name: Upload Mac build
         uses: actions/upload-artifact@v3
@@ -232,8 +232,8 @@ jobs:
 
       - name: Rename and zip the build
         run: |
-          mv src/localai/dist "LocalAI-mac-x64"
-          7z a "LocalAI-mac-x64.zip" "LocalAI-mac-x64"
+          mv src/localai/dist/localai localai
+          7z a "LocalAI-mac-x64.zip" localai
 
       - name: Upload Mac build
         uses: actions/upload-artifact@v3
