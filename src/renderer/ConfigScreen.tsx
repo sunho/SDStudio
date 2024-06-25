@@ -12,6 +12,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
   const [ready, setReady] = useState(false);
   const [quality, setQuality] = useState('');
   const [progress, setProgress] = useState(0);
+  const [stage, setStage] = useState(0);
   useEffect(() => {
     (async () => {
       const config = await invoke('get-config');
@@ -26,14 +27,20 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
       console.log(e);
       setProgress(e.detail.percent);
     }
+    const onStage = (e:any) => {
+      setStage(e.detail.stage);
+    }
     checkReady();
     localAIService.addEventListener('updated', checkReady);
     localAIService.addEventListener('progress', onProgress);
+    localAIService.addEventListener('stage', onStage);
     return () => {
       localAIService.removeEventListener('updated', checkReady);
       localAIService.removeEventListener('progress', onProgress);
+      localAIService.removeEventListener('stage', onStage);
     };
   }, []);
+  const stageTexts = ['모델 다운로드 중...', '모델 가중치 다운로드 중...', '모델 압축 푸는 중...'];
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="bg-white p-6 rounded shadow-md w-full max-w-md">
@@ -61,14 +68,16 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
                 localAIService.download();
             }}
           >
-            {!localAIService.downloading ? "배경 제거 기능 활성화 (배경 제거 모델을 다운받습니다)" : `배경 제거 모델 다운로드 중... (${(progress*100).toFixed(2)}%)`}:
+            {!localAIService.downloading ? "배경 제거 기능 활성화 (배경 제거 모델을 설치)" : stageTexts[stage] + ` (${(progress*100).toFixed(2)}%)`}
           </button>
         </div>
         }
         {ready && <>
         <div className="flex gap-2 mt-4">
           <label htmlFor="imageEditor" className="block text-sm font-medium text-gray-700">
-            배경 제거 시 GPU 사용 (CUDA를 다운 받야아합니다
+            배경 제거 시 GPU 사용 <a onClick={() => {
+              invoke('open-web-page', 'https://developer.nvidia.com/cuda-11-8-0-download-archive');
+            }} className="underline text-blue-500 cursor-pointer">(CUDA를 설치 해야함)</a>
           </label>
           <input
             type="checkbox"
