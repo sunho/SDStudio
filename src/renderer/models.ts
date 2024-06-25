@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import ExifReader from 'exifreader';
 import { setInterval } from 'timers/promises';
 import { Config } from '../main/config';
+import { a } from 'hangul-js';
 
 const PROMPT_SERVICE_INTERVAL = 5000;
 const UPDATE_SERVICE_INTERVAL = 60*1000;
@@ -2508,14 +2509,21 @@ class LocalAIService extends EventTarget {
     this.downloading = true;
     try {
       let ldl = await getLocalAIDownloadLink();
-      ldl = 'https://github.com/sunho/BiRefNet/releases/download/d/LocalAI-windows.zip'
       await invoke('download', ldl, 'tmp', 'localai.zip');
-      await invoke('extract-zip', 'tmp/localai.zip', 'localai');
+      await invoke('extract-zip', 'tmp/localai.zip', '');
       await invoke('download', QUALITY_DOWNLOAD_LINK, 'models', 'quality');
       await this.statsModels();
     } finally {
       this.downloading = false;
     }
+  }
+
+  async sapwnLocalAI() {
+    const running = await invoke('is-local-ai-running');
+    if (running) {
+      return;
+    }
+    await invoke('spawn-local-ai');
   }
 
   async statsModels() {
@@ -2538,6 +2546,7 @@ class LocalAIService extends EventTarget {
     }
     if (availExec && avail.quality) {
       this.ready = true;
+      await this.sapwnLocalAI();
     } else {
       this.ready = false;
     }
@@ -2545,8 +2554,9 @@ class LocalAIService extends EventTarget {
   }
 
   async loadModel() {
-    if (!this.ready)
-      return;
+    const running = await invoke('is-local-ai-running');
+    if (!this.ready || !running)
+      throw new Error('Local AI not ready');
     const modelType = 'quality';
     this.modelLoaded = false;
     await invoke('load-model', 'models/' + modelType);
