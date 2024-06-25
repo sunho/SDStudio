@@ -176,6 +176,7 @@ jobs:
           pip install pipenv --user
           cd src/localai
           python -m pipenv install
+          python -m pipenv run pip install macholib
           python -m pipenv run python build.py
           cd ../..
 
@@ -218,6 +219,7 @@ jobs:
           pip install pipenv --user
           cd src/localai
           python -m pipenv install
+          python -m pipenv run pip install macholib
           python -m pipenv run python build.py
           cd ../..
 
