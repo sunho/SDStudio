@@ -3,50 +3,6 @@ name: Build Electron Application
 on: [push, pull_request]
 
 jobs:
-  build-localai-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '22'
-
-      - name: Build local AI
-        run: |
-          cd src/localai
-          pip install -r requirements.txt
-          pip install pywin32-ctypes
-          pip install pefile
-          python build.py
-          cd ../..
-
-      - name: Get version and commit hash
-        id: get-version
-        run: |
-          node get-version.js
-          echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-        shell: bash
-
-      - name: Rename and zip the build
-        run: |
-          mv src/localai/dist/localai localai
-          7z a "LocalAI-windows.zip" localai
-
-      - name: Upload Windows build
-        uses: actions/upload-artifact@v3
-        with:
-          name: localai-windows-build
-          path: "LocalAI-windows.zip"
-          if-no-files-found: error
-
   build-windows:
     runs-on: windows-latest
     steps:
@@ -159,94 +115,8 @@ jobs:
           path: "release/build/SDStudio-${{ env.version }}-${{ env.commit_hash }}-mac-*.dmg"
           if-no-files-found: error
 
-  build-localai-mac-arm64:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '22'
-
-      - name: Build local AI
-        run: |
-          cd src/localai
-          pip install -r requirements.txt
-          pip install macholib
-          python build.py
-          cd ../..
-
-      - name: Get version and commit hash
-        id: get-version
-        run: |
-          node get-version.js
-          echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-        shell: bash
-
-      - name: Rename and zip the build
-        run: |
-          mv src/localai/dist/localai localai
-          7z a "LocalAI-mac-arm64.zip" localai
-
-      - name: Upload Mac build
-        uses: actions/upload-artifact@v3
-        with:
-          name: localai-mac-arm64-build
-          path: "LocalAI-mac-arm64.zip"
-          if-no-files-found: error
-
-  build-localai-mac-x64:
-    runs-on: macos-13
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '22'
-
-      - name: Build local AI
-        run: |
-          cd src/localai
-          pip install -r requirements.txt
-          pip install macholib
-          python build.py
-          cd ../..
-
-      - name: Get version and commit hash
-        id: get-version
-        run: |
-          node get-version.js
-          echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-        shell: bash
-
-      - name: Rename and zip the build
-        run: |
-          mv src/localai/dist/localai localai
-          7z a "LocalAI-mac-x64.zip" localai
-
-      - name: Upload Mac build
-        uses: actions/upload-artifact@v3
-        with:
-          name: localai-mac-x64-build
-          path: "LocalAI-mac-x64.zip"
-          if-no-files-found: error
-
   create-release:
-    needs: [build-windows, build-mac, build-localai-mac-arm64, build-localai-mac-x64, build-localai-windows]
+    needs: [build-windows, build-mac]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -262,24 +132,6 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: mac-build
-          path: ./dist
-
-      - name: Download local AI mac arm64 build artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: localai-mac-arm64-build
-          path: ./dist
-
-      - name: Download local AI mac x64 build artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: localai-mac-x64-build
-          path: ./dist
-
-      - name: Download local AI windows build artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: localai-windows-build
           path: ./dist
 
       - name: Get version and commit hash
@@ -330,34 +182,3 @@ jobs:
           asset_path: ./dist/SDStudio-${{ env.version }}-${{ env.commit_hash }}-mac-arm64.dmg
           asset_name: SDStudio-${{ env.version }}-${{ env.commit_hash }}-mac-arm64.dmg
           asset_content_type: application/x-apple-diskimage
-
-      - name: Upload mac x64 local AI build to Release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/LocalAI-mac-x64.zip
-          asset_name: LocalAI-mac-x64.zip
-          asset_content_type: application/zip
-
-      - name: Upload mac arm64 local AI build to Release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/LocalAI-mac-arm64.zip
-          asset_name: LocalAI-mac-arm64.zip
-          asset_content_type: application/zip
-
-      - name: Upload windows local AI build to Release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/LocalAI-windows.zip
-          asset_name: LocalAI-windows.zip
-          asset_content_type: application/zip
-
