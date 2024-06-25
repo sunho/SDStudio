@@ -6,11 +6,11 @@ name = "pypi"
 [[source]]
 url = "https://download.pytorch.org/whl/cu118"
 verify_ssl = true
-name = "downloadpytorch"
+name = "pytorch"
 
 [packages]
-torch = "==2.0.1"
-torchvision = "==0.15.2"
+torch = {index = "pytorch", "==2.0.1"}
+torchvision = {index = "pytorch", "==0.15.2"}
 opencv-python = "*"
 tqdm = "*"
 timm = "*"
