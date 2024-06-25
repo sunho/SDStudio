@@ -1,0 +1,134 @@
+name: Build Electron Application
+
+on: [push, pull_request]
+
+jobs:
+  build-localai-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Build local AI
+        run: |
+          cd src/localai
+          pip install -r requirements.txt
+          pip install pywin32-ctypes
+          pip install pefile
+          python build.py
+          cd ../..
+
+      - name: Get version and commit hash
+        id: get-version
+        run: |
+          node get-version.js
+          echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Rename and zip the build
+        run: |
+          mv src/localai/dist/localai localai
+          7z a "LocalAI-windows.zip" localai
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v3
+        with:
+          name: localai-windows-build
+          path: "LocalAI-windows.zip"
+          if-no-files-found: error
+
+  build-localai-mac-arm64:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Build local AI
+        run: |
+          cd src/localai
+          pip install -r requirements.txt
+          pip install macholib
+          python build.py
+          cd ../..
+
+      - name: Get version and commit hash
+        id: get-version
+        run: |
+          node get-version.js
+          echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Rename and zip the build
+        run: |
+          mv src/localai/dist/localai localai
+          7z a "LocalAI-mac-arm64.zip" localai
+
+      - name: Upload Mac build
+        uses: actions/upload-artifact@v3
+        with:
+          name: localai-mac-arm64-build
+          path: "LocalAI-mac-arm64.zip"
+          if-no-files-found: error
+
+  build-localai-mac-x64:
+    runs-on: macos-13
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Build local AI
+        run: |
+          cd src/localai
+          pip install -r requirements.txt
+          pip install macholib
+          python build.py
+          cd ../..
+
+      - name: Get version and commit hash
+        id: get-version
+        run: |
+          node get-version.js
+          echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Rename and zip the build
+        run: |
+          mv src/localai/dist/localai localai
+          7z a "LocalAI-mac-x64.zip" localai
+
+      - name: Upload Mac build
+        uses: actions/upload-artifact@v3
+        with:
+          name: localai-mac-x64-build
+          path: "LocalAI-mac-x64.zip"
+          if-no-files-found: error
