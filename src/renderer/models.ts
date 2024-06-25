@@ -1505,7 +1505,7 @@ export class TaskQueueService extends EventTarget {
           this.dispatchProgress();
         } catch (e: any) {
           this.dispatchEvent(
-            new CustomEvent('error', { detail: { error: e.message } }),
+            new CustomEvent('error', { detail: { error: e.message, task: task } }),
           );
           console.error(e);
         }
@@ -2482,7 +2482,7 @@ async function getPlatform() {
 async function getLocalAIDownloadLink() {
   const platform = await getPlatform();
   const version = await invoke('get-version');
-  return `https://github.com/sunho/SDStudio/releases/download/${version}/LocalAI-${platform}.zip`;
+  return `https://huggingface.co/mathneko/localai/resolve/main/LocalAI-${platform}.zip?download=true`
 }
 const QUALITY_DOWNLOAD_LINK = 'https://github.com/sunho/BiRefNet/releases/download/sdstudio/quality';
 
@@ -2508,11 +2508,28 @@ class LocalAIService extends EventTarget {
   async download() {
     this.downloading = true;
     try {
+     await invoke('delete-file', 'tmp/localai.zip');
+    } catch(e) {
+    }
+    try {
+      await invoke('delete-dir', 'localai');
+    } catch(e) {
+    }
+    try {
+      await invoke('delete-dir', 'models');
+    } catch(e) {
+    }
+    try {
       let ldl = await getLocalAIDownloadLink();
+      this.dispatchEvent(new CustomEvent('stage', { detail: { stage: 0 } }));
       await invoke('download', ldl, 'tmp', 'localai.zip');
-      await invoke('extract-zip', 'tmp/localai.zip', '');
+      this.dispatchEvent(new CustomEvent('stage', { detail: { stage: 1 } }));
       await invoke('download', QUALITY_DOWNLOAD_LINK, 'models', 'quality');
+      this.dispatchEvent(new CustomEvent('stage', { detail: { stage: 2 } }));
+      await invoke('extract-zip', 'tmp/localai.zip', '');
       await this.statsModels();
+    } catch (e: any) {
+      console.error(e);
     } finally {
       this.downloading = false;
     }

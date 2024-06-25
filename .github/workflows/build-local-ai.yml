@@ -1,4 +1,4 @@
-name: Build Electron Application
+name: Build Local AI
 
 on: [push, pull_request]
 

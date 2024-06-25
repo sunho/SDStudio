@@ -10,7 +10,7 @@
  */
 import path from 'path';
 import { ImageGenInput, ImageGenService } from './imageGen';
-import { app, BrowserWindow, shell, ipcMain, screen } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, screen, webContents } from 'electron';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
@@ -24,6 +24,8 @@ import webpackPaths from '../../.erb/configs/webpack.paths';
 import { Config } from './config';
 import { spawn } from 'child_process';
 import LocalAIService from './localai';
+const StreamZip = require('node-stream-zip');
+
 
 import contextMenu from 'electron-context-menu';
 import * as electronDL from 'electron-dl';
@@ -217,6 +219,10 @@ ipcMain.handle('delete-file', async (event, filename) => {
   return await fs.unlink(APP_DIR + '/' + filename);
 });
 
+ipcMain.handle('delete-dir', async (event, filename) => {
+  return await fs.rmdir(APP_DIR + '/' + filename, { recursive: true });
+});
+
 ipcMain.handle('trash-file', async (event, filename) => {
   await shell.trashItem(path.join(APP_DIR, filename));
 });
@@ -258,8 +264,6 @@ ipcMain.handle('download', async (event, url, dest, filename) => {
     }
   }
 });
-
-
 
 ipcMain.handle(
   'resize-image',
@@ -468,10 +472,18 @@ ipcMain.handle('load-model', async (event, modelPath) => {
 });
 
 ipcMain.handle('extract-zip', async (event, zipPath, outPath) => {
-  const zip = new AdmZip(path.join(APP_DIR, zipPath));
   const dir = path.join(APP_DIR, outPath);
+  const zip = new StreamZip.async({ file: path.join(APP_DIR, zipPath) });
+
+  let numExtracted = 0;
+  const entries = Object.values(await zip.entries());
+  zip.on('extract', (entry, file) => {
+    numExtracted++;
+    mainWindow!.webContents.send('download-progress', { percent: numExtracted / entries.length });
+  });
   await fs.mkdir(dir, { recursive: true });
-  await zip.extractAllTo(dir, true);
+  await zip.extract(null, dir);
+  await zip.close();
 });
 
 let localAIRunning = false;
