@@ -9,8 +9,8 @@ verify_ssl = true
 name = "pytorch"
 
 [packages]
-torch = {index = "pytorch", "==2.0.1"}
-torchvision = {index = "pytorch", "==0.15.2"}
+torch = {index = "pytorch",version = "==2.0.1"}
+torchvision = {index = "pytorch",version = "==0.15.2"}
 opencv-python = "*"
 tqdm = "*"
 timm = "*"
