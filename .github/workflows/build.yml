@@ -21,12 +21,11 @@ jobs:
 
       - name: Build local AI
         run: |
-          pip install pipenv --user
           cd src/localai
-          python -m pipenv install
-          python -m pipenv run pip install pywin32-ctypes
-          python -m pipenv run pip install pefile
-          python -m pipenv run python build.py
+          pip install -r requirements.txt
+          pip install pywin32-ctypes
+          pip install pefile
+          python build.py
           cd ../..
 
       - name: Get version and commit hash
@@ -179,11 +178,10 @@ jobs:
 
       - name: Build local AI
         run: |
-          pip install pipenv --user
           cd src/localai
-          python -m pipenv install
-          python -m pipenv run pip install macholib
-          python -m pipenv run python build.py
+          pip install -r requirements.txt
+          pip install macholib
+          python build.py
           cd ../..
 
       - name: Get version and commit hash
@@ -222,11 +220,10 @@ jobs:
 
       - name: Build local AI
         run: |
-          pip install pipenv --user
           cd src/localai
-          python -m pipenv install
-          python -m pipenv run pip install macholib
-          python -m pipenv run python build.py
+          pip install -r requirements.txt
+          pip install macholib
+          python build.py
           cd ../..
 
       - name: Get version and commit hash
