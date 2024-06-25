@@ -21,6 +21,7 @@ kornia = "*"
 numpy = "<2"
 pyinstaller = "*"
 flask = "*"
+colorama = "*"
 
 [dev-packages]
 
