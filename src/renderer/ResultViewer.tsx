@@ -137,8 +137,14 @@ const Cell = memo(({
   return (
     <div
       key={index.toString() + path + imageSize.toString()}
+      title={encodeContextAlt({
+        type: 'image',
+        path,
+        scene: scene.name,
+        starable: true,
+      })}
       style={style}
-      className="image-cell relative"
+      className="image-cell relative hover:brightness-95 active:brightness-90 bg-white cursor-pointer"
       draggable
       onClick={() => {
         if (path) {
@@ -153,24 +159,30 @@ const Cell = memo(({
     >
       {path && image && (
         <>
-          <img
-            src={image}
-            alt={encodeContextAlt({
-              type: 'image',
-              path,
-              scene: scene.name,
-              starable: true,
-            })}
-            className={
-              'image relative cursor-pointer hover:brightness-95 active:brightness-90 bg-checkboard ' +
-              (isMain ? 'border-2 border-yellow-400' : '')
-            }
-          />
-          {isMain && (
-            <div className="absolute left-0 top-0 z-10 text-yellow-400 m-2">
-              <FaStar size={30} />
-            </div>
-          )}
+          <div className="relative">
+            <img
+              src={image}
+              style={{
+                maxWidth: imageSize,
+                maxHeight: imageSize,
+              }}
+              alt={encodeContextAlt({
+                type: 'image',
+                path,
+                scene: scene.name,
+                starable: true,
+              })}
+              className={
+                'relative bg-checkboard w-auto h-auto ' +
+                (isMain ? 'border-2 border-yellow-400' : '')
+              }
+            />
+            {isMain && (
+              <div className="absolute left-0 top-0 z-10 text-yellow-400 m-2">
+                <FaStar size={30} />
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>

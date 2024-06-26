@@ -72,6 +72,8 @@ const SceneCell = ({
   const [image, setImage] = useState<string | undefined>(undefined);
 
   const cellSizes = ['w-48 h-48', 'w-64 h-64', 'w-96 h-96']
+  const cellSizes2 = ['max-w-48 max-h-48', 'max-w-64 max-h-64', 'max-w-96 max-h-96']
+  const cellSizes3 = ['w-48', 'w-64', 'w-96']
 
   const handleDragStart = (scene: GenericScene) => {
     setDraggingScene(scene);
@@ -154,77 +156,86 @@ const SceneCell = ({
 
   return (
     <div
-      className={"active:brightness-90 hover:brightness-95 cursor-pointer relative m-2 p-4 bg-white border border-gray-300 " + (cellSizes[cellSize])}
+      className={"relative m-2 p-1 bg-white border border-gray-300 " }
       draggable
       onDragStart={() => handleDragStart(scene)}
       onDragOver={handleDragOver}
       onDrop={(event) => handleDrop(event, scene)}
-      onClick={(event) => {
-        setDisplayScene(scene);
-      }}
       title={encodeContextAlt({
         type: 'scene',
         sceneType: scene.type,
         name: scene.name,
       })}
     >
-      <div className="relative flex flex-col w-full h-full z-10"
+      {getSceneQueueCount(scene) > 0 && (
+        <span className="absolute z-10 right-0 bg-yellow-400 inline-block mr-3 px-2 py-1 text-center align-middle rounded-md font-bold text-white">
+          {getSceneQueueCount(scene)}
+        </span>
+      )}
+      <div className="active:brightness-90 hover:brightness-95 cursor-pointer bg-white"
+      onClick={(event) => {
+        setDisplayScene(scene);
+      }}
+      >
+        <div className={"p-2 text-lg text-black truncate " + cellSizes3[cellSize]}
+          title={encodeContextAlt({
+            type: 'scene',
+            sceneType: scene.type,
+            name: scene.name,
+          })}
+        >
+          {scene.name}
+        </div>
+      <div className={"relative image-cell flex-none overflow-hidden z-10 " + (cellSizes[cellSize])}
         title={encodeContextAlt({
           type: 'scene',
           sceneType: scene.type,
           name: scene.name,
         })}
       >
-        {getSceneQueueCount(scene) > 0 && (
-          <span className="absolute right-0 bg-yellow-400 inline-block mr-3 px-2 py-1 text-center align-middle rounded-md font-bold text-white">
-            {getSceneQueueCount(scene)}
-          </span>
+
+        {image && (
+          <img
+            src={image}
+            alt={encodeContextAlt({
+              type: 'scene',
+              sceneType: scene.type,
+              name: scene.name,
+            })}
+            className={"w-auto h-auto object-scale-down z-0 bg-checkboard " + cellSizes2[cellSize]}
+          />
         )}
-        <div className="overflow-auto no-scrollbars">
-          <span className="text-lg text-black inline-block text-glow"
-          >{scene.name}</span>
-        </div>
-        <div className="w-full flex mt-auto justify-center items-center gap-2">
-          <button
-            className={`${roundButton} bg-green-500`}
-            onClick={(e) => {
-              e.stopPropagation();
-              addToQueue(scene);
-            }}
-          >
-            <FaPlus />
-          </button>
-          <button
-            className={`${roundButton} bg-gray-500`}
-            onClick={(e) => {
-              e.stopPropagation();
-              removeFromQueue(scene);
-            }}
-          >
-            <FaRegCalendarTimes />
-          </button>
-          <button
-            className={`${roundButton} bg-orange-400`}
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditingScene(scene);
-            }}
-          >
-            <FaEdit />
-          </button>
-        </div>
       </div>
-      {image && (
-        <img
-          src={image}
-          alt={encodeContextAlt({
-            type: 'scene',
-            sceneType: scene.type,
-            name: scene.name,
-          })}
-          className="top-0 left-0 absolute w-full h-full object-cover z-0 bg-checkboard"
-        />
-      )}
+      </div>
+      <div className="w-full flex mt-auto justify-center items-center gap-2 p-2">
+        <button
+          className={`${roundButton} bg-green-500`}
+          onClick={(e) => {
+            e.stopPropagation();
+            addToQueue(scene);
+          }}
+        >
+          <FaPlus />
+        </button>
+        <button
+          className={`${roundButton} bg-gray-500`}
+          onClick={(e) => {
+            e.stopPropagation();
+            removeFromQueue(scene);
+          }}
+        >
+          <FaRegCalendarTimes />
+        </button>
+        <button
+          className={`${roundButton} bg-orange-400`}
+          onClick={(e) => {
+            e.stopPropagation();
+            setEditingScene(scene);
+          }}
+        >
+          <FaEdit />
+        </button>
+      </div>
     </div>
   );
 };
