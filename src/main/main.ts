@@ -490,7 +490,8 @@ let localAIRunning = false;
 
 async function spawnLocalAI() {
   const localaiProcess = spawn(path.join(APP_DIR, 'localai', 'localai'), ['--port', '5353'], {
-    stdio: 'inherit'
+    stdio: 'inherit',
+    windowsHide: true,
   });
   localAIRunning = true;
   localaiProcess.on('close', (code) => {

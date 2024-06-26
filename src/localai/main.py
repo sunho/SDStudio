@@ -124,9 +124,12 @@ def run_model_route():
 
     return jsonify({"message": "Model run successfully"})
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description='Flask service for model loading and running.')
     parser.add_argument('--port', type=int, default=5000, help='Port number to listen on')
     args = parser.parse_args()
 
     app.run(debug=True, port=args.port)
+
+if __name__ == '__main__':
+    main()
