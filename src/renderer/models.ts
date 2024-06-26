@@ -2535,7 +2535,7 @@ class LocalAIService extends EventTarget {
     }
   }
 
-  async sapwnLocalAI() {
+  async spawnLocalAI() {
     const running = await invoke('is-local-ai-running');
     if (running) {
       return;
@@ -2563,7 +2563,7 @@ class LocalAIService extends EventTarget {
     }
     if (availExec && avail.quality) {
       this.ready = true;
-      await this.sapwnLocalAI();
+      this.spawnLocalAI();
     } else {
       this.ready = false;
     }
