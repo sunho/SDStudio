@@ -244,21 +244,17 @@ ipcMain.handle('exist-file', async (event, filename) => {
 ipcMain.handle('download', async (event, url, dest, filename) => {
   dest = path.join(APP_DIR, dest);
   await fs.mkdir(dest, { recursive: true });
-  const win = BrowserWindow.getFocusedWindow();
-  if (!win) {
-    return;
-  }
   const options = {
     directory: dest,
     saveAs: false,
     openFolderWhenDone: false,
     filename,
     onProgress: (progress) => {
-      win.webContents.send('download-progress', progress);
+      mainWindow!.webContents.send('download-progress', progress);
     }
   };
   try {
-    await electronDL.download(win, url, options);
+    await electronDL.download(mainWindow!, url, options);
   } catch (e) {
     if (!(e instanceof electronDL.CancelError)) {
       console.error(e);
