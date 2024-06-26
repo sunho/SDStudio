@@ -243,6 +243,7 @@ ipcMain.handle('exist-file', async (event, filename) => {
 
 ipcMain.handle('download', async (event, url, dest, filename) => {
   dest = path.join(APP_DIR, dest);
+  await fs.mkdir(dest, { recursive: true });
   const win = BrowserWindow.getFocusedWindow();
   if (!win) {
     return;
