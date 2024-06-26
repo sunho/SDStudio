@@ -278,7 +278,9 @@ ipcMain.handle(
   },
 );
 
+const util = require('util');
 const { exec } = require('child_process');
+const execPromise = util.promisify(exec);
 
 const dirWatchHandles = new Map<string, any>();
 const watchHandles = new Map<string, any>();
@@ -469,18 +471,25 @@ ipcMain.handle('load-model', async (event, modelPath) => {
 });
 
 ipcMain.handle('extract-zip', async (event, zipPath, outPath) => {
-  const dir = path.join(APP_DIR, outPath);
-  const zip = new StreamZip.async({ file: path.join(APP_DIR, zipPath) });
+  const platform = os.platform();
 
-  let numExtracted = 0;
-  const entries = Object.values(await zip.entries());
-  zip.on('extract', (entry, file) => {
-    numExtracted++;
-    mainWindow!.webContents.send('download-progress', { percent: numExtracted / entries.length });
-  });
-  await fs.mkdir(dir, { recursive: true });
-  await zip.extract(null, dir);
-  await zip.close();
+  if (platform === 'win32') {
+    const dir = path.join(APP_DIR, outPath);
+    const zip = new StreamZip.async({ file: path.join(APP_DIR, zipPath) });
+
+    let numExtracted = 0;
+    const entries = Object.values(await zip.entries());
+    zip.on('extract', (entry, file) => {
+      numExtracted++;
+      mainWindow!.webContents.send('download-progress', { percent: numExtracted / entries.length });
+    });
+    await fs.mkdir(dir, { recursive: true });
+    await zip.extract(null, dir);
+    await zip.close();
+  } else {
+    const command = `unzip -o "${APP_DIR}/${zipPath}" -d "${APP_DIR}/${outPath}"`;
+    await execPromise(command);
+  }
 });
 
 let localAIRunning = false;
