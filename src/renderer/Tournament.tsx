@@ -169,14 +169,15 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
     });
   };
   const reroll = () => {
+    if (!players.length) return;
     const round = scene.round!;
     if (round.players.length <= 1) {
       return;
     }
-    const players = round.players.slice(round.curPlayer);
-    shuffleArray(players);
-    round.players = round.players.slice(0, round.curPlayer).concat(players);
-    setPlayers([players[round.curPlayer].path, players[round.curPlayer+1].path]);
+    const items = round.players.slice(round.curPlayer);
+    shuffleArray(items);
+    round.players = round.players.slice(0, round.curPlayer).concat(items);
+    setPlayers([round.players[round.curPlayer].path, round.players[round.curPlayer+1].path]);
     sessionUpdated();
   };
   const getCurWinRank = () => {
@@ -214,7 +215,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
         </button>
         <button
           onClick={() => {
-            if (!lock.current && round.curPlayer !== 0) {
+            if (players.length && !lock.current && round.curPlayer !== 0) {
               setPlayers([]);
               round.curPlayer -= 2;
               setPlayers([round.players[round.curPlayer].path, round.players[round.curPlayer+1].path]);
@@ -228,7 +229,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
           대진 리롤
         </button>
         <button className={`${roundButton} bg-orange-400`} onClick={() => {
-          if (!lock.current){
+          if (players.length && !lock.current){
             round.winMask[round.curPlayer] = false;
             round.winMask[round.curPlayer+1] = false;
             nextMatch();
@@ -237,7 +238,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
           둘다 패배 처리
         </button>
         <button className={`${roundButton} bg-orange-400`} onClick={() => {
-          if (!lock.current){
+          if (players.length && !lock.current){
             round.winMask[round.curPlayer] = true;
             round.winMask[round.curPlayer+1] = true;
             nextMatch();
