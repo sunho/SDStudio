@@ -123,10 +123,6 @@ body {
   border-radius: 4px;
 }
 
-.image {
-  width: 100%;
-  height: auto;
-}
 
 .imageSmall {
   object-fit: scale-down;
@@ -191,10 +187,7 @@ input[type='number']::-webkit-outer-spin-button {
   overflow: hidden;
 }
 
-.image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* This ensures the image fits and is cropped to the cell */
+.image-anime {
   animation-name: show;
   transition-timing-function: cubic-bezier(
     0.645,
