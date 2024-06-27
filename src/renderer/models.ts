@@ -95,6 +95,7 @@ export interface Scene {
   locked: boolean;
   slots: PromptPieceSlot[];
   game: Game | undefined;
+  round: Round | undefined;
   landscape?: boolean;
   mains: string[];
 }
@@ -106,6 +107,7 @@ export interface InPaintScene {
   prompt: string;
   uc: string;
   game: Game | undefined;
+  round: Round | undefined;
   landscape?: boolean;
   sceneRef?: string;
   image?: string;
@@ -1933,13 +1935,13 @@ export const swapImages = async (a: string, b: string) => {
   await renameImage(tmp, b);
 };
 
-export interface Match {
-  players: Player[];
-  winRank: number;
-  loseRank: number;
-}
-
 export type SceneType = 'scene' | 'inpaint';
+
+export interface Round {
+  players: Player[];
+  winMask: boolean[];
+  curPlayer: number;
+}
 
 export class GameService extends EventTarget {
   outputList: { [type: string]: {[key: string]: {[key2: string]: string[]}}}
@@ -2033,7 +2035,7 @@ export class GameService extends EventTarget {
     }));
   };
 
-  nextMatch(game: Game): [number, Match[] | undefined] {
+  nextRound(game: Game): [number, Round | undefined] {
     sortGame(game);
     let matchRank = -1;
     for (let i = 0; i < game.length - 1; i++) {
@@ -2047,21 +2049,14 @@ export class GameService extends EventTarget {
     }
     let matchPlayers = game.filter((x) => x.rank === matchRank);
     shuffleArray(matchPlayers);
-    const winRank = matchRank - (matchPlayers.length >> 1);
-    if (matchPlayers.length % 2 === 1) {
-      matchPlayers[matchPlayers.length - 1].rank = winRank;
-    }
-    const newMatches: Match[] = [];
-    for (let i = 0; i + 1 < matchPlayers.length; i += 2) {
-      newMatches.push({
-        players: [matchPlayers[i], matchPlayers[i + 1]],
-        winRank: winRank,
-        loseRank: matchRank,
-      });
-    }
     for (let i = 0; i < game.length - 1; i++) {
       if (game[i].rank != i) {
-        return [i, newMatches];
+        const round: Round = {
+          players: matchPlayers,
+          winMask: matchPlayers.map(() => false),
+          curPlayer: 0,
+        };
+        return [i, round];
       }
     }
     throw new Error('should not be reached here');

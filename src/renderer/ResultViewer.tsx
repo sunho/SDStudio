@@ -173,7 +173,7 @@ const Cell = memo(({
                 starable: true,
               })}
               className={
-                'relative bg-checkboard w-auto h-auto ' +
+                'image-anime relative bg-checkboard w-auto h-auto ' +
                 (isMain ? 'border-2 border-yellow-400' : '')
               }
             />
