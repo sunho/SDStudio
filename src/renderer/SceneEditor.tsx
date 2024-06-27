@@ -16,6 +16,7 @@ import {
   getMainImage,
   highlightPrompt,
   imageService,
+  invoke,
   lowerPromptNode,
   promptService,
   queueScenePrompt,
@@ -423,8 +424,9 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
             pushDialog({
               type: 'confirm',
               text: '정말로 해당 씬을 삭제하시겠습니까?',
-              callback: () => {
+              callback: async () => {
                 delete curSession!.scenes[scene.name];
+                await invoke('trash-file', imageService.getOutputDir(curSession!, scene));
                 updateScene();
                 onClosed();
                 if (onDeleted) {
