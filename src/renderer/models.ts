@@ -1063,12 +1063,16 @@ export class PromptService extends ResourceSyncService<PieceLibrary> {
 
   showPromptTooltip(piece: string, e: any) {
     try {
-      const expanded = this.tryExpandPiece(piece, window.curSession);
       let txt = '';
-      if (this.isMulti(piece, window.curSession)) {
-        txt = '이 중 한 줄 랜덤 선택:\n' + expanded.split('\n').slice(0, 32).join('\n');
+      if (piece !== '|') {
+        const expanded = this.tryExpandPiece(piece, window.curSession);
+        if (this.isMulti(piece, window.curSession)) {
+          txt = '이 중 한 줄 랜덤 선택:\n' + expanded.split('\n').slice(0, 32).join('\n');
+        } else {
+          txt = expanded;
+        }
       } else {
-        txt = expanded;
+        txt = "프롬프트를 교차합니다.\n예시:\n상위 프롬프트: 1girl, |, 캐릭터 \n중위 프롬프트: 그림체, |, 포즈\n이렇게 세팅되어 있으면 1girl, 캐릭터, 그림체, 포즈 순으로 교차됩니다."
       }
       this.dispatchEvent(
         new CustomEvent('prompt-tooltip', {
@@ -1586,9 +1590,42 @@ export const createPrompts = async (
   const res: PromptNode[] = [];
   const dfs = async () => {
     if (promptComb.length === scene.slots.length) {
-      let cur = toPARR(preset.frontPrompt);
+      const front = toPARR(preset.frontPrompt);
+      let middle: string[] = [];
       for (const comb of promptComb) {
-        cur = cur.concat(toPARR(comb));
+        middle = middle.concat(toPARR(comb));
+      }
+      let left = 0, right = 0;
+      let cur: string[] = [];
+      let currentInsert = 0;
+      while (left < front.length && right < middle.length) {
+        if (currentInsert === 0) {
+          if (front[left] === '|') {
+            currentInsert = 1;
+            left++;
+            continue;
+          }
+          cur.push(front[left]);
+          left++;
+        } else {
+          if (middle[right] === '|') {
+            currentInsert = 0;
+            right++;
+            continue;
+          }
+          cur.push(middle[right]);
+          right++;
+        }
+      }
+      while (left < front.length) {
+        if (front[left] !== '|')
+          cur.push(front[left]);
+        left++;
+      }
+      while (right < middle.length) {
+        if (middle[right] !== '|')
+          cur.push(middle[right]);
+        right++
       }
       cur = cur.concat(toPARR(preset.backPrompt));
       const newNode: PromptNode = {
@@ -1734,6 +1771,13 @@ export const highlightPrompt = (session: Session, text: string, lineHighlight: b
       }
       let js = '';
       let pword = word.substring(leftTrimPos, rightTrimPos + 1);
+      if (pword === '|') {
+        classNames.push('syntax-split');
+        js =
+          'onmousemove="window.promptService.showPromptTooltip(\'' +
+          pword +
+          '\', event)" onmouseout="window.promptService.clearPromptTooltip()"';
+      }
       if (pword.startsWith('[') && pword.endsWith(']')) {
         classNames.push('syntax-weak');
       }
