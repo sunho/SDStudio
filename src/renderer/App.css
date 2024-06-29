@@ -262,6 +262,12 @@ input[type='number']::-webkit-outer-spin-button {
   background-color: gray;
 }
 
+.syntax-split {
+  font-size: 1.3em;
+  color: #ff8e38;
+  font-weight: 800;
+}
+
 .bg-checkboard {
   background:
       repeating-conic-gradient(#e0e0e0 0% 25%, transparent 0% 50%)
