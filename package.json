@@ -84,7 +84,9 @@
     }
   },
   "dependencies": {
+    "@capacitor/android": "^6.1.0",
     "@capacitor/core": "^6.1.0",
+    "@capacitor/ios": "^6.1.0",
     "adm-zip": "^0.5.12",
     "axios": "^1.7.2",
     "chokidar": "^3.6.0",
