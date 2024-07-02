@@ -1,12 +1,9 @@
-import { watchFile } from 'fs';
 import { ImageGenInput, Model, Resolution, Sampling } from '../main/imageGen';
 import { CircularQueue } from './circularQueue';
 
 import { v4 as uuidv4 } from 'uuid';
 import ExifReader from 'exifreader';
-import { setInterval } from 'timers/promises';
-import { Config } from '../main/config';
-import { a } from 'hangul-js';
+import { ElectornBackend } from './backends/electronBackend';
 
 const PROMPT_SERVICE_INTERVAL = 5000;
 const UPDATE_SERVICE_INTERVAL = 60*1000;
@@ -25,13 +22,13 @@ const LARGE_WAIT_INTERVAL_BIAS = 500;
 const LARGE_WAIT_INTERVAL_STD = 100;
 const FAST_TASK_DEFAULT_ESTIMATE = TASK_DEFAULT_ESTIMATE - RANDOM_DELAY_BIAS * 1000 - RANDOM_DELAY_STD * 1000 / 2 + 1000;
 
+export const backend = new ElectornBackend();
+
 export function assert(condition: any, message?: string): asserts condition {
   if (!condition) {
     throw new Error(message);
   }
 }
-
-export const invoke = window.electron.ipcRenderer.invoke;
 
 export const defaultFPrompt = `1girl, {artist:ixy}`;
 export const defaultBPrompt = `{best quality, amazing quality, very aesthetic, highres, incredibly absurdres}`;
@@ -306,8 +303,7 @@ abstract class ResourceSyncService<T> extends EventTarget {
   async delete(name: string) {
     if (name in this.resources) {
       delete this.resources[name];
-      await invoke(
-        'rename-file',
+      await backend.renameFile(
         this.resourceDir + '/' + name + '.json',
         this.resourceDir + '/' + name + '.deleted',
       );
@@ -326,8 +322,7 @@ abstract class ResourceSyncService<T> extends EventTarget {
   async get(name: string): Promise<T | undefined> {
     if (!(name in this.resources)) {
       try {
-        const str = await invoke(
-          'read-file',
+        const str = await backend.readFile(
           this.resourceDir + '/' + name + '.json',
         );
         this.resources[name] = JSON.parse(str);
@@ -347,8 +342,7 @@ abstract class ResourceSyncService<T> extends EventTarget {
     for (const name of Object.keys(this.dirty)) {
       const l = await this.get(name);
       if (l)
-        await invoke(
-          'write-file',
+        await backend.writeFile(
           this.resourceDir + '/' + name + '.json',
           JSON.stringify(l),
         );
@@ -361,8 +355,7 @@ abstract class ResourceSyncService<T> extends EventTarget {
   async saveAll() {
     for (const name of Object.keys(this.resources)) {
       const l = this.resources[name];
-      await invoke(
-        'write-file',
+      await backend.writeFile(
         this.resourceDir + '/' + name + '.json',
         JSON.stringify(l),
       );
@@ -394,7 +387,7 @@ abstract class ResourceSyncService<T> extends EventTarget {
   }
 
   private async getList() {
-    const sessions = await invoke('list-files', this.resourceDir);
+    const sessions = await backend.listFiles(this.resourceDir);
     return sessions
       .filter((x: string) => x.endsWith('.json'))
       .map((x: string) => x.substring(0, x.length - 5));
@@ -450,7 +443,7 @@ export class SessionService extends ResourceSyncService<Session> {
       if (inpaint.image) {
         try {
           const path = "inpaint_orgs/" + session.name + "/" + inpaint.name + ".png";
-          await invoke('write-data-file', path, inpaint.image);
+          await backend.writeDataFile(path, inpaint.image);
           inpaint.image = undefined;
         } catch(e){
           inpaint.image = undefined;
@@ -459,7 +452,7 @@ export class SessionService extends ResourceSyncService<Session> {
       if (inpaint.mask) {
         try {
           const path = "inpaint_masks/" + session.name + "/" + inpaint.name + ".png";
-          await invoke('write-data-file', path, inpaint.mask);
+          await backend.writeDataFile(path, inpaint.mask);
           inpaint.mask = undefined;
         } catch(e) {
           inpaint.mask = undefined;
@@ -468,7 +461,7 @@ export class SessionService extends ResourceSyncService<Session> {
       if ((inpaint as any).middlePrompt != null) {
         inpaint.prompt = '';
         try {
-          const image = dataUriToBase64(await imageService.fetchImage(this.getInpaintOrgPath(session, inpaint)));
+          const image = dataUriToBase64((await imageService.fetchImage(this.getInpaintOrgPath(session, inpaint)))!);
           const [prompt, seed, scale, sampler, steps, uc] = await extractPromptDataFromBase64(image);
           inpaint.prompt = prompt;
         } catch (e) {
@@ -479,7 +472,7 @@ export class SessionService extends ResourceSyncService<Session> {
       if (!inpaint.uc) {
         inpaint.uc = '';
         try {
-          const image = dataUriToBase64(await imageService.fetchImage(this.getInpaintOrgPath(session, inpaint)));
+          const image = dataUriToBase64((await imageService.fetchImage(this.getInpaintOrgPath(session, inpaint)))!);
           const [prompt, seed, scale, sampler, steps, uc] = await extractPromptDataFromBase64(image);
           inpaint.uc = uc;
         } catch (e) {
@@ -523,8 +516,8 @@ export class SessionService extends ResourceSyncService<Session> {
   }
 
   async saveInpaintImages(seesion: Session, inpaint: InPaintScene, image: string, mask: string) {
-    await invoke('write-data-file', this.getInpaintOrgPath(seesion, inpaint), image);
-    await invoke('write-data-file', this.getInpaintMaskPath(seesion, inpaint), mask);
+    await backend.writeDataFile(this.getInpaintOrgPath(seesion, inpaint), image);
+    await backend.writeDataFile(this.getInpaintMaskPath(seesion, inpaint), mask);
     await imageService.invalidateCache(this.getInpaintOrgPath(seesion, inpaint));
     await imageService.invalidateCache(this.getInpaintMaskPath(seesion, inpaint));
   }
@@ -552,7 +545,7 @@ export class SessionService extends ResourceSyncService<Session> {
         res.push(k + "." + piece);
       }
     }
-    await invoke('load-pieces-db', res);
+    await backend.loadPiecesDB(res);
   }
 }
 
@@ -620,7 +613,7 @@ export class ImageService extends EventTarget {
       await this.mutexes[path];
     }
 
-    let resolve: () => void;
+    let resolve: () => void = () => {};
     this.mutexes[path] = new Promise((r) => (resolve = r));
     (this.mutexes[path] as any).resolve = resolve;
   }
@@ -635,7 +628,7 @@ export class ImageService extends EventTarget {
     try {
       await this.acquireMutex(oldPath);
       await this.acquireMutex(newPath);
-      await invoke('rename-file', oldPath, newPath);
+      await backend.renameFile(oldPath, newPath);
       await this.onRenameFile(oldPath, newPath);
     } finally {
       this.releaseMutex(newPath);
@@ -666,7 +659,7 @@ export class ImageService extends EventTarget {
         const oldPath = oldPaths[i];
         const newPath = newPaths[i];
         try {
-          await invoke('rename-file', oldPath, newPath);
+          await backend.renameFile(oldPath, newPath);
         } catch (e) {
         }
       }
@@ -704,7 +697,7 @@ export class ImageService extends EventTarget {
         const smallPath = this.getSmallImagePath(path, imageSize);
         this.cache.delete(smallPath);
         try {
-          await invoke('delete-file', smallPath);
+          await backend.deleteFile(smallPath);
         } catch(e) {
         }
       }
@@ -726,7 +719,7 @@ export class ImageService extends EventTarget {
         const res = this.cache.get(path);
         return res;
       }
-      const data = await invoke('read-data-file', path);
+      const data = await backend.readDataFile(path);
       this.cache.set(path, data);
       return data;
     } finally {
@@ -749,7 +742,7 @@ export class ImageService extends EventTarget {
         console.log(e);
       }
       await this.resizeImage(path, smallImagePath, size, size);
-      const data = await this.fetchImage(smallImagePath, false);
+      const data = (await this.fetchImage(smallImagePath, false))!;
       this.cache.set(smallImagePath, data);
       return data;
     } finally {
@@ -774,7 +767,7 @@ export class ImageService extends EventTarget {
     const scale = maxWidth <= 200 ? 1.25 : 1.1;
     maxWidth = Math.ceil(scale*maxWidth);
     maxHeight = Math.ceil(scale*maxHeight);
-    await invoke('resize-image', {
+    await backend.resizeImage({
       inputPath,
       outputPath,
       maxWidth,
@@ -805,7 +798,7 @@ export class ImageService extends EventTarget {
       const oldPath = imgDir + '/' + session.name + '/' + oldName;
       const newPath = imgDir + '/' + session.name + '/' + newName;
       try {
-        await invoke('rename-dir', oldPath, newPath);
+        await backend.renameDir(oldPath, newPath);
       } catch (e) {
         console.error('rename scene error:', e);
       }
@@ -814,7 +807,7 @@ export class ImageService extends EventTarget {
       const oldPath = imgDir + '/' + session.name + '/' + oldName + '.png';
       const newPath = imgDir + '/' + session.name + '/' + newName + '.png';
       try {
-        await invoke('rename-file', oldPath, newPath);
+        await backend.renameFile(oldPath, newPath);
       } catch (e) {
         console.error('rename scene error:', e);
       }
@@ -889,7 +882,7 @@ export class ImageService extends EventTarget {
     if (!(session.name in target)) {
       target[session.name] = {};
     }
-    let files = await invoke('list-files', this.getOutputDir(session, scene));
+    let files = await backend.listFiles(this.getOutputDir(session, scene));
     files = files.filter((x: string) => x.endsWith('.png'));
     files = files.map(
       (x: string) => this.getOutputDir(session, scene) + '/' + x,
@@ -1065,8 +1058,8 @@ export class PromptService extends ResourceSyncService<PieceLibrary> {
     try {
       let txt = '';
       if (piece !== '|') {
-        const expanded = this.tryExpandPiece(piece, window.curSession);
-        if (this.isMulti(piece, window.curSession)) {
+        const expanded = this.tryExpandPiece(piece, window.curSession!);
+        if (this.isMulti(piece, window.curSession!)) {
           txt = '이 중 한 줄 랜덤 선택:\n' + expanded.split('\n').slice(0, 32).join('\n');
         } else {
           txt = expanded;
@@ -1242,7 +1235,7 @@ class GenerateImageTaskHandler implements TaskHandler {
       arg.vibes = [];
     }
     console.log(arg);
-    await invoke('image-gen', arg);
+    await backend.generateImage(arg);
 
     if (params.preset.seed) {
       params.preset.seed = stepSeed(params.preset.seed);
@@ -1896,9 +1889,9 @@ export const queueInPaint = async (
 ) => {
   const prompt = await createInPaintPrompt(session, preset, scene);
   let image = await imageService.fetchImage(sessionService.getInpaintOrgPath(session, scene));
-  image = dataUriToBase64(image);
+  image = dataUriToBase64(image!);
   let mask = await imageService.fetchImage(sessionService.getInpaintMaskPath(session, scene));
-  mask = dataUriToBase64(mask);
+  mask = dataUriToBase64(mask!);
   const params: GenerateImageTaskParams = {
     preset: {
       prompt,
@@ -1931,13 +1924,13 @@ class LoginService extends EventTarget {
   }
 
   async login(email: string, password: string) {
-    await invoke('login', email, password);
+    await backend.login(email, password);
     await this.refresh();
   }
 
   async refresh() {
     try {
-      await invoke('read-file', 'TOKEN.txt');
+      await backend.readFile('TOKEN.txt');
       this.loggedIn = true;
     } catch (e: any) {
       this.loggedIn = false;
@@ -2071,7 +2064,7 @@ export class GameService extends EventTarget {
   }
 
   async createGame(path: string) {
-    let files = await invoke('list-files', path);
+    let files = await backend.listFiles(path);
     files = files.filter((x: string) => x.endsWith('.png'));
     return files.map((x: string) => ({
       path: path + '/' + x,
@@ -2207,7 +2200,7 @@ export const statsGenericSceneTasks = (session: Session, scene: GenericScene) =>
 window.electron.ipcRenderer.onClose(() => {
   (async () => {
     await sessionService.saveAll();
-    await invoke('close');
+    await backend.close();
   })();
 });
 
@@ -2311,7 +2304,7 @@ class AppUpdateNoticeService extends EventTarget {
   async run() {
     while (true) {
       try {
-        if (this.current === '') this.current = await invoke('get-version');
+        if (this.current === '') this.current = await backend.getVersion();
         let latest = await this.getLatestRelease('sunho', 'SDStudio');
         console.log("latest", this.current, latest);
         if (this.isOutdated(this.current, latest)) {
@@ -2348,7 +2341,7 @@ export const appUpdateNoticeService = new AppUpdateNoticeService();
 
 export const deleteImageFiles = async (curSession: Session, paths: string[]) => {
   for (const path of paths) {
-    await invoke('trash-file', path);
+    await backend.trashFile(path);
     await imageService.invalidateCache(path);
   }
   await imageService.refreshBatch(curSession);
@@ -2513,14 +2506,14 @@ export function calcGapMatch(small: string, large: string) {
 async function getPlatform() {
   const platform = window.navigator.platform;
   if (platform.startsWith('Win')) return 'windows';
-  const arch = await navigator.userAgentData.getHighEntropyValues(['architecture'])
+  const arch = await (navigator as any).userAgentData.getHighEntropyValues(['architecture'])
   if (arch.architecture === 'arm64') return 'mac-arm64';
   return 'mac-x64';
 }
 
 async function getLocalAIDownloadLink() {
   const platform = await getPlatform();
-  const version = await invoke('get-version');
+  const version = await backend.getVersion();
   return `https://huggingface.co/mathneko/localai/resolve/main/LocalAI-${platform}.zip?download=true`
 }
 const QUALITY_DOWNLOAD_LINK = 'https://github.com/sunho/BiRefNet/releases/download/sdstudio/quality';
@@ -2547,25 +2540,25 @@ class LocalAIService extends EventTarget {
   async download() {
     this.downloading = true;
     try {
-     await invoke('delete-file', 'tmp/localai.zip');
+     await backend.deleteFile('tmp/localai.zip');
     } catch(e) {
     }
     try {
-      await invoke('delete-dir', 'localai');
+      await backend.deleteDir('localai');
     } catch(e) {
     }
     try {
-      await invoke('delete-dir', 'models');
+      await backend.deleteDir('models');
     } catch(e) {
     }
     try {
       let ldl = await getLocalAIDownloadLink();
       this.dispatchEvent(new CustomEvent('stage', { detail: { stage: 0 } }));
-      await invoke('download', ldl, 'tmp', 'localai.zip');
+      await backend.download(ldl, 'tmp', 'localai.zip');
       this.dispatchEvent(new CustomEvent('stage', { detail: { stage: 1 } }));
-      await invoke('download', QUALITY_DOWNLOAD_LINK, 'models', 'quality');
+      await backend.download(QUALITY_DOWNLOAD_LINK, 'models', 'quality');
       this.dispatchEvent(new CustomEvent('stage', { detail: { stage: 2 } }));
-      await invoke('extract-zip', 'tmp/localai.zip', '');
+      await backend.extractZip('tmp/localai.zip', '');
       await this.statsModels();
     } catch (e: any) {
       console.error(e);
@@ -2575,11 +2568,11 @@ class LocalAIService extends EventTarget {
   }
 
   async spawnLocalAI() {
-    const running = await invoke('is-local-ai-running');
+    const running = await backend.isLocalAIRunning();
     if (running) {
       return;
     }
-    await invoke('spawn-local-ai');
+    await backend.spawnLocalAI();
   }
 
   async statsModels() {
@@ -2589,13 +2582,13 @@ class LocalAIService extends EventTarget {
     }
     let availExec = false;
     try {
-      availExec = await invoke('exist-file', "localai");
+      availExec = await backend.existFile("localai");
     } catch (e: any) {
       console.error(e);
     }
     for (const model of ['fast', 'quality']) {
       try {
-        avail[model] = await invoke('exist-file', "models/" + model);
+        avail[model] = await backend.existFile("models/" + model);
       } catch (e: any) {
         console.error(e);
       }
@@ -2610,12 +2603,12 @@ class LocalAIService extends EventTarget {
   }
 
   async loadModel() {
-    const running = await invoke('is-local-ai-running');
+    const running = await backend.isLocalAIRunning();
     if (!this.ready || !running)
       throw new Error('Local AI not ready');
     const modelType = 'quality';
     this.modelLoaded = false;
-    await invoke('load-model', 'models/' + modelType);
+    await backend.loadModel('models/' + modelType);
     this.modelLoaded = true;
   }
 
@@ -2623,9 +2616,20 @@ class LocalAIService extends EventTarget {
   async removeBg(image: string, outputFilePath: string) {
     if (!this.modelLoaded)
       await this.loadModel();
-    await invoke('remove-bg', image, outputFilePath);
+    await backend.removeBackground(image, outputFilePath);
   }
 }
 
 export const localAIService = new LocalAIService();
 localAIService.statsModels();
+
+declare global {
+  interface Window { 
+    curSession?: Session; 
+    promptService: PromptService;
+    sessionService: SessionService;
+    imageService: ImageService;
+    taskQueueService: TaskQueueService;
+    loginService: LoginService;
+  }
+}

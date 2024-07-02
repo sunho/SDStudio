@@ -249,7 +249,7 @@ ipcMain.handle('download', async (event, url, dest, filename) => {
     saveAs: false,
     openFolderWhenDone: false,
     filename,
-    onProgress: (progress) => {
+    onProgress: (progress:any) => {
       mainWindow!.webContents.send('download-progress', progress);
     }
   };
@@ -479,7 +479,7 @@ ipcMain.handle('extract-zip', async (event, zipPath, outPath) => {
 
     let numExtracted = 0;
     const entries = Object.values(await zip.entries());
-    zip.on('extract', (entry, file) => {
+    zip.on('extract', (entry: any, file: any) => {
       numExtracted++;
       mainWindow!.webContents.send('download-progress', { percent: numExtracted / entries.length });
     });

@@ -15,11 +15,12 @@ import {
   isValidPieceLibrary,
   sessionService,
   appUpdateNoticeService,
-  invoke,
   imageService,
   ContextAlt,
   SceneContextAlt,
   localAIService,
+  backend,
+  ImageContextAlt,
 } from './models';
 import SessionSelect from './SessionSelect';
 import PreSetEditor from './PreSetEdtior';
@@ -102,7 +103,7 @@ export default function App() {
           text: '새로운 버전이 있습니다. 새로 다운 받으시겠습니까?',
           green: true,
           callback: () => {
-            invoke('open-web-page', 'https://github.com/sunho/SDStudio/releases');
+            backend.openWebPage('https://github.com/sunho/SDStudio/releases');
           },
         })
         updatedIgnored.current = true;
@@ -115,11 +116,11 @@ export default function App() {
     };
   },[]);
   useEffect(() => {
-    const removeDonwloadProgressListener = ipcRenderer.on('download-progress', (progress: any) => {
+    const removeDonwloadProgressListener = backend.onDownloadProgress((progress: any) => {
       console.log(progress);
       localAIService.notifyDownloadProgress(progress.percent);
     });
-    const removeDuplicateSceneListener = ipcRenderer.on('duplicate-scene', async (ctx: SceneContextAlt) => {
+    const removeDuplicateSceneListener = backend.onDuplicateScene(async (ctx: SceneContextAlt) => {
       const field = ctx.sceneType === 'scene' ? 'scenes' : 'inpaints';
       const scene = curSession![field][ctx.name];
       if (!scene) {
@@ -136,13 +137,13 @@ export default function App() {
       sessionService.markUpdated(curSession!.name);
       sessionService.sceneOrderChanged();
     });
-    const removeImageChangedListener = ipcRenderer.on('image-changed', async (path: string) => {
+    const removeImageChangedListener = backend.onImageChanged(async (path: string) => {
       console.log('image-changed', path);
       imageService.invalidateCache(path);
     });
-    const removeDuplicateImageListener = ipcRenderer.on('duplicate-image', async (ctx: ContextAlt) => {
+    const removeDuplicateImageListener = backend.onDuplicateImage(async (ctx: ImageContextAlt) => {
       const tmp = ctx.path.slice(0, ctx.path.lastIndexOf('/'));
-      const dir = tmp.split('/').pop();
+      const dir = tmp.split('/').pop()!;
       const parDir = tmp.slice(0, tmp.lastIndexOf('/')) as any;
       const field = parDir.startsWith('outs') ? 'scenes' : 'inpaints';
       console.log(parDir);
@@ -151,8 +152,7 @@ export default function App() {
         return;
       }
 
-      await invoke(
-        'copy-file',
+      await backend.copyFile(
         ctx.path,
         tmp +
           '/' +
@@ -165,7 +165,7 @@ export default function App() {
         text: '이미지를 복제했습니다',
       });
     });
-    const removeCopyImageListener = ipcRenderer.on('copy-image', (ctx: ContextAlt) => {
+    const removeCopyImageListener = backend.onCopyImage((ctx: ImageContextAlt) => {
       pushDialog({
         type: 'dropdown',
         text: '이미지를 어디에 복사할까요?',
@@ -182,8 +182,7 @@ export default function App() {
             return;
           }
 
-          await invoke(
-            'copy-file',
+          await backend.copyFile(
             ctx.path,
             imageService.getImageDir(curSession!, scene) +
               '/' +
@@ -198,7 +197,7 @@ export default function App() {
         },
       });
     });
-    const removeMoveSceneFrontListener = ipcRenderer.on('move-scene-front', (ctx: SceneContextAlt) => {
+    const removeMoveSceneFrontListener = backend.onMoveSceneFront((ctx: SceneContextAlt) => {
       const field = ctx.sceneType === 'scene' ? 'scenes' : 'inpaints';
       const scene = curSession![field][ctx.name];
       if (!scene) {
@@ -215,7 +214,7 @@ export default function App() {
       sessionService.markUpdated(curSession!.name);
       sessionService.sceneOrderChanged();
     });
-    const removeMoveSceneBackListener = ipcRenderer.on('move-scene-back', (ctx: SceneContextAlt) => {
+    const removeMoveSceneBackListener = backend.onMoveSceneBack((ctx: SceneContextAlt) => {
       const field = ctx.sceneType === 'scene' ? 'scenes' : 'inpaints';
       const scene = curSession![field][ctx.name];
       if (!scene) {
@@ -302,7 +301,7 @@ export default function App() {
                     cur.scenes[key].slots = json.scenes[key].slots;
                   } else {
                     cur.scenes[key] = json.scenes[key];
-                    cur.scenes[key].main = undefined;
+                    cur.scenes[key].mains = [];
                     cur.scenes[key].game = undefined;
                   }
                 }
@@ -358,21 +357,21 @@ export default function App() {
       }
     };
 
-    const handleDragOver = (event) => {
+    const handleDragOver = (event: any) => {
       event.preventDefault();
       event.dataTransfer.dropEffect = 'move';
     };
 
-    const handleDragLeave = (event) => {
+    const handleDragLeave = (event: any) => {
       event.preventDefault();
     };
 
-    const handleDrop = (event) => {
+    const handleDrop = (event: any) => {
       event.preventDefault();
       const file = event.dataTransfer.files[0];
       if (file && file.type === 'application/json') {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = (e: any) => {
           try {
             const json = JSON.parse(e.target.result);
             handleJSONContent(file.name, json);

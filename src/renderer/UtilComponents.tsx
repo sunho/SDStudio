@@ -60,30 +60,30 @@ export const FileUploadBase64: React.FC<{
 }> = ({ onFileSelect, disabled, notext }) => {
   const [dragging, setDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<any>(null);
 
-  const handleDragEnter = (e) => {
+  const handleDragEnter = (e: any) => {
     if (disabled) return;
     e.preventDefault();
     e.stopPropagation();
     setDragging(true);
   };
 
-  const handleDragLeave = (e) => {
+  const handleDragLeave = (e: any) => {
     if (disabled) return;
     e.preventDefault();
     e.stopPropagation();
     setDragging(false);
   };
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: any) => {
     if (disabled) return;
     e.preventDefault();
     e.stopPropagation();
     setDragging(true);
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: any) => {
     if (disabled) return;
     e.preventDefault();
     e.stopPropagation();
@@ -95,7 +95,7 @@ export const FileUploadBase64: React.FC<{
     }
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = (e: any) => {
     const file = e.target.files[0];
     if (file) {
       setFile(file);
@@ -108,7 +108,7 @@ export const FileUploadBase64: React.FC<{
     fileInputRef.current.click();
   };
 
-  const convertFileToBase64 = (file) => {
+  const convertFileToBase64 = (file: any) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
@@ -219,7 +219,7 @@ export const NumberSelect: React.FC<{
   );
 };
 
-export const Collapsible = ({ title, children }) => {
+export const Collapsible = ({ title, children } : { title: string, children: ReactNode }) => {
   const [isOpen, setIsOpen] = useState(true);
 
   const toggleCollapse = () => {
@@ -238,14 +238,14 @@ export const Collapsible = ({ title, children }) => {
   );
 };
 
-export const TextAreaWithUndo = ({ value, onChange }) => {
+export const TextAreaWithUndo = ({ value, onChange } : { value: string, onChange: (value: string) => void }) => {
   const textAreaRef = useRef<any>(null);
   useEffect(() => {
     if (value !== textAreaRef.current.value) {
       textAreaRef.current.value = value;
     }
   }, [value]);
-  const handleChange = (e) => {
+  const handleChange = (e:any) => {
     const newValue = e.target.value;
     onChange(newValue);
   };
@@ -259,7 +259,7 @@ export const TextAreaWithUndo = ({ value, onChange }) => {
 };
 
 export const CustomScrollbars = ({ onScroll, forwardedRef, style, children }: any) => {
-  const refSetter = useCallback(scrollbarsRef => {
+  const refSetter = useCallback((scrollbarsRef:any) => {
     if (scrollbarsRef) {
       forwardedRef(scrollbarsRef.view);
     } else {

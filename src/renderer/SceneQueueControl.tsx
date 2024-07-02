@@ -3,7 +3,6 @@ import {
   Session,
   Scene,
   imageService,
-  invoke,
   promptService,
   queueScene,
   sessionService,
@@ -24,6 +23,7 @@ import {
   dataUriToBase64,
   queueRemoveBg,
   localAIService,
+  backend,
 } from './models';
 import { AppContext } from './App';
 import { FloatView } from './FloatView';
@@ -47,7 +47,7 @@ interface SceneCellProps {
   setDisplayScene: (scene: GenericScene) => void;
   setEditingScene: (scene: GenericScene) => void;
   setDraggingScene: (scene: GenericScene | undefined) => void;
-  getImage: (scene: GenericScene) => Promise<string | undefined>;
+  getImage: (scene: GenericScene) => Promise<string | null>;
   rerender: (obj: {}) => void;
   draggingScene: GenericScene | undefined;
   curSession: Session;
@@ -138,7 +138,7 @@ const SceneCell = ({
     const refreshImage = async () => {
       try {
         const base64 = await getImage(scene);
-        setImage(base64);
+        setImage(base64!);
       } catch (e: any) {
         setImage(undefined);
       }
@@ -338,6 +338,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
                   locked: false,
                   slots: [[{ prompt: '', enabled: true }]],
                   mains: [],
+                  round: undefined,
                   game: undefined,
                 };
                 updateScenes();
@@ -368,11 +369,11 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
     type === 'scene'
       ? [
           {
-            text: (path) => {
+            text: (path: string) => {
               return isMainImage(path) ? '즐겨찾기 해제' : '즐겨찾기 지정';
             },
             className: 'bg-orange-400',
-            onClick: async (scene, path, close) => {
+            onClick: async (scene: Scene, path: string, close: () => void) => {
               const filename = path.split('/').pop()!;
               if (isMainImage(path)) {
                 scene.mains = scene.mains.filter((x) => x !== filename);
@@ -387,9 +388,9 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
           {
             text: '인페인팅 씬 생성',
             className: 'bg-green-500',
-            onClick: async (scene, path, close) => {
+            onClick: async (scene: Scene, path: string, close: () => void) => {
               let image = await imageService.fetchImage(path);
-              image = dataUriToBase64(image);
+              image = dataUriToBase64(image!);
               let cnt = 0;
               const newName = () => (scene.name + '_inpaint_' + cnt);
               while (newName() in curSession!.inpaints) {
@@ -412,6 +413,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
                 uc,
                 resolution: scene.resolution,
                 sceneRef: scene.name,
+                round: undefined,
                 game: undefined,
               };
               await sessionService.saveInpaintImages(curSession!, newScene, image, '');
@@ -425,13 +427,13 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
           {
             text: '배경 제거 예약',
             className: 'bg-gray-500',
-            onClick: async (scene, path, close) => {
+            onClick: async (scene: Scene, path: string, close: () => void) => {
               if (!localAIService.ready) {
                 ctx.pushMessage('환경설정에서 배경 제거 기능을 활성화해주세요');
                 return;
               }
               let image = await imageService.fetchImage(path);
-              image = dataUriToBase64(image);
+              image = dataUriToBase64(image!);
               queueRemoveBg(curSession!, scene, image);
             }
           },
@@ -441,11 +443,11 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
           {
             text: '해당 이미지로 인페인트',
             className: 'bg-orange-400',
-            onClick: async (scene, path, close) => {
+            onClick: async (scene: InPaintScene, path: string, close: () => void) => {
               let image = await imageService.fetchImage(path);
-              image = dataUriToBase64(image);
+              image = dataUriToBase64(image!);
               let mask =  await imageService.fetchImage(sessionService.getInpaintMaskPath(curSession!, scene as InPaintScene));
-              mask = dataUriToBase64(mask);
+              mask = dataUriToBase64(mask!);
               await sessionService.saveInpaintImages(curSession!, scene, image, mask);
               close();
               updateScenes();
@@ -456,7 +458,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
           {
             text: '원본 씬으로 이미지 복사',
             className: 'bg-green-500',
-            onClick: async (scene: InPaintScene, path, close) => {
+            onClick: async (scene: InPaintScene, path: string, close: () => void) => {
               if (!scene.sceneRef) {
                 ctx.pushMessage('원본 씬이 없습니다.');
                 return;
@@ -466,8 +468,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
                 ctx.pushMessage('원본 씬이 삭제되었거나 이동했습니다.');
                 return;
               }
-              await invoke(
-                'copy-file',
+              await backend.copyFile(
                 path,
                 imageService.getImageDir(curSession!, orgScene) +
                   '/' +
@@ -604,8 +605,8 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
         '_main_images_' +
         Date.now().toString() +
         '.zip';
-      await invoke('zip-files', paths, outFilePath);
-      await invoke('show-file', outFilePath);
+      await backend.zipFiles(paths, outFilePath);
+      await backend.showFile(outFilePath);
       }
       ctx.pushDialog({
         type: 'select',
@@ -643,14 +644,14 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
         if (!images.length)
           continue;
         let image = await imageService.fetchImage(images[0]);
-        image = dataUriToBase64(image);
+        image = dataUriToBase64(image!);
         queueRemoveBg(curSession!, scene, image);
       } else {
         const mains = scene.mains;
         for (const main of mains) {
           const path = imageService.getImageDir(curSession!, scene) + '/' + main;
           let image = await imageService.fetchImage(path);
-          image = dataUriToBase64(image);
+          image = dataUriToBase64(image!);
           queueRemoveBg(curSession!, scene, image, (newPath: string) => {
             for (let j = 0; scene.mains.length; j++) {
               if (scene.mains[j] === main) {

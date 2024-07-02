@@ -1,9 +1,9 @@
 import { Scrollbars } from 'react-custom-scrollbars-2';
 import * as Hangul from 'hangul-js';
-import { createRef, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { DOMElement, createRef, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppContext } from './App';
 import Denque from 'denque';
-import { WordTag, calcGapMatch, highlightPrompt, invoke, promptService } from './models';
+import { WordTag, backend, calcGapMatch, highlightPrompt, promptService } from './models';
 import { FaBook, FaBox, FaBrush, FaDatabase, FaExpand, FaPaintBrush, FaTag, FaTimes, FaTimesCircle } from 'react-icons/fa';
 import { FaPerson, FaStar } from "react-icons/fa6";
 import { FixedSizeList as List } from 'react-window';
@@ -62,7 +62,7 @@ class Mutex {
     this._dispatchNext();
   }
 
-  async runExclusive(callback) {
+  async runExclusive(callback: () => void | Promise<void>) {
     await this.lock();
     try {
       return await callback();
@@ -135,18 +135,21 @@ class CursorMemorizeEditor {
     let endContainer = range.endContainer;
     let startOffset = range.startOffset;
     let endOffset = range.endOffset;
-    const nodeIterator = document.createNodeIterator(this.editor, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, null, false);
+    const nodeIterator = document.createNodeIterator(this.editor, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, null);
     let currentNode;
     while (currentNode = nodeIterator.nextNode()) {
       for (let [i,container,offset] of [[0,startContainer, startOffset], [1,endContainer, endOffset]]) {
+        i = i as number;
+        offset = offset as number;
+        container = container as Node;
         if (currentNode === container) {
           if (container.nodeType === 3) {
             res[i] += offset;
-          } else if (container.tagName !== "BR"){
+          } else if ((container as any).tagName !== "BR"){
             for (let j=0;j<offset;j++){
               const child = container.childNodes[j];
-              res[i] += child.textContent.length;
-              if (child.tagName === 'BR')
+              res[i] += (child as any).textContent.length;
+              if ((child as any).tagName === 'BR')
                 res[i]++;
             }
           }
@@ -154,7 +157,7 @@ class CursorMemorizeEditor {
         } else {
           if (!done[i]) {
             if (currentNode.nodeType === 3) {
-              res[i] += currentNode.textContent.length;
+              res[i] += currentNode.textContent!.length;
             }
             if (currentNode.nodeName === 'BR') {
               res[i] += 1;
@@ -173,7 +176,7 @@ class CursorMemorizeEditor {
     let foundNode = undefined;
     for (let i = 0; i < 2; i ++) {
       let offset = 0;
-      const nodeIterator = document.createNodeIterator(this.editor, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, null, false);
+      const nodeIterator = document.createNodeIterator(this.editor, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, null);
       let currentNode;
       while (currentNode = nodeIterator.nextNode()) {
           if (currentNode.nodeName === 'BR') {
@@ -560,7 +563,7 @@ class CursorMemorizeEditor {
 const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSelectTag }: { tags: WordTag[], curWord: string, clientX: number, clientY: number, selectedTag: number, onSelectTag: (idx: number) => void }) => {
   const [posX, setPosX] = useState(0);
   const [posY, setPosY] = useState(0);
-  const [matchMasks, setMatchMasks] = useState<number[][]>([]);
+  const [matchMasks, setMatchMasks] = useState<any[][]>([]);
   const tagsRef = useRef<any[]>([]);
   const listRef = createRef<any>();
   const categoryIcon = (category: number) => {
@@ -658,6 +661,8 @@ const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSe
         itemCount={tags.length}
         itemSize={31}
         width={400}
+        /* 
+        // @ts-ignore */
         overscanRowCount={16}
       >
         {renderRow}
@@ -693,8 +698,8 @@ function trimByBraces(str: string) {
 }
 
 function replaceMiddleWord(str: string, newWord: string) {
-  let trimmedLeft = str.match(/^[{\[]*(artist:)?/) ? str.match(/^[{\[]*(artist:)?/)[0] : '';
-  let trimmedRight = str.match(/[}\]]*$/) ? str.match(/[}\]]*$/)[0] : '';
+  let trimmedLeft = str.match(/^[{\[]*(artist:)?/) ? str.match(/^[{\[]*(artist:)?/)![0] : '';
+  let trimmedRight = str.match(/[}\]]*$/) ? str.match(/[}\]]*$/)![0] : '';
   return trimmedLeft + newWord + trimmedRight;
 }
 
@@ -754,10 +759,10 @@ const PromptEditTextArea = ({
         if (word === '') {
           closeAutoComplete();
         } else {
-          const action = word.startsWith('<') ? 'search-pieces' : 'search-tags';
+          const action = word.startsWith('<') ? backend.searchPieces : backend.searchTags;
           cntRef.current++;
           const myId = cntRef.current;
-          invoke(action, trimByBraces(word)).then(async (tags: any[]) => {
+          action(trimByBraces(word)).then(async (tags: any[]) => {
             if (myId !== cntRef.current) return;
             if (tags.length > 0) {
               let selection = window.getSelection()!;
