@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SDStudio</string>
+    <string name="title_activity_main">SDStudio</string>
+    <string name="package_name">io.sunho.SDStudio</string>
+    <string name="custom_url_scheme">io.sunho.SDStudio</string>
+</resources>
