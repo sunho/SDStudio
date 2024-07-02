@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useContext, useEffect, useState } from 'react';
-import { Session, invoke, sessionService, taskQueueService } from './models';
+import { Session, backend, sessionService, taskQueueService } from './models';
 import { AppContext } from './App';
 import { primaryColor, roundButton } from './styles';
 import { DropdownSelect, Option } from './UtilComponents';
@@ -89,8 +89,7 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSamples }) => {
         className={`${roundButton} bg-orange-500 h-8 w-18`}
         onClick={async () => {
           if (!ctx.curSession) return;
-          await invoke(
-            'show-file',
+          await backend.showFile(
             sessionService.getPath(ctx.curSession.name),
           );
         }}

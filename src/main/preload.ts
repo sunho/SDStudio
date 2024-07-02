@@ -23,20 +23,26 @@ export type Channels =
   | 'open-web-page'
   | 'search-tags'
   | 'load-pieces-db'
+  | 'get-config'
+  | 'set-config'
   | 'search-pieces'
+  | 'trash-file'
+  | 'delete-dir'
+  | 'spawn-local-ai'
+  | 'is-local-ai-running'
+  | 'resize-image'
+  | 'exist-file'
   | 'open-image-editor'
   | 'watch-image'
   | 'unwatch-image'
-  | 'get-config'
-  | 'set-config'
-  | 'remove-bg'
   | 'load-model'
-  | 'exist-file'
-  | 'download';
+  | 'extract-zip'
+  | 'download'
+  | 'remove-bg';
 
 const electronHandler = {
   ipcRenderer: {
-    on(channel: Channels, func: (...args: unknown[]) => void) {
+    on(channel: string, func: (...args: any[]) => void | Promise<void>) {
       const subscription = (_event: IpcRendererEvent, ...args: unknown[]) =>
         func(...args);
       ipcRenderer.on(channel, subscription);

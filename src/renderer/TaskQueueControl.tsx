@@ -122,7 +122,7 @@ export const TaskProgressBar = ({fast}: TaskProgressBarProps) => {
         setDuration(0);
       }
     };
-    const onError = (e) => {
+    const onError = (e:any) => {
       if (e.detail.task.type === 'remove-bg') {
         pushMessage('Error: ' + e.detail.error);
       }

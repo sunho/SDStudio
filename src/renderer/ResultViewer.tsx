@@ -13,6 +13,7 @@ import {
   GenericScene,
   InPaintScene,
   Scene,
+  backend,
   dataUriToBase64,
   deleteImageFiles,
   encodeContextAlt,
@@ -22,8 +23,8 @@ import {
   gameService,
   getResultDirectory,
   getResultImages,
+  getSceneKey,
   imageService,
-  invoke,
   queueGenericScene,
   sessionService,
   swapImages,
@@ -114,7 +115,7 @@ const Cell = memo(({
     const refreshImage = async () => {
       try {
         const base64Image = await imageService.fetchImageSmall(path, imageSize)!;
-        setImage(base64Image);
+        setImage(base64Image!);
       } catch (e: any) {
         setImage(undefined);
       }
@@ -321,8 +322,8 @@ const ResultDetailView = ({
     const fetchImage = async () => {
       try {
         let base64Image = await imageService.fetchImage(paths[selectedIndex])!;
-        setImage(base64Image);
-        base64Image = dataUriToBase64(base64Image);
+        setImage(base64Image!);
+        base64Image = dataUriToBase64(base64Image!);
         try {
           const [prompt, seed, scale, sampler, steps, uc] = await extractPromptDataFromBase64(base64Image);
           setMiddlePrompt(prompt);
@@ -379,17 +380,17 @@ const ResultDetailView = ({
             <button
               className={`${roundButton} bg-sky-500`}
               onClick={async () => {
-                await invoke('show-file', paths[selectedIndex]);
+                await backend.showFile(paths[selectedIndex]);
               }}
             >
               파일 위치 열기
             </button>
             <button
               className={`${roundButton} bg-sky-500`}
-              onClick={() => {
-                invoke('open-image-editor', paths[selectedIndex]);
+              onClick={async () => {
+                await backend.openImageEditor(paths[selectedIndex]);
                 watchedImages.current.add(paths[selectedIndex]);
-                invoke('watch-image', paths[selectedIndex]);
+                backend.watchImage(paths[selectedIndex]);
               }}
             >이미지 편집</button>
             <button
@@ -490,7 +491,7 @@ interface ResultVieweRef {
 
 interface ResultViewerProps {
   scene: GenericScene;
-  buttons: ResultDetailViewButton[];
+  buttons: any[];
   onFilenameChange: (src: string, dst: string) => void;
   onEdit: (scene: GenericScene) => void;
   isMainImage?: (path: string) => boolean;
@@ -540,7 +541,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
   }, [tournament]);
 
   const paths = gameService.getOutputs(curSession!, scene);
-  const onSelected = useCallback((index) => {
+  const onSelected = useCallback((index: any) => {
     setSelectedImageIndex(index);
   },[]);
   const onDeleteImages = async (scene: GenericScene) => {
@@ -623,7 +624,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
             <button
               className={`${roundButton} bg-gray-500`}
               onClick={() => {
-                taskQueueService.removeTaskFromGenericScene(scene);
+                taskQueueService.removeTasksFromScene(scene.type === 'scene' ? 'generate' : 'inpaint', getSceneKey(curSession!, scene.name));
               }}>
               예약 제거
             </button>
@@ -637,7 +638,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
             <button
               className={`${roundButton} bg-sky-500`}
               onClick={async () => {
-                await invoke('show-file', getResultDirectory(curSession!, scene));
+                await backend.showFile(getResultDirectory(curSession!, scene));
               }}
             >
               <FaFolder/>
@@ -674,8 +675,8 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
         />
         <QueueControl type='inpaint' className={selectedTab === 1 ? 'px-4 ' : 'hidden'}
           onClose={(x)=>{setSelectedTab(x)}}
-          filterFunc={(x: InPaintScene) => {
-            return x.sceneRef && x.sceneRef === scene.name;
+          filterFunc={(x: any) => {
+            return !!(x.sceneRef && x.sceneRef === scene.name);
           }}
         >
         </QueueControl>

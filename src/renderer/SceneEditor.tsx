@@ -12,11 +12,11 @@ import {
   PromptPieceSlot,
   Scene,
   Session,
+  backend,
   createPrompts,
   getMainImage,
   highlightPrompt,
   imageService,
-  invoke,
   lowerPromptNode,
   promptService,
   queueScenePrompt,
@@ -77,7 +77,7 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
     setImage(null);
     (async () => {
       const dataUri = await getMainImage(curSession!, scene, -1);
-      setImage(dataUri);
+      setImage(dataUri!);
     })();
   }, [scene]);
   useEffect(() => {
@@ -122,11 +122,14 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
         <div className="ml-auto flex-none flex gap-4 pt-2">
         {path && <button className={`${roundButton} bg-orange-400 h-8 w-36 flex items-center justify-center`}
           onClick={()=>{
-            scene.main = path.split('/').pop()!;
+            const filename = path.split('/').pop()!;
+            if (!(filename in scene.mains)) {
+              scene.mains.push(filename);
+            }
             sessionService.mainImageUpdated();
             onChanged && onChanged();
           }}
-        >메인이미지 지정
+        >즐겨찾기 지정
         </button>}
         <TaskProgressBar fast/>
         {!taskQueueService.isRunning() ? (
@@ -426,7 +429,7 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
               text: '정말로 해당 씬을 삭제하시겠습니까?',
               callback: async () => {
                 delete curSession!.scenes[scene.name];
-                await invoke('trash-file', imageService.getOutputDir(curSession!, scene));
+                await backend.trashFile(imageService.getOutputDir(curSession!, scene));
                 updateScene();
                 onClosed();
                 if (onDeleted) {

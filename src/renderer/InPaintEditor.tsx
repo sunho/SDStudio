@@ -7,12 +7,12 @@ import BrushTool, {
 import { DropdownSelect, FileUploadBase64 } from './UtilComponents';
 import {
   InPaintScene,
+  backend,
   createInPaintPrompt,
   dataUriToBase64,
   extractMiddlePrompt,
   extractPromptDataFromBase64,
   imageService,
-  invoke,
   promptService,
   sessionService,
   toPARR,
@@ -70,7 +70,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
     async function loadImage() {
       try {
         const data = await imageService.fetchImage(sessionService.getInpaintOrgPath(curSession!, editingScene as InPaintScene));
-        setImage(dataUriToBase64(data));
+        setImage(dataUriToBase64(data!));
       } catch (e) {
         pushMessage('인페인트 이미지를 불러오는데 실패했습니다.');
       }
@@ -78,7 +78,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
     async function loadMask() {
       try {
         const data = await imageService.fetchImage(sessionService.getInpaintMaskPath(curSession!, editingScene as InPaintScene));
-        setMask(dataUriToBase64(data));
+        setMask(dataUriToBase64(data!));
       } catch (e) {
       }
     }
@@ -98,7 +98,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
       .catch(() => {});
   }, [image]);
 
-  const handleTaskNameChange = (event) => {
+  const handleTaskNameChange = (event: any) => {
     setTaskName(event.target.value);
   };
 
@@ -142,6 +142,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
         prompt: currentPrompt,
         uc: currentUC,
         resolution: resolution,
+        round: undefined,
         game: undefined,
       };
       curSession!.inpaints[taskName] = newScene;
@@ -202,8 +203,8 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
             className={`${roundButton} ${primaryColor}`}
             onClick={() => {
               const path = sessionService.getInpaintOrgPath(curSession!, editingScene as InPaintScene);
-              invoke('open-image-editor', path);
-              invoke('watch-image', path);
+              backend.openImageEditor(path);
+              backend.watchImage(path);
             }}>
             이미지 편집
           </button>
@@ -270,7 +271,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
             min="1"
             max="100"
             value={brushSize}
-            onChange={(e) => setBrushSize(e.target.value)}
+            onChange={(e: any) => setBrushSize(e.target.value)}
           />
           <button
             className={`${roundButton} ${primaryColor}`}

@@ -1,6 +1,6 @@
 import { createRef, useContext, useEffect, useRef, useState } from 'react';
 import { AppContext } from './App';
-import { PieceLibrary, invoke, promptService, sessionService } from './models';
+import { PieceLibrary, backend, promptService, sessionService } from './models';
 import { DropdownSelect } from './UtilComponents';
 import PromptEditTextArea from './PromptEditTextArea';
 import { grayLabel, primaryColor, roundButton } from './styles';
@@ -138,12 +138,11 @@ const PieceEditor = () => {
               '_' +
               Date.now().toString() +
               '.json';
-            await invoke(
-              'write-file',
+            await backend.writeFile(
               outPath,
               JSON.stringify(curPieceLibrary),
             );
-            await invoke('show-file', outPath);
+            await backend.showFile(outPath);
           }}
         >
           <FaShare />

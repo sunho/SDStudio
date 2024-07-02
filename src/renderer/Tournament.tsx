@@ -2,20 +2,19 @@ import { useContext, useEffect, useRef, useState } from 'react';
 import {
   Scene,
   InPaintScene,
-  Match,
   imageService,
   gameService,
   sessionService,
-  invoke,
   shuffleArray,
   encodeContextAlt,
+  backend,
 } from './models';
 import { AppContext } from './App';
 import { roundButton } from './styles';
 
 interface TournamentProps {
   scene: Scene | InPaintScene;
-  onFilenameChange: (path: string) => void;
+  onFilenameChange: (src: string, dst: string) => void;
   path: string;
 }
 
@@ -105,7 +104,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
         if (!scene.game) {
           scene.game = await gameService.createGame(path);
         }
-        let files = await invoke('list-files', path);
+        let files = await backend.listFiles(path);
         files = files.filter((f: string) => f.endsWith('.png'));
         if (scene.game!.length !== files.length) {
           pushDialog({
@@ -124,8 +123,8 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
     if (players.length) {
       (async () => {
         try {
-          const p0 = await imageService.fetchImage(players[0]);
-          const p1 = await imageService.fetchImage(players[1]);
+          const p0 = (await imageService.fetchImage(players[0]))!;
+          const p1 = (await imageService.fetchImage(players[1]))!;
           setImages([p0, p1]);
         } catch (e: any) {
           pushMessage('Image load error: ' + e.message);
@@ -137,7 +136,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
       if (first) {
         (async () => {
           try {
-            const p0 = await imageService.fetchImage(first.path);
+            const p0 = (await imageService.fetchImage(first.path))!;
             setImages([p0]);
           } catch (e: any) {
             pushMessage('Image load error: ' + e.message);
@@ -191,7 +190,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
     return `${Math.floor(round.players.length/2)}강`;
   };
   const showFolder = async () => {
-    await invoke('show-file', path);
+    await backend.showFile(path);
   };
   const round = scene.round!;
   return (

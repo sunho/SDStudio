@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { invoke, localAIService } from './models';
+import { backend, localAIService } from './models';
 import { Config, ImageEditor, ModelType, RemoveBgQuality } from '../main/config';
 
 interface ConfigScreenProps {
@@ -15,7 +15,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
   const [stage, setStage] = useState(0);
   useEffect(() => {
     (async () => {
-      const config = await invoke('get-config');
+      const config = await backend.getConfig();
       setImageEditor(config.imageEditor ?? 'photoshop');
       setUseGPU(config.useCUDA ?? false);
       setQuality(config.removeBgQuality ?? 'normal');
@@ -76,7 +76,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
         <div className="flex gap-2 mt-4">
           <label htmlFor="imageEditor" className="block text-sm font-medium text-gray-700">
             배경 제거 시 GPU 사용 <a onClick={() => {
-              invoke('open-web-page', 'https://developer.nvidia.com/cuda-11-8-0-download-archive');
+              backend.openWebPage('https://developer.nvidia.com/cuda-11-8-0-download-archive');
             }} className="underline text-blue-500 cursor-pointer">(CUDA를 설치 해야함)</a>
           </label>
           <input
@@ -106,14 +106,14 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
         <button
           className="mt-4 w-full bg-sky-500 text-white py-2 rounded hover:brightness-95 active:brightness-90"
           onClick={async () => {
-            const old = await invoke('get-config');
+            const old = await backend.getConfig();
             const config: Config = {
               imageEditor: imageEditor as ImageEditor,
               useCUDA: useGPU,
               modelType: 'quality',
               removeBgQuality: quality as RemoveBgQuality
             };
-            invoke('set-config', config);
+            await backend.setConfig(config);
             if (old.useCUDA !== useGPU)
               localAIService.modelChanged();
             onSave();
