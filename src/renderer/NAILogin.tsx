@@ -4,8 +4,13 @@ import { AppContext } from './App';
 import { grayInput, primaryColor, roundButton } from './styles';
 import { FloatView } from './FloatView';
 import ConfigScreen from './ConfigScreen';
+import SessionSelect from './SessionSelect';
 
-const NAILogin = () => {
+interface Props {
+  setCurSession: (session: string) => void;
+}
+
+const NAILogin = ({ setCurSession } : Props) => {
   const ctx = useContext(AppContext)!;
   const [loggedIn, setLoggedIn] = useState(false);
   const [email, setEmail] = useState('');
@@ -37,8 +42,8 @@ const NAILogin = () => {
   const [settings, setSettings] = useState(false);
 
   return (
-    <div className="flex border-b border-gray-200 px-2 py-2 items-center">
-      <div className="flex gap-3">
+    <div className={"flex border-b border-gray-200 px-2 py-2 items-center"}>
+      <div className="gap-3 hidden md:flex">
         <input
           className={`${grayInput}`}
           type="text"
@@ -57,7 +62,7 @@ const NAILogin = () => {
           로그인
         </button>
       </div>
-      <p className="ml-auto mr-2">
+      <p className="ml-auto mr-2 hidden md:block">
         <span className="text-black">로그인 상태:</span>{' '}
         {loggedIn ? (
           <span className={`${roundTag} bg-green-500`}>Yes</span>
@@ -72,6 +77,10 @@ const NAILogin = () => {
       }>
         환경설정
       </button>
+      <div className="ml-auto block md:hidden">
+      <SessionSelect
+        setCurSession={setCurSession}/>
+      </div>
       {settings &&<FloatView
         priority={1}
         onEscape={()=>{setSettings(false);}}

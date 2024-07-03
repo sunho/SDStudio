@@ -7,7 +7,7 @@ import {
   FileUploadBase64,
   DropdownSelect,
 } from './UtilComponents';
-import { Sampling } from '../main/imageGen';
+import { Sampling } from './backends/imageGen';
 import { PreSet, getDefaultPreset, sessionService } from './models';
 import { Context, AppContext } from './App';
 import { base64ToDataUri } from './BrushTool';

@@ -32,26 +32,26 @@ interface ProgressBarProps {
 
 const ProgressBar = ({ duration, isError, text, key }: ProgressBarProps) => {
   return (
-    <div key={key} className="relative w-52 bg-gray-200 rounded-full h-8">
-      <div className="top-0 left-0 w-52 h-8 absolute flex items-center justify-center text-gray-600 gap-2">
-        <FaRegClock size={20} />
-        <div className="w-36 text-sm text-center overflow-hidden text-nowrap">
+    <div key={key} className="relative w-40 md:w-52 bg-gray-200 rounded-full h-8">
+      <div className="top-0 left-0 w-40 md:w-52 h-8 absolute flex items-center justify-center text-gray-600 gap-2">
+        <FaRegClock size={20}/>
+        <div className="w-28 md:w-40 text-xs md:text-sm text-center overflow-hidden text-nowrap">
           {text}
         </div>
       </div>
       <div
         className={
-          'top-0 left-0 absolute w-52 progress-transition rounded-full h-8 progress-clip-animation ' +
+          'top-0 left-0 absolute w-40 md:w-52 progress-transition rounded-full h-8 progress-clip-animation ' +
           (!isError ? 'bg-sky-500' : 'bg-red-500')
         }
         style={{ animationDuration: `${duration}s` }}
       ></div>
       <div
-        className="top-0 left-0 w-52 h-8 absolute flex items-center justify-center text-white gap-2 progress-clip-animation"
+        className="top-0 left-0 w-40 md:w-52 h-8 absolute flex items-center justify-center text-white gap-2 progress-clip-animation"
         style={{ animationDuration: `${duration}s` }}
       >
-        <FaRegClock size={20} />
-        <div className="w-36 text-sm text-center overflow-hidden text-nowrap">
+        <FaRegClock size={20}/>
+        <div className="w-28 md:w-40 text-xs md:text-sm text-center overflow-hidden text-nowrap">
           {text}
         </div>
       </div>
@@ -249,7 +249,7 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
   }, []);
 
   return (
-    <div className="flex gap-4 items-center">
+    <div className="flex gap-2 md:gap-4 items-center">
       {showList && <TaskQueueList
         onClose={() => {
           setShowList(false);
@@ -257,12 +257,12 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
       />}
       <div className="whitespace-nowrap">
         <span className="whitespace-nowrap">
-        추가개수:
+        개수:
         </span>
         <input
           min={1}
           max={99}
-          className={'ml-2 w-16 text-center ' + grayInput}
+          className={'ml-2 p-1 md:p-0 md:w-16 text-center ' + grayInput}
           type="number"
           value={ctx.samples}
           onChange={(e: any) => {
@@ -283,16 +283,16 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
       <TaskProgressBar />
       </div>
       <button
-        className={`${roundButton} bg-gray-500 h-8 px-6`}
+        className={`${roundButton} bg-gray-500 px-2 h-8 md:px-6`}
         onClick={() => {
           taskQueueService.removeAllTasks();
         }}
       >
-        <FaRegCalendarTimes size={18} />
+        <FaRegCalendarTimes size={18}/>
       </button>
       {!taskQueueService.isRunning() ? (
         <button
-          className={`${roundButton} bg-green-500 h-8 px-6`}
+          className={`${roundButton} bg-green-500 px-2 h-8 md:px-6`}
           onClick={() => {
             (async () => {
               taskQueueService.run();
@@ -303,7 +303,7 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
         </button>
       ) : (
         <button
-          className={`${roundButton} bg-red-500 h-8 px-6`}
+          className={`${roundButton} bg-red-500 px-2 h-8 md:px-6`}
           onClick={() => {
             taskQueueService.stop();
           }}

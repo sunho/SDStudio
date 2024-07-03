@@ -140,11 +140,11 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                     className="z-20 w-full"
                     selectedOption={curDialog.items!.find((item) => item.value === inputValue)}
                     menuPlacement="bottom"
-                    options={curDialog.items!.map((item) => ({
+                    options={curDialog.items!.map((item: any) => ({
                       label: item.text,
                       value: item.value,
                     }))}
-                    onSelect={(opt) => {
+                    onSelect={(opt: any) => {
                       setInputValue(opt.value);
                     }}
                   />

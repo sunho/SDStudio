@@ -34,3 +34,5 @@ build
 
 .venv
 venv
+
+dist

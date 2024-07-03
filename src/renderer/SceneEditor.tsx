@@ -36,7 +36,7 @@ import Scrollbars from 'react-custom-scrollbars-2';
 import PromptEditTextArea from './PromptEditTextArea';
 import PreSetEditor from './PreSetEdtior';
 import { TaskProgressBar } from './TaskQueueControl';
-import { Resolution, resolutionMap } from '../main/imageGen';
+import { Resolution, resolutionMap } from './backends/imageGen';
 
 interface Props {
   scene: Scene;

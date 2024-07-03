@@ -1,9 +1,10 @@
-import { ReactNode, forwardRef, useCallback, useEffect, useRef, useState } from 'react';
+import React, { ReactNode, forwardRef, useCallback, useEffect, useRef, useState } from 'react';
 
 import Select from 'react-select';
 import { primaryColor, roundButton } from './styles';
-import { FaFileUpload, FaTimes } from 'react-icons/fa';
+import { FaAddressBook, FaAmilia, FaDAndD, FaFileUpload, FaPenNib, FaTimes } from 'react-icons/fa';
 import { Scrollbars } from 'react-custom-scrollbars-2';
+import { FaAnchor, FaOpencart, FaPerson } from 'react-icons/fa6';
 
 export interface Option<T> {
   value: T;
@@ -143,17 +144,20 @@ export const FileUploadBase64: React.FC<{
 interface TabProps {
   label: string;
   content: React.ReactNode;
+  emoji: React.ReactNode
   onClick?: () => void;
 }
 
 interface TabComponentProps {
   tabs: TabProps[];
+  toggleView?: React.ReactNode;
   className?: string;
   left?: boolean;
 }
 
-export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs }) => {
+export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs, toggleView }) => {
   const [activeTab, setActiveTab] = useState(0);
+  const [toggleViewOpen, setToggleViewOpen] = useState(false);
 
   const handleTabClick = (index: number) => {
     tabs[index].onClick?.();
@@ -161,18 +165,18 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs }) => {
   };
 
   return (
-    <div className="h-full flex flex-col p-2">
+    <div className="h-full flex flex-col px-1 md:p-2">
       <div
         className={
-          'flex p-2 flex-none gap-2 items-center ' + (!left ? 'ml-auto' : '')
+          'flex p-1 md:p-2 flex-none gap-2 items-center w-full mb-1 md:mb-0'
         }
       >
-        <div className="flex gap-1">
+        <div className="md:flex gap-1 w-full hidden">
           {tabs.map((tab, index) => (
             <button
               key={index}
               className={
-                'active:brightness-90 hover:brightness-95 select-none p-2 ' +
+                'active:brightness-90 hover:brightness-95 select-none h-8 px-1 md:px-2 text-xs md:text-sm ' +
                 (index === activeTab
                   ? `${primaryColor} text-white`
                   : 'bg-gray-400 text-white')
@@ -183,8 +187,32 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs }) => {
             </button>
           ))}
         </div>
+        <div className="flex md:hidden gap-1 w-full">
+          {toggleView && <button className='active:brightness-90 hover:brightness-95 select-none h-8 md:hidden text-sm text-white bg-sky-500 px-2 flex justify-center items-center mr-auto'
+            onClick={() => setToggleViewOpen(!toggleViewOpen)}
+            >
+            {toggleViewOpen?'프롬프트 닫기':'프롬프트 열기'}
+          </button>}
+          {tabs.map((tab, index) => (
+            <button
+              key={index}
+              className={
+                'active:brightness-90 hover:brightness-95 select-none px-2 text-sm ' +
+                (index === activeTab
+                  ? `${primaryColor} text-white`
+                  : 'bg-gray-400 text-white')
+              }
+              onClick={() => handleTabClick(index)}
+            >
+              {tab.emoji}
+            </button>
+          ))}
+        </div>
       </div>
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
+        {toggleViewOpen&& <div className="z-10 absolute h-full w-full overflow-hidden bg-white">
+          {toggleView}
+        </div>}
         {tabs.map((tab, index) => (
           <div
             key={index}

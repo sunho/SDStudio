@@ -9,13 +9,11 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { ImageGenInput, ImageGenService } from './imageGen';
 import { app, BrowserWindow, shell, ipcMain, screen, webContents } from 'electron';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import { v4 as uuidv4 } from 'uuid';
-import { NovelAiImageGenService } from './genVendors/nai';
 const sharp = require('sharp');
 const native = require('sdsnative');
 const { exiftool } = require('exiftool-vendored');
@@ -41,8 +39,6 @@ let databases: DataBaseConns = {
 };
 
 let mainWindow: BrowserWindow | null = null;
-
-const imageGen: ImageGenService = new NovelAiImageGenService();
 
 async function listFilesInDirectory(dir: any) {
   try {
@@ -113,17 +109,6 @@ ipcMain.handle('get-version', async (event) => {
 
 ipcMain.handle('open-web-page', async (event, url) => {
   await shell.openExternal(url);
-});
-
-ipcMain.handle('image-gen', async (event, arg: ImageGenInput) => {
-  const token = await fs.readFile(APP_DIR + '/TOKEN.txt', 'utf-8');
-  arg.outputFilePath = APP_DIR + '/' + arg.outputFilePath;
-  await imageGen.generateImage(token, arg);
-});
-
-ipcMain.handle('login', async (event, email, password) => {
-  const rsp = await imageGen.login(email, password);
-  await fs.writeFile(APP_DIR + '/TOKEN.txt', rsp.accessToken, 'utf-8');
 });
 
 ipcMain.handle('show-file', async (event, arg) => {
