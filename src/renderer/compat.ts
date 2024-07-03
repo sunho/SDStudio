@@ -74,6 +74,9 @@ export function convertDenDenData(
       landscape: false,
       locked: false,
       slots: [[{ enabled: true, prompt: preset.presetPrompt }]],
+      resolution: 'portrait',
+      mains: [],
+      round: undefined,
       game: undefined,
     };
     scenes[preset.name] = scene;

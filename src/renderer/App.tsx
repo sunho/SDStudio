@@ -35,8 +35,8 @@ import ConfirmWindow, { Dialog } from './ConfirmWindow';
 import QueueControl from './SceneQueueControl';
 import { convertDenDenData, isValidDenDenDataFormat } from './compat';
 import { FloatViewProvider } from './FloatView';
+import { FaImage, FaImages, FaPenFancy, FaPenNib, FaPuzzlePiece } from 'react-icons/fa';
 
-const ipcRenderer = window.electron.ipcRenderer;
 
 export interface Context {
   curSession: Session | undefined;
@@ -421,14 +421,14 @@ export default function App() {
   };
 
   const tabs = [
-    { label: '이미지생성', content: <QueueControl type="scene" showPannel/> },
-    { label: '인페인트', content: <QueueControl type="inpaint" showPannel/> },
-    { label: '프롬프트조각', content: <PieceEditor /> },
+    { label: '이미지생성', content: <QueueControl type="scene" showPannel/>, emoji: <FaImages/> },
+    { label: '인페인트', content: <QueueControl type="inpaint" showPannel/>, emoji: <FaPenFancy/> },
+    { label: '프롬프트조각', content: <PieceEditor />, emoji: <FaPuzzlePiece/> },
   ];
 
   return (
     <AppContext.Provider value={ctx}>
-      <div className="flex flex-col relative h-screen">
+      <div className="flex flex-col relative h-screen w-screen overflow-hidden">
         <ErrorBoundary
           onErr={(error, errorInfo) => {
             pushMessage(`${error.message}`);
@@ -437,13 +437,13 @@ export default function App() {
             <FloatViewProvider>
             <div className="flex flex-col flex-1 overflow-hidden">
               <div className="grow-0">
-                <NAILogin />
+                <NAILogin setCurSession={setCurSession} />
               </div>
               <div className="flex-1 overflow-hidden">
                 <div className="flex w-full h-full overflow-hidden">
                 {curSession && (
                   <>
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-hidden hidden md:block">
                       <PreSetEditor
                         key={curSession.name}
                         middlePromptMode={false}
@@ -451,7 +451,13 @@ export default function App() {
                       />
                     </div>
                     <div className="flex-1 overflow-hidden">
-                      <TabComponent key={curSession.name} tabs={tabs} />
+                      <TabComponent key={curSession.name} tabs={tabs}
+                      toggleView={<PreSetEditor
+                        key={curSession.name}
+                        middlePromptMode={false}
+                        setSelectedPreset={setSelectedPreset}
+                      />}
+                      />
                     </div>
                   </>
                 )}
@@ -460,10 +466,16 @@ export default function App() {
             </div>
             </FloatViewProvider>
           <div className="grow-0">
-            <SessionSelect
-              setCurSession={setCurSession}
-              setSamples={setSamples}
-            />
+            <div className="px-3 py-2 border-t flex gap-3 items-center">
+              <div className="hidden md:block">
+                <SessionSelect
+                  setCurSession={setCurSession}
+                />
+              </div>
+              <div className="flex gap-4 ml-auto">
+                <TaskQueueControl setSamples={setSamples} />
+              </div>
+            </div>
           </div>
         </ErrorBoundary>
         <AlertWindow setMessages={setMessages} />

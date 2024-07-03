@@ -20,7 +20,7 @@ import {
 import { AppContext } from './App';
 import { grayInput, grayLabel, primaryColor, roundButton } from './styles';
 import PromptEditTextArea from './PromptEditTextArea';
-import { Resolution, resolutionMap } from '../main/imageGen';
+import { Resolution, resolutionMap } from './backends/imageGen';
 
 interface Props {
   editingScene: InPaintScene;

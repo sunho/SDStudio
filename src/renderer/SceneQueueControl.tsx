@@ -24,6 +24,7 @@ import {
   queueRemoveBg,
   localAIService,
   backend,
+  isMobile,
 } from './models';
 import { AppContext } from './App';
 import { FloatView } from './FloatView';
@@ -71,9 +72,9 @@ const SceneCell = ({
   const ctx = useContext(AppContext)!;
   const [image, setImage] = useState<string | undefined>(undefined);
 
-  const cellSizes = ['w-48 h-48', 'w-64 h-64', 'w-96 h-96']
-  const cellSizes2 = ['max-w-48 max-h-48', 'max-w-64 max-h-64', 'max-w-96 max-h-96']
-  const cellSizes3 = ['w-48', 'w-64', 'w-96']
+  const cellSizes = ['w-48 h-48', 'w-36 h-36 md:w-64 md:h-64', 'w-96 h-96']
+  const cellSizes2 = ['max-w-48 max-h-48', ' max-w-36 max-h-36 md:max-w-64 md:max-h-64', 'max-w-96 max-h-96']
+  const cellSizes3 = ['w-48', 'w-36 md:w-64', ' w-96']
 
   const handleDragStart = (scene: GenericScene) => {
     setDraggingScene(scene);
@@ -168,11 +169,11 @@ const SceneCell = ({
       })}
     >
       {getSceneQueueCount(scene) > 0 && (
-        <span className="absolute z-10 right-0 bg-yellow-400 inline-block mr-3 px-2 py-1 text-center align-middle rounded-md font-bold text-white">
+        <span className="absolute right-0 bg-yellow-400 inline-block mr-3 px-2 py-1 text-center align-middle rounded-md font-bold text-white">
           {getSceneQueueCount(scene)}
         </span>
       )}
-      <div className="active:brightness-90 hover:brightness-95 cursor-pointer bg-white"
+      <div className="-z-10 active:brightness-90 hover:brightness-95 cursor-pointer bg-white"
       onClick={(event) => {
         setDisplayScene(scene);
       }}
@@ -186,7 +187,7 @@ const SceneCell = ({
         >
           {scene.name}
         </div>
-      <div className={"relative image-cell flex-none overflow-hidden z-10 " + (cellSizes[cellSize])}
+      <div className={"relative image-cell flex-none overflow-hidden " + (cellSizes[cellSize])}
         title={encodeContextAlt({
           type: 'scene',
           sceneType: scene.type,
@@ -424,19 +425,6 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
               sessionService.inPaintHook();
             },
           },
-          {
-            text: '배경 제거 예약',
-            className: 'bg-gray-500',
-            onClick: async (scene: Scene, path: string, close: () => void) => {
-              if (!localAIService.ready) {
-                ctx.pushMessage('환경설정에서 배경 제거 기능을 활성화해주세요');
-                return;
-              }
-              let image = await imageService.fetchImage(path);
-              image = dataUriToBase64(image!);
-              queueRemoveBg(curSession!, scene, image);
-            }
-          },
         ]
       : [
 
@@ -482,6 +470,21 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
             },
           },
         ];
+  if (type === 'scene' && !isMobile) {
+    buttons.push({
+      text: '배경 제거 예약',
+      className: 'bg-gray-500',
+      onClick: async (scene: Scene, path: string, close: () => void) => {
+        if (!localAIService.ready) {
+          ctx.pushMessage('환경설정에서 배경 제거 기능을 활성화해주세요');
+          return;
+        }
+        let image = await imageService.fetchImage(path);
+        image = dataUriToBase64(image!);
+        queueRemoveBg(curSession!, scene, image);
+      }
+    });
+  }
 
   const [adding, setAdding] = useState<boolean>(false);
   const panel = useMemo(() => {
@@ -696,34 +699,34 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
       {panel}
       {!!showPannel &&
       <div className="flex flex-none pb-2">
-        <div className="flex gap-2">
+        <div className="flex gap-1 md:gap-2">
           <button className={`${roundButton} ${primaryColor}`} onClick={addScene}>
             씬 추가
           </button>
           <button
-            className={`${roundButton} ${primaryColor}`}
+            className={`${roundButton} bg-gray-400`}
             onClick={addAllToQueue}
           >
             모두 예약추가
           </button>
           {type === 'scene' && (
             <button
-              className={`${roundButton} ${primaryColor}`}
+              className={`${roundButton} bg-gray-400`}
               onClick={exportPackage}
             >
               모두 내보내기
             </button>
           )}
-          {type === 'scene' && (
+          {(!isMobile && type === 'scene') && (
             <button
-              className={`${roundButton} ${primaryColor}`}
+              className={`${roundButton} bg-gray-400 hidden md:block`}
               onClick={removeBg}
             >
               모두 배경제거
             </button>
           )}
         </div>
-        <div className="ml-auto mr-2">
+        <div className="ml-auto mr-2 hidden md:block">
           <button onClick={() => setCellSize((cellSize + 1) % 3)} className={`${roundButton} bg-gray-400`}>
             {cellSizes[cellSize]}
           </button>
@@ -737,7 +740,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
             return filterFunc(x);
           }).map((scene) => (
             <SceneCell
-              cellSize={showPannel ? cellSize : 2}
+              cellSize={(showPannel || isMobile) ? cellSize : 2}
               key={scene.name}
               scene={scene}
               getImage={getImage}

@@ -1,5 +1,5 @@
 import { Config } from '../main/config';
-import { ImageGenInput } from '../main/imageGen';
+import { ImageGenInput } from './backends/imageGen';
 import { SceneContextAlt, ContextAlt } from './models';
 
 export interface FileEntry {
@@ -56,4 +56,5 @@ export abstract class Backend {
   abstract onCopyImage(callback: (ctx: ContextAlt) => void): () => void;
   abstract onMoveSceneFront(callback: (ctx: SceneContextAlt) => void): () => void;
   abstract onMoveSceneBack(callback: (ctx: SceneContextAlt) => void): () => void;
+  abstract onClose(callback: () => void): () => void;
 }

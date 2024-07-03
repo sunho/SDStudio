@@ -165,14 +165,14 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
 
-      const drawBrush = (x, y) => {
+      const drawBrush = (x: any, y: any) => {
         ctx.beginPath();
         ctx.arc(x, y, brushSize, 0, Math.PI * 2);
         ctx.fillStyle = brushColor;
         ctx.fill();
       };
 
-      const interpolate = (x0, y0, x1, y1) => {
+      const interpolate = (x0: any, y0: any, x1: any, y1: any) => {
         const dist = Math.hypot(x1 - x0, y1 - y0);
         const steps = Math.ceil(dist / brushSize) * 2;
         const dx = (x1 - x0) / steps;
@@ -184,7 +184,7 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
         }
       };
 
-      const draw = (e) => {
+      const draw = (e: any) => {
         const rect = canvas.getBoundingClientRect();
         const x = (e.clientX - rect.left) * (canvas.width / rect.width);
         const y = (e.clientY - rect.top) * (canvas.height / rect.height);
@@ -201,7 +201,7 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
         lastPosRef.current = { x, y };
       };
 
-      const undo = (e) => {
+      const undo = (e: any) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
           if (historyRef.current.length > 1) {
             const imageData = historyRef.current[historyRef.current.length - 1];
@@ -212,7 +212,7 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
         }
       };
 
-      const startDrawing = (e) => {
+      const startDrawing = (e: any) => {
         ctx.putImageData(curImageRef.current, 0, 0);
         const imageData = curImageRef.current;
         historyRef.current.push(imageData);
@@ -233,7 +233,7 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
         lastPosRef.current.x = -1;
       };
 
-      const drawIfDrawing = (e) => {
+      const drawIfDrawing = (e: any) => {
         const rect = canvas.getBoundingClientRect();
         const x = (e.clientX - rect.left) * (canvas.width / rect.width);
         const y = (e.clientY - rect.top) * (canvas.height / rect.height);

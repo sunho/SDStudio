@@ -14,11 +14,10 @@ import {
 } from 'react-icons/fa';
 
 interface Props {
-  setSamples: (nw: number) => void;
   setCurSession: (session: Session | undefined) => void;
 }
 
-const SessionSelect: React.FC<Props> = ({ setCurSession, setSamples }) => {
+const SessionSelect: React.FC<Props> = ({ setCurSession }) => {
   const ctx = useContext(AppContext)!;
   const [sessionNames, setSessionNames] = useState<string[]>([]);
   useEffect(() => {
@@ -69,42 +68,39 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSamples }) => {
   };
 
   return (
-    <div className="px-3 py-2 border-t flex gap-3 items-center">
-      <span className="whitespace-nowrap">프로젝트: </span>
-      <div className="w-1/5 xl:w-1/4">
-        <DropdownSelect
-          menuPlacement="top"
-          selectedOption={ctx.curSession?.name}
-          options={sessionNames.map((name) => ({ label: name, value: name }))}
-          onSelect={selectSession}
-        />
-      </div>
-      <button
-        className={`${roundButton} ${primaryColor} w-18 h-8`}
-        onClick={addSession}
-      >
-        <FaPlus size={18} />
-      </button>
-      <button
-        className={`${roundButton} bg-orange-500 h-8 w-18`}
-        onClick={async () => {
-          if (!ctx.curSession) return;
-          await backend.showFile(
-            sessionService.getPath(ctx.curSession.name),
-          );
-        }}
-      >
-        <FaShare />
-      </button>
-      <button
-        className={`${roundButton} bg-red-500 w-18 h-8`}
-        onClick={deleteSession}
-      >
-        <FaTrashAlt size={18} />{' '}
-      </button>
-      <div className="flex gap-4 ml-auto">
-        <TaskQueueControl setSamples={setSamples} />
-      </div>
+    <div className="flex gap-2 items-center">
+    <span className="hidden md:inline whitespace-nowrap">프로젝트: </span>
+    <div className="md:w-1/5 xl:w-1/4">
+      <DropdownSelect
+        menuPlacement="top"
+        selectedOption={ctx.curSession?.name}
+        options={sessionNames.map((name) => ({ label: name, value: name }))}
+        onSelect={selectSession}
+      />
+    </div>
+    <button
+      className={`${roundButton} ${primaryColor} w-18 h-8`}
+      onClick={addSession}
+    >
+      <FaPlus size={18} />
+    </button>
+    <button
+      className={`${roundButton} bg-orange-500 h-8 w-18`}
+      onClick={async () => {
+        if (!ctx.curSession) return;
+        await backend.showFile(
+          sessionService.getPath(ctx.curSession.name),
+        );
+      }}
+    >
+      <FaShare />
+    </button>
+    <button
+      className={`${roundButton} bg-red-500 w-18 h-8`}
+      onClick={deleteSession}
+    >
+      <FaTrashAlt size={18} />{' '}
+    </button>
     </div>
   );
 };

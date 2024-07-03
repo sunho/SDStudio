@@ -195,7 +195,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
   const round = scene.round!;
   return (
     <div className="flex flex-col w-full h-full">
-      <div className="p-4 flex flex-none gap-2 items-center">
+      <div className="p-2 md:p-4 flex flex-none gap-2 items-center">
         {!!players.length ? (
           <span className="font-bold text-xl">
             {finalRank + 1}위 결정 이상형 월드컵 {getCurWinRank()} ({Math.floor(round.curPlayer/2) + 1}/
@@ -205,7 +205,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
           <span className="font-bold text-xl">모든 순위가 확정되었습니다</span>
         )}
       </div>
-      <div className="px-4 pb-4 flex flex-none gap-2 w-full border-b border-gray-300 pb-2">
+      <div className="px-2 pb-2 md:px-4 md:pb-4 flex flex-none gap-2 w-full border-b border-gray-300 flex-wrap">
         <button className={`${roundButton} bg-sky-500`} onClick={showFolder}>
           결과 폴더 열기
         </button>
@@ -248,8 +248,8 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
       </div>
       <div className="flex-1 w-full overflow-hidden">
         {!!(players.length && images.length) && (
-          <div className="h-full float-view-comp-width flex">
-            <div className="flex-1 justify-center items-center flex">
+          <div className="flex h-full w-full overflow-hidden flex-col md:flex-row">
+            <div className="flex-1 justify-center items-center flex overflow-hidden">
               <img
                 onClick={() => {
                   if (!lock.current){
@@ -268,8 +268,8 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
                 })}
               />
             </div>
-            <div className="bg-gray-300 w-px h-full flex-none"></div>
-            <div className="flex-1 justify-center items-cetner flex">
+            <div className="bg-gray-300 h-px w-full md:w-px md:h-full flex-none"></div>
+            <div className="flex-1 justify-center items-center flex overflow-hidden">
               <img
                 onClick={() => {
                   if (!lock.current){
@@ -279,7 +279,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
                   }
                 }}
                 className={
-                  'active:brightness-90 hover:brightness-95 cursor-pointer imageSmall flex-1 '
+                  'active:brightness-90 hover:brightness-95 cursor-pointer imageSmall'
                 }
                 src={images[1]}
                 alt={encodeContextAlt({

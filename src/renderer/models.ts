@@ -1,9 +1,10 @@
-import { ImageGenInput, Model, Resolution, Sampling } from '../main/imageGen';
+import { ImageGenInput, Model, Resolution, Sampling } from './backends/imageGen';
 import { CircularQueue } from './circularQueue';
 
 import { v4 as uuidv4 } from 'uuid';
 import ExifReader from 'exifreader';
 import { ElectornBackend } from './backends/electronBackend';
+import { AndroidBackend } from './backends/androidBackend';
 
 const PROMPT_SERVICE_INTERVAL = 5000;
 const UPDATE_SERVICE_INTERVAL = 60*1000;
@@ -22,7 +23,9 @@ const LARGE_WAIT_INTERVAL_BIAS = 500;
 const LARGE_WAIT_INTERVAL_STD = 100;
 const FAST_TASK_DEFAULT_ESTIMATE = TASK_DEFAULT_ESTIMATE - RANDOM_DELAY_BIAS * 1000 - RANDOM_DELAY_STD * 1000 / 2 + 1000;
 
-export const backend = new ElectornBackend();
+export const backend = window.electron != null ? new ElectornBackend() : new AndroidBackend();
+
+export const isMobile = window.electron == null;
 
 export function assert(condition: any, message?: string): asserts condition {
   if (!condition) {
@@ -2197,7 +2200,7 @@ export const statsGenericSceneTasks = (session: Session, scene: GenericScene) =>
   return taskQueueService.statsTasksFromScene('inpaint', getSceneKey(session, scene.name));
 };
 
-window.electron.ipcRenderer.onClose(() => {
+backend.onClose(() => {
   (async () => {
     await sessionService.saveAll();
     await backend.close();
@@ -2624,8 +2627,8 @@ export const localAIService = new LocalAIService();
 localAIService.statsModels();
 
 declare global {
-  interface Window { 
-    curSession?: Session; 
+  interface Window {
+    curSession?: Session;
     promptService: PromptService;
     sessionService: SessionService;
     imageService: ImageService;

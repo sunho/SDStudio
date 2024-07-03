@@ -3,7 +3,7 @@ import * as Hangul from 'hangul-js';
 import { DOMElement, createRef, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppContext } from './App';
 import Denque from 'denque';
-import { WordTag, backend, calcGapMatch, highlightPrompt, promptService } from './models';
+import { WordTag, backend, calcGapMatch, highlightPrompt, isMobile, promptService } from './models';
 import { FaBook, FaBox, FaBrush, FaDatabase, FaExpand, FaPaintBrush, FaTag, FaTimes, FaTimesCircle } from 'react-icons/fa';
 import { FaPerson, FaStar } from "react-icons/fa6";
 import { FixedSizeList as List } from 'react-window';
@@ -93,6 +93,7 @@ class CursorMemorizeEditor {
   autocomplete: boolean;
   historyBuf: any;
   redoBuf: any;
+  shuffling: boolean;
   constructor(
     container: HTMLElement,
     editor: HTMLElement,
@@ -122,6 +123,7 @@ class CursorMemorizeEditor {
     this.onDownArrow = onDownArrow;
     this.onEnter = onEnter;
     this.onEsc = onEsc;
+    this.shuffling = false;
   }
 
   getCaretPosition() {
@@ -347,7 +349,9 @@ class CursorMemorizeEditor {
       const collapsed = range.collapsed;
       if (koreanRegex.test(e.key || '')) {
         e.preventDefault();
+        this.shuffling = true;
         this.editor.blur();
+        this.shuffling = false;
         await this.handleInput(e.key || '', collapsed, [start, end]);
         return;
       }
@@ -536,7 +540,9 @@ class CursorMemorizeEditor {
       const range = selection.getRangeAt(0);
       const [start,end] = this.getCaretPosition();
       const collapsed = range.collapsed;
+      this.shuffling = true;
       this.clipboard.focus();
+      this.shuffling = false;
       await new Promise(resolve => requestAnimationFrame(resolve));
       await new Promise(resolve => requestAnimationFrame(resolve));
       await this.handleInput(e.data || '', collapsed, [start, end]);
@@ -661,7 +667,7 @@ const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSe
         itemCount={tags.length}
         itemSize={31}
         width={400}
-        /* 
+        /*
         // @ts-ignore */
         overscanRowCount={16}
       >
@@ -810,6 +816,16 @@ const PromptEditTextArea = ({
     editorRef.current.addEventListener('keydown', handleKeyDown);
     const handleBeforeInput = (e: any) => editor.handleBeforeInput(e);
     editorRef.current.addEventListener('beforeinput', handleBeforeInput);
+    const handleFocus = () => {
+      if (isMobile)
+        setFullScreen(true);
+    };
+    const handleBlur = () => {
+      if (isMobile && !editorModelRef.current.shuffling)
+        setFullScreen(false);
+    };
+    editorRef.current.addEventListener('focus', handleFocus);
+    editorRef.current.addEventListener('blur', handleBlur);
     const handleCompositionUpdate = (e: any) => editor.handleCompositionUpdate(e);
     if (!isMacPlatform()) {
       editorRef.current.addEventListener('compositionupdate', handleCompositionUpdate);
@@ -827,6 +843,8 @@ const PromptEditTextArea = ({
       if (editorRef.current === null) return;
       editorRef.current.removeEventListener('keydown', handleKeyDown);
       editorRef.current.removeEventListener('beforeinput', handleBeforeInput);
+      editorRef.current.removeEventListener('focus', handleFocus);
+      editorRef.current.removeEventListener('blur', handleBlur);
       if (!isMacPlatform()) {
         editorRef.current.removeEventListener('compositionupdate', handleCompositionUpdate);
       }

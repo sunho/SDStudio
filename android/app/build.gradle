@@ -1,7 +1,8 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "io.sunho.SDStudio"
+
+  namespace "io.sunho.SDStudio"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
         applicationId "io.sunho.SDStudio"
@@ -40,9 +41,12 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    implementation 'com.squareup.okhttp3:okhttp:4.9.2'
+    implementation 'com.lambdapioneer.argon2kt:argon2kt:1.5.0'
 }
 
 apply from: 'capacitor.build.gradle'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 try {
     def servicesJSON = file('google-services.json')

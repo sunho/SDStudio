@@ -25,6 +25,7 @@ import {
   getResultImages,
   getSceneKey,
   imageService,
+  isMobile,
   queueGenericScene,
   sessionService,
   swapImages,
@@ -38,11 +39,12 @@ import { userInfo } from 'os';
 import { CustomScrollbars } from './UtilComponents';
 import Tournament from './Tournament';
 import { grayLabel, roundButton } from './styles';
-import { FaFolder, FaPaintBrush, FaStar, FaTrash } from 'react-icons/fa';
+import { FaCalendarTimes, FaEdit, FaFolder, FaPaintBrush, FaStar, FaTrash } from 'react-icons/fa';
 import { PromptHighlighter } from './SceneEditor';
 import QueueControl from './SceneQueueControl';
 import { FloatView } from './FloatView';
 import memoizeOne from 'memoize-one';
+import { FaPlus } from 'react-icons/fa6';
 
 interface ImageGalleryProps {
   scene: GenericScene;
@@ -134,6 +136,10 @@ const Cell = memo(({
   }, [data, imageSize]);
 
   const isMain = !!(isMainImage && path && isMainImage(path));
+  let cellSize = isMobile ? imageSize/2.5 : imageSize;
+  if (isMobile && imageSize === 500) {
+    cellSize = style.width;
+  }
 
   return (
     <div
@@ -164,8 +170,8 @@ const Cell = memo(({
             <img
               src={image}
               style={{
-                maxWidth: imageSize,
-                maxHeight: imageSize,
+                maxWidth: cellSize,
+                maxHeight: cellSize,
               }}
               alt={encodeContextAlt({
                 type: 'image',
@@ -245,8 +251,12 @@ const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
       return () => resizeObserver.disconnect();
     }, []);
 
-    const columnWidth = imageSize;
-    const rowHeight = imageSize;
+    let columnWidth = isMobile ? imageSize/2.5 : imageSize;
+    let rowHeight = isMobile ? imageSize/2.5 : imageSize;
+    if (isMobile && imageSize === 500) {
+      columnWidth = containerWidth - 10;
+      rowHeight = containerWidth - 10;
+    }
     const columnCount = Math.max(1, Math.floor(containerWidth / columnWidth));
     // preload 4 pages
     const overcountCounts = [32, 16, 8];
@@ -373,10 +383,12 @@ const ResultDetailView = ({
     }
   });
 
+  const [showPrompt, setShowPrompt] = useState<boolean>(false);
+
   return (
-      <div className="z-10 bg-white w-full h-full flex overflow-hidden">
-        <div className="flex-none w-1/3 p-4">
-          <div className="flex gap-3 mb-6 flex-wrap w-full">
+      <div className="z-10 bg-white w-full h-full flex overflow-hidden flex-col md:flex-row">
+        <div className="flex-none md:w-1/3 p-2 md:p-4">
+          <div className="flex gap-2 md:gap-3 mb-2 md:mb-6 flex-wrap w-full">
             <button
               className={`${roundButton} bg-sky-500`}
               onClick={async () => {
@@ -385,6 +397,7 @@ const ResultDetailView = ({
             >
               파일 위치 열기
             </button>
+            {!isMobile &&
             <button
               className={`${roundButton} bg-sky-500`}
               onClick={async () => {
@@ -393,6 +406,7 @@ const ResultDetailView = ({
                 backend.watchImage(paths[selectedIndex]);
               }}
             >이미지 편집</button>
+            }
             <button
               className={`${roundButton} bg-red-500`}
               onClick={() => {
@@ -419,33 +433,38 @@ const ResultDetailView = ({
               </button>
             ))}
           </div>
-          <div className="max-w-full mb-2">
-            <span className={grayLabel}>파일이름: </span>
-            <span>{filename}</span>
-          </div>
-          <div className="w-full mb-2">
-            <div className={grayLabel}>프롬프트 </div>
-            <PromptHighlighter text={middlePrompt} className="w-full h-24 overflow-auto"/>
-          </div>
-          <div className="w-full mb-2">
-            <div className={grayLabel}>네거티브 프롬프트 </div>
-            <PromptHighlighter text={uc} className="w-full h-24 overflow-auto"/>
-          </div>
-          <div className="w-full mb-2">
-            <span className={grayLabel}>시드: </span>
-            {seed}
-          </div>
-          <div className="w-full mb-2">
-            <span className={grayLabel}>프롬프트 가이던스: </span>
-            {scale}
-          </div>
-          <div className="w-full mb-2">
-            <span className={grayLabel}>샘플러: </span>
-            {sampler}
-          </div>
-          <div className="w-full mb-2">
-            <span className={grayLabel}>스텝: </span>
-            {steps}
+          <button className={`${roundButton} bg-gray-500 md:hidden`} onClick={() => setShowPrompt(!showPrompt)}>
+            {!showPrompt ? '자세한 정보 보기' : '자세한 정보 숨기기'}
+          </button>
+          <div className={"mt-2 md:mt-0 md:block " + (showPrompt?"block":"hidden")}>
+            <div className="max-w-full mb-2">
+              <span className={grayLabel}>파일이름: </span>
+              <span>{filename}</span>
+            </div>
+            <div className="w-full mb-2">
+              <div className={grayLabel}>프롬프트 </div>
+              <PromptHighlighter text={middlePrompt} className="w-full h-24 overflow-auto"/>
+            </div>
+            <div className="w-full mb-2">
+              <div className={grayLabel}>네거티브 프롬프트 </div>
+              <PromptHighlighter text={uc} className="w-full h-24 overflow-auto"/>
+            </div>
+            <div className="w-full mb-2">
+              <span className={grayLabel}>시드: </span>
+              {seed}
+            </div>
+            <div className="w-full mb-2">
+              <span className={grayLabel}>프롬프트 가이던스: </span>
+              {scale}
+            </div>
+            <div className="w-full mb-2">
+              <span className={grayLabel}>샘플러: </span>
+              {sampler}
+            </div>
+            <div className="w-full mb-2">
+              <span className={grayLabel}>스텝: </span>
+              {steps}
+            </div>
           </div>
         </div>
         <div className="flex-1 overflow-hidden">
@@ -461,9 +480,9 @@ const ResultDetailView = ({
               className="w-full h-full object-contain bg-checkboard"
             />
           )}
-          <div className="absolute top-10 right-0 flex gap-3 p-4">
+          <div className="absolute bottom-0 right-0 md:top-10 md:right-0 flex gap-3 p-4 w-full">
             <button
-              className={`${roundButton} bg-gray-500`}
+              className={`${roundButton} h-10 md:h-auto w-20 md:w-auto bg-gray-500 mr-auto md:mr-0 text-lg md:text-base`}
               onClick={() => {
                 setSelectedIndex((selectedIndex - 1 + paths.length) % paths.length);
               }}
@@ -471,7 +490,7 @@ const ResultDetailView = ({
               이전
             </button>
             <button
-              className={`${roundButton} bg-gray-500`}
+              className={`${roundButton} h-10 md:h-auto w-20 md:w-auto bg-gray-500 text-lg md:text-base`}
               onClick={() => {
                 setSelectedIndex((selectedIndex + 1) % paths.length);
               }}
@@ -599,15 +618,17 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
           />
         </FloatView>
       )}
-      <div className="flex-none p-4 border-b border-gray-300">
-        <div className="mb-4 flex items-center">
-          <span className="font-bold text-2xl">
-            {scene.type === "inpaint" ? <span className="inline-flex items-center gap-1">
-                🖌️ 인페인트 씬 {scene.name}의 생성된 이미지</span> : <span className="inline-flex items-center gap-1">🖼️ 일반 씬 {scene.name}의 생성된 이미지</span>}
+      <div className="flex-none p-2 md:p-4 border-b border-gray-300">
+        <div className="mb-2 md:mb-4 flex items-center">
+          <span className="font-bold text-lg md:text-2xl">
+            {
+              !isMobile ? (scene.type === "inpaint" ? <span className="inline-flex items-center gap-1">🖌️ 인페인트 씬 {scene.name}의 생성된 이미지</span> : <span className="inline-flex items-center gap-1">🖼️ 일반 씬 {scene.name}의 생성된 이미지</span>)
+              : (scene.type === "inpaint" ? <span className="inline-flex items-center gap-1">🖌️ 인페인트 씬 {scene.name}</span> : <span className="inline-flex items-center gap-1">🖼️ 일반 씬 {scene.name}</span>)
+            }
           </span>
         </div>
-        <div className="flex justify-between items-center mt-4">
-          <div className="flex gap-3">
+        <div className="md:flex justify-between items-center mt-2 md:mt-4">
+          <div className="flex gap-2 md:gap-3">
             <button
               className={`${roundButton} bg-sky-500`}
               onClick={() => setTournament(true)}
@@ -619,21 +640,21 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
               onClick={async () => {
                 await queueGenericScene(curSession!, selectedPreset!, scene, samples);
               }}>
-              예약 추가
+              {!isMobile?"예약 추가":<FaPlus/>}
             </button>
             <button
               className={`${roundButton} bg-gray-500`}
               onClick={() => {
                 taskQueueService.removeTasksFromScene(scene.type === 'scene' ? 'generate' : 'inpaint', getSceneKey(curSession!, scene.name));
               }}>
-              예약 제거
+              {!isMobile?"예약 제거":<FaCalendarTimes/>}
             </button>
             <button
               className={`${roundButton} bg-orange-400`}
               onClick={() => {
                 onEdit(scene);
               }}>
-              씬 편집
+              {!isMobile?"씬 편집":<FaEdit/>}
             </button>
             <button
               className={`${roundButton} bg-sky-500`}
@@ -651,16 +672,13 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
               <FaTrash/>
             </button>
           </div>
-
-          {scene.type === 'scene' && <span className="flex ml-auto gap-2">
+          {scene.type === 'scene' && <span className="flex ml-auto gap-1 md:gap-2 mt-2 md:mt-0">
             {tabNames.map((tabName, index) => (
             <button className={`${roundButton} ` + (selectedTab === index ? 'bg-sky-500' : 'bg-gray-400')} onClick={() => setSelectedTab(index)}>
               {tabName}
             </button>
             ))}
           </span>}
-          <div className="flex gap-3">
-          </div>
         </div>
       </div>
       <div className="flex-1 pt-2 relative h-full overflow-hidden">
@@ -703,7 +721,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
           onSelected={onSelected}
         />
       </div>
-      <div className="flex absolute gap-1 m-2 bottom-0 bg-white p-1 right-0 opacity-30 hover:opacity-100 transition-all">
+      <div className="absolute gap-1 m-2 bottom-0 bg-white p-1 right-0 opacity-30 hover:opacity-100 transition-all flex">
       {selectedTab !== 1 && imagesSizes.map((size, index) => (
         <button
           key={index}
