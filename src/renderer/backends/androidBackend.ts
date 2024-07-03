@@ -293,8 +293,9 @@ export class AndroidBackend extends Backend {
 
     // Create a canvas for the output image
     const outputCanvas = document.createElement('canvas');
+    const ratio = img.height / img.width;
     outputCanvas.width = maxWidth;
-    outputCanvas.height = maxHeight;
+    outputCanvas.height = Math.floor(maxWidth * ratio);
 
     await pica.resize(canvas, outputCanvas, {
       unsharpAmount: 80,
