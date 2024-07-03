@@ -27,6 +27,7 @@ import {
   imageService,
   isMobile,
   queueGenericScene,
+  removeTaskFromGenericScene,
   sessionService,
   swapImages,
   taskQueueService,
@@ -576,6 +577,10 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
           text: '즐겨찾기 제외 n등 이하 이미지 삭제',
           value: 'n'
         },
+        {
+          text: '모든 즐겨찾기 지정 해제',
+          value: 'fav'
+        }
       ],
       callback: (value) => {
         if (value === 'all') {
@@ -586,7 +591,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
               await deleteImageFiles(curSession!, paths);
             }
           });
-        } else {
+        } else if (value === 'n') {
           pushDialog({
             type: 'input-confirm',
             text: '몇등 이하 이미지를 삭제할지 입력해주세요.',
@@ -595,6 +600,22 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
                 const n = parseInt(value);
                 await deleteImageFiles(curSession!, paths.slice(n).filter((x) => !isMainImage || !isMainImage(x)));
               }
+            }
+          });
+        } else {
+          if (scene.type === 'inpaint') {
+            pushDialog({
+              type: 'yes-only',
+              text: '인페인트 씬에서는 즐겨찾기를 지정할 수 없습니다.'
+            });
+            return;
+          }
+          pushDialog({
+            type: 'confirm',
+            text: '정말로 모든 즐겨찾기 지정을 해제하시겠습니까?',
+            callback: () => {
+              scene.mains = [];
+              sessionService.mainImageUpdated();
             }
           });
         }
@@ -645,7 +666,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
             <button
               className={`${roundButton} bg-gray-500`}
               onClick={() => {
-                taskQueueService.removeTasksFromScene(scene.type === 'scene' ? 'generate' : 'inpaint', getSceneKey(curSession!, scene.name));
+                removeTaskFromGenericScene(curSession!, scene);
               }}>
               {!isMobile?"예약 제거":<FaCalendarTimes/>}
             </button>
