@@ -79,6 +79,7 @@ const NAILogin = ({ setCurSession } : Props) => {
       </button>
       <div className="ml-auto block md:hidden">
       <SessionSelect
+        // @ts-ignore
         setCurSession={setCurSession}/>
       </div>
       {settings &&<FloatView

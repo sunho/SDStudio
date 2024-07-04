@@ -144,6 +144,7 @@ export const FileUploadBase64: React.FC<{
 interface TabProps {
   label: string;
   content: React.ReactNode;
+  banToggle?: boolean;
   emoji: React.ReactNode
   onClick?: () => void;
 }
@@ -188,7 +189,7 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs, toggleVi
           ))}
         </div>
         <div className="flex md:hidden gap-1 w-full">
-          {toggleView && <button className='active:brightness-90 hover:brightness-95 select-none h-8 md:hidden text-sm text-white bg-sky-500 px-2 flex justify-center items-center mr-auto'
+          {!tabs[activeTab].banToggle && toggleView && <button className='active:brightness-90 hover:brightness-95 select-none h-8 md:hidden text-sm text-white bg-sky-500 px-2 flex justify-center items-center mr-auto'
             onClick={() => setToggleViewOpen(!toggleViewOpen)}
             >
             {toggleViewOpen?'프롬프트 닫기':'프롬프트 열기'}
@@ -197,7 +198,7 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs, toggleVi
             <button
               key={index}
               className={
-                'active:brightness-90 hover:brightness-95 select-none px-2 text-sm ' +
+                'active:brightness-90 hover:brightness-95 select-none px-2 text-sm h-8 ' +
                 (index === activeTab
                   ? `${primaryColor} text-white`
                   : 'bg-gray-400 text-white')
@@ -210,7 +211,7 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs, toggleVi
         </div>
       </div>
       <div className="flex-1 overflow-hidden relative">
-        {toggleViewOpen&& <div className="z-10 absolute h-full w-full overflow-hidden bg-white">
+        {!tabs[activeTab].banToggle && toggleViewOpen && <div className="z-10 absolute h-full w-full overflow-hidden bg-white">
           {toggleView}
         </div>}
         {tabs.map((tab, index) => (

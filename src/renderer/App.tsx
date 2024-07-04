@@ -44,6 +44,7 @@ export interface Context {
   messages: string[];
   pushMessage: (msg: string) => void;
   pushDialog: (dialog: Dialog) => void;
+  handleFile: (file: File) => void;
   dialogs: Dialog[];
   samples: number;
 }
@@ -241,7 +242,20 @@ export default function App() {
       removeDuplicateSceneListener();
     };
   },[curSession]);
-  useEffect(() => {
+
+  const handleFile = (file: File) => {
+    if (file.type === 'application/json') {
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        try {
+          const json = JSON.parse(e.target.result);
+          handleJSONContent(file.name, json);
+        } catch (err) {
+          console.error(err);
+        }
+      };
+      reader.readAsText(file);
+    }
     const handleJSONContent = async (name: string, json: any) => {
       if (name.endsWith('.json')) {
         name = name.slice(0, -5);
@@ -356,7 +370,8 @@ export default function App() {
         handleAddSession(converted);
       }
     };
-
+  };
+  useEffect(() => {
     const handleDragOver = (event: any) => {
       event.preventDefault();
       event.dataTransfer.dropEffect = 'move';
@@ -370,16 +385,7 @@ export default function App() {
       event.preventDefault();
       const file = event.dataTransfer.files[0];
       if (file && file.type === 'application/json') {
-        const reader = new FileReader();
-        reader.onload = (e: any) => {
-          try {
-            const json = JSON.parse(e.target.result);
-            handleJSONContent(file.name, json);
-          } catch (err) {
-            console.error(err);
-          }
-        };
-        reader.readAsText(file);
+        handleFile(file);
         event.stopPropagation();
       }
     };
@@ -418,6 +424,7 @@ export default function App() {
     dialogs,
     pushMessage,
     pushDialog,
+    handleFile,
   };
 
   const tabs = [
@@ -437,7 +444,9 @@ export default function App() {
             <FloatViewProvider>
             <div className="flex flex-col flex-1 overflow-hidden">
               <div className="grow-0">
-                <NAILogin setCurSession={setCurSession} />
+                <NAILogin
+                // @ts-ignore
+                setCurSession={setCurSession} />
               </div>
               <div className="flex-1 overflow-hidden">
                 <div className="flex w-full h-full overflow-hidden">

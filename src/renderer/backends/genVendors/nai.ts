@@ -204,7 +204,7 @@ export class NovelAiImageGenService implements ImageGenService {
     // }
 
     // base64 to arraybuf do it
-    function base64ToArrayBuffer(base64) {
+    function base64ToArrayBuffer(base64: string) {
       // Decode the base64 string
       const binaryString = atob(base64);
 
@@ -220,21 +220,6 @@ export class NovelAiImageGenService implements ImageGenService {
       return bytes.buffer;
   }
     const arrayBuffer = base64ToArrayBuffer(response.data);
-    function buf2hex(buffer) { // buffer is an ArrayBuffer
-      return [...new Uint8Array(buffer)]
-          .map(x => x.toString(16).padStart(2, '0'))
-          .join('');
-    }
-    function hex2buf(hex) {
-      if (hex.length % 2 !== 0) {
-        throw new Error("Invalid hex string");
-      }
-      const buffer = new Uint8Array(hex.length / 2);
-      for (let i = 0; i < hex.length; i += 2) {
-        buffer[i / 2] = parseInt(hex.substr(i, 2), 16);
-      }
-      return buffer.buffer;
-    }
     const zip = await JSZip.loadAsync(Buffer.from(arrayBuffer));
     const zipEntries = Object.keys(zip.files);
     if (zipEntries.length === 0) {

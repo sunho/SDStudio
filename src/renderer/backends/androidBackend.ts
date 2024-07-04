@@ -7,8 +7,9 @@ import { Buffer } from 'buffer';
 import { v4 as uuidv4 } from 'uuid';
 import Pica from 'pica';
 import { NovelAiImageGenService } from "./genVendors/nai";
-
 import FetchService from "./fecthService";
+
+declare var cordova: any;
 
 const APP_DIR = "SDStudio";
 let config: Config = {};
@@ -47,6 +48,10 @@ function getDirName(filePath: string): string {
   return parts.join('/');
 }
 
+document.addEventListener('deviceready', function () {
+  cordova.plugins.backgroundMode.enable();
+}, false);
+
 export class AndroidBackend extends Backend {
   private imageGenService: ImageGenService;
   constructor() {
@@ -57,6 +62,7 @@ export class AndroidBackend extends Backend {
       directory: Directory.Documents,
     });
     this.imageGenService = new NovelAiImageGenService();
+
   }
 
   async getConfig(): Promise<Config> {

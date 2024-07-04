@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useContext, useEffect, useState } from 'react';
-import { Session, backend, sessionService, taskQueueService } from './models';
+import { Session, backend, getFirstFile, sessionService, taskQueueService } from './models';
 import { AppContext } from './App';
 import { primaryColor, roundButton } from './styles';
 import { DropdownSelect, Option } from './UtilComponents';
@@ -87,10 +87,33 @@ const SessionSelect: React.FC<Props> = ({ setCurSession }) => {
     <button
       className={`${roundButton} bg-orange-500 h-8 w-18`}
       onClick={async () => {
-        if (!ctx.curSession) return;
-        await backend.showFile(
-          sessionService.getPath(ctx.curSession.name),
-        );
+        ctx.pushDialog({
+          type: 'select',
+          text: '메뉴를 선택해주세요',
+          items: [
+            {
+              text: '불러오기',
+              value: 'load'
+            },
+            {
+              text: '내보내기',
+              value: 'save'
+            }
+          ],
+
+          callback: async (value) => {
+            if (value === 'save')  {
+              if (ctx.curSession)
+                await backend.showFile(
+                  sessionService.getPath(ctx.curSession.name),
+                );
+            } else {
+              const file = await getFirstFile();
+              ctx.handleFile(file as any);
+            }
+
+          }
+        });
       }}
     >
       <FaShare />
