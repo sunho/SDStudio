@@ -23,6 +23,9 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    buildFeatures {
+      buildConfig true
+    }
 }
 
 repositories {
@@ -43,6 +46,8 @@ dependencies {
     implementation project(':capacitor-cordova-android-plugins')
     implementation 'com.squareup.okhttp3:okhttp:4.9.2'
     implementation 'com.lambdapioneer.argon2kt:argon2kt:1.5.0'
+  implementation 'com.github.bumptech.glide:glide:4.12.0'
+  annotationProcessor 'com.github.bumptech.glide:compiler:4.12.0'
 }
 
 apply from: 'capacitor.build.gradle'

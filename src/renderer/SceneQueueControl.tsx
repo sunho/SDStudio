@@ -145,11 +145,11 @@ const SceneCell = ({
       }
     };
     refreshImage();
-    imageService.addEventListener('updated', refreshImage);
+    gameService.addEventListener('updated', refreshImage);
     sessionService.addEventListener('main-image-updated', refreshImage);
     refreshSceneImageFuncs[scene.name] = refreshImage;
     return () => {
-      imageService.removeEventListener('updated', refreshImage);
+      gameService.removeEventListener('updated', refreshImage);
       sessionService.removeEventListener('main-image-updated', refreshImage);
       delete refreshSceneImageFuncs[scene.name];
     };
