@@ -767,7 +767,10 @@ export class ImageService extends EventTarget {
     maxWidth: number,
     maxHeight: number,
   ) {
-    const scale = maxWidth <= 200 ? 1.25 : 1.1;
+    let scale = maxWidth <= 200 ? 1.25 : 1.1;
+    if (isMobile && maxWidth !== 500) {
+      scale *= 0.5;
+    }
     maxWidth = Math.ceil(scale*maxWidth);
     maxHeight = Math.ceil(scale*maxHeight);
     await backend.resizeImage({
@@ -902,10 +905,14 @@ export class ImageService extends EventTarget {
 
   async refreshBatch(session: Session) {
     for (const scene of Object.values(session.scenes)) {
-      await this.refresh(session, scene, false);
+      try {
+        await this.refresh(session, scene, false);
+      } catch(e) {}
     }
     for (const scene of Object.values(session.inpaints)) {
-      await this.refresh(session, scene, false);
+      try {
+        await this.refresh(session, scene, false);
+      } catch(e) {}
     }
     this.dispatchEvent(new CustomEvent('updated', { detail: {batch: true, session}}));
   }
@@ -919,6 +926,9 @@ export class ImageService extends EventTarget {
     }
     this.images[session.name][scene] = this.images[session.name][scene].concat([path]);
     this.images[session.name][scene].sort(naturalSort);
+    if (isMobile)
+      for (const size of supportedImageSizes)
+        this.fetchImageSmall(path, size);
     this.dispatchEvent(new CustomEvent('updated', { detail: { batch: false, session, scene: session.scenes[scene] }}));
   }
 
@@ -931,6 +941,9 @@ export class ImageService extends EventTarget {
     }
     this.inpaints[session.name][scene] = this.inpaints[session.name][scene].concat([path]);
     this.inpaints[session.name][scene].sort(naturalSort);
+    if (isMobile)
+      for (const size of supportedImageSizes)
+        this.fetchImageSmall(path, size);
     this.dispatchEvent(new CustomEvent('updated', { detail: { batch: false, session, scene: session.inpaints[scene] }}));
   }
 }

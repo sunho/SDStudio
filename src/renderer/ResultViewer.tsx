@@ -259,7 +259,7 @@ const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
     }
     const columnCount = Math.max(1, Math.floor(containerWidth / columnWidth));
     // preload 4 pages
-    const overcountCounts = [32, 16, 8];
+    const overcountCounts = isMobile ? [undefined, undefined, undefined] : [32, 16, 8];
 
     return (
       <div

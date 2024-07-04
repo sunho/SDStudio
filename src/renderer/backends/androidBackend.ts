@@ -304,9 +304,9 @@ export class AndroidBackend extends Backend {
     outputCanvas.height = Math.floor(maxWidth * ratio);
 
     await pica.resize(canvas, outputCanvas, {
-      unsharpAmount: 80,
+      unsharpAmount: 160,
       unsharpRadius: 0.6,
-      unsharpThreshold: 2
+      unsharpThreshold: 1
     });
 
     const outputBlob = await pica.toBlob(outputCanvas, 'image/png', 0.9);

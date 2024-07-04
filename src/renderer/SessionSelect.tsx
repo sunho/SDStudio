@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useContext, useEffect, useState } from 'react';
-import { Session, backend, getFirstFile, sessionService, taskQueueService } from './models';
+import { Session, backend, getFirstFile, imageService, sessionService, taskQueueService } from './models';
 import { AppContext } from './App';
 import { primaryColor, roundButton } from './styles';
 import { DropdownSelect, Option } from './UtilComponents';
@@ -52,7 +52,10 @@ const SessionSelect: React.FC<Props> = ({ setCurSession }) => {
   const selectSession = (opt: Option<string>) => {
     (async () => {
       const session = await sessionService.get(opt.value);
-      if (session) setCurSession(session);
+      if (session) {
+        imageService.refreshBatch(session);
+        setCurSession(session);
+      }
     })();
   };
 

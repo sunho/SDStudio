@@ -88,6 +88,7 @@
     }
   },
   "dependencies": {
+    "@anuradev/capacitor-background-mode": "file:externals/capacitor-background-mode",
     "@capacitor-community/http": "^1.4.1",
     "@capacitor/android": "^6.1.0",
     "@capacitor/core": "^6.1.0",
@@ -98,8 +99,6 @@
     "axios": "^1.7.2",
     "buffer": "^6.0.3",
     "chokidar": "^3.6.0",
-    "cordova-plugin-background-mode": "github:brunochikuji/cordova-plugin-background-mode",
-    "cordova-plugin-device": "^3.0.0",
     "denque": "^2.1.0",
     "electron-context-menu": "^3.6.1",
     "electron-debug": "^3.2.0",
