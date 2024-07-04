@@ -24,6 +24,7 @@ import {
   dataUriToBase64,
   queueRemoveBg,
   localAIService,
+  deleteImageFiles,
 } from './models';
 import { AppContext } from './App';
 import { FloatView } from './FloatView';
@@ -689,6 +690,48 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
     return <></>
   },[displayScene]);
 
+  const openMenu = () => {
+    ctx.pushDialog({
+      type: 'select',
+      text: '일괄 작업을 선택해주세요',
+      items: [
+        {'text': '모든 씬 즐겨찾기 배경 제거', 'value': 'removeBg'},
+        {'text': '모든 씬 이미지 전부 삭제', 'value': 'removeAll'},
+        {'text': '모든 씬 즐겨찾기 제외 n등 이하 이미지 삭제', 'value': 'removeAllExcept'},
+      ],
+      callback: async (value) => {
+        if (value === 'removeAll') {
+          ctx.pushDialog({
+            type: 'confirm',
+            text: '정말로 모든 이미지를 삭제하시겠습니까?',
+            callback: async () => {
+              for (const scene of Object.values(curSession!.scenes)) {
+                const paths = imageService.getImages(curSession, scene);
+                await deleteImageFiles(curSession!, paths);
+              }
+            }
+          });
+        } else if (value === 'removeAllExcept') {
+          ctx.pushDialog({
+            type: 'input-confirm',
+            text: '몇등 이하 이미지를 삭제할지 입력해주세요.',
+            callback: async (value) => {
+              if (value) {
+                for (const scene of Object.values(curSession!.scenes)) {
+                  const paths = imageService.getImages(curSession, scene);
+                  const n = parseInt(value);
+                  await deleteImageFiles(curSession!, paths.slice(n).filter((x) => !isMainImage || !isMainImage(x)));
+                }
+              }
+            }
+          });
+        } else {
+          removeBg();
+        }
+      }
+    })
+  }
+
   return (
     <div className={"flex flex-col h-full " + (className ?? '')}>
       {resultViewer}
@@ -714,13 +757,12 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
             </button>
           )}
           {type === 'scene' && (
-            <button
-              className={`${roundButton} ${primaryColor}`}
-              onClick={removeBg}
-            >
-              모두 배경제거
-            </button>
-          )}
+          <button
+            className={`${roundButton} ${primaryColor}`}
+            onClick={openMenu}
+          >
+            다른 일괄 작업
+          </button>)}
         </div>
         <div className="ml-auto mr-2">
           <button onClick={() => setCellSize((cellSize + 1) % 3)} className={`${roundButton} bg-gray-400`}>
