@@ -17,6 +17,7 @@ import {
   getMainImage,
   highlightPrompt,
   imageService,
+  isMobile,
   lowerPromptNode,
   promptService,
   queueScenePrompt,
@@ -25,7 +26,7 @@ import {
   taskQueueService,
 } from './models';
 import { CustomScrollbars, DropdownSelect, TabComponent, TextAreaWithUndo } from './UtilComponents';
-import { FaPlay, FaPlus, FaStop, FaTimes } from 'react-icons/fa';
+import { FaImages, FaPlay, FaPlus, FaPuzzlePiece, FaSearch, FaStar, FaStop, FaTimes } from 'react-icons/fa';
 import { FaTrash } from 'react-icons/fa';
 import { AppContext } from './App';
 import Denque from 'denque';
@@ -94,8 +95,9 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
     };
   });
 
-  return <div className="flex h-full">
-    <div className="w-1/3 g-full">
+  return <div className="flex h-full flex-col md:flex-row">
+    <div className={"overflow-auto flex-none h-1/3 md:h-auto md:w-1/3 md:h-full"}>
+      <div className="h-screen md:h-full">
       <PreSetEditor
         middlePromptMode={true}
         getMiddlePrompt={() => {
@@ -112,15 +114,16 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
           onChanged && onChanged();
         }}
         setSelectedPreset={() => {}} />
+        </div>
     </div>
-    <div className="w-2/3 h-full">
+    <div className="flex-none h-2/3 md:h-auto md:w-2/3 overflow-hidden">
       <div className="flex flex-col h-full">
         <div className="flex-1 overflow-hidden">
       {image && <img className="w-full h-full object-contain"
         src={image} />}
         </div>
-        <div className="ml-auto flex-none flex gap-4 pt-2">
-        {path && <button className={`${roundButton} bg-orange-400 h-8 w-36 flex items-center justify-center`}
+        <div className="ml-auto flex-none flex gap-4 pt-2 mb-2 md:mb-0">
+        {path && <button className={`${roundButton} bg-orange-400 h-8 md:w-36 flex items-center justify-center`}
           onClick={()=>{
             const filename = path.split('/').pop()!;
             if (!(filename in scene.mains)) {
@@ -129,12 +132,13 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
             sessionService.mainImageUpdated();
             onChanged && onChanged();
           }}
-        >즐겨찾기 지정
+        >
+          {!isMobile?"즐겨찾기 지정":<FaStar/>}
         </button>}
         <TaskProgressBar fast/>
         {!taskQueueService.isRunning() ? (
           <button
-            className={`${roundButton} bg-green-500 h-8 w-36 flex items-center justify-center`}
+            className={`${roundButton} bg-green-500 h-8 w-16 md:w-36 flex items-center justify-center`}
             onClick={() => {
               (async () => {
                 try {
@@ -370,8 +374,9 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
 
   return (
     <div className="w-full h-full overflow-hidden">
-      <div className="flex flex-col overflow-hidden flex-1 h-full">
-      <div className="grow-0 pt-2 px-3 flex gap-3 items-center">
+      <div className="flex flex-col overflow-hidden h-full w-full">
+      <div className="grow-0 pt-2 px-3 flex gap-3 items-center text-nowrap flex-wrap mb-2 md:mb-0">
+        <div className="flex items-center gap-2">
         <label>씬 이름:</label>
         <input
           className={grayInput}
@@ -381,8 +386,10 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
             setCurName(e.currentTarget.value);
           }}
         />
+        </div>
+        <div className="flex items-center gap-2 ">
         <label>해상도:</label>
-        <div className="w-36">
+        <div className="md:w-36">
           <DropdownSelect
             options={resolutionOptions}
             menuPlacement='bottom'
@@ -403,6 +410,7 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
               }
             }}
           />
+        </div>
         </div>
 
         <button
@@ -444,13 +452,13 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
       </div>
       <div className="flex-1 overflow-hidden">
         <TabComponent
-          left
           tabs={[
-            { label: '프롬프트 에디터', content: BigEditor},
-            { label: '조합 에디터', content: SmallSlotEditor },
+            { label: '프롬프트 에디터', content: BigEditor, emoji: <FaImages/>},
+            { label: '조합 에디터', content: SmallSlotEditor, emoji: <FaPuzzlePiece/>},
             {
               label: '최종 프롬프트 미리보기',
               content: PromptPreview,
+              emoji: <FaSearch/>,
               onClick: () => {
                 (async () => {
                   try {

@@ -474,6 +474,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
     buttons.push({
       text: '배경 제거 예약',
       className: 'bg-gray-500',
+      // @ts-ignore
       onClick: async (scene: Scene, path: string, close: () => void) => {
         if (!localAIService.ready) {
           ctx.pushMessage('환경설정에서 배경 제거 기능을 활성화해주세요');
