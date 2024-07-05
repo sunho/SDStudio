@@ -179,14 +179,15 @@ const SceneCell = ({
         setDisplayScene(scene);
       }}
       >
-        <div className={"p-2 text-lg text-black truncate " + cellSizes3[cellSize]}
+        <div className={"p-2 flex text-lg text-black " + cellSizes3[cellSize]}
           title={encodeContextAlt({
             type: 'scene',
             sceneType: scene.type,
             name: scene.name,
           })}
         >
-          {scene.name}
+          <div className="truncate flex-1">{scene.name}</div>
+          <div className="flex-none text-gray-400">{imageService.getOutputs(curSession!, scene).length} </div>
         </div>
       <div className={"relative image-cell flex-none overflow-hidden " + (cellSizes[cellSize])}
         title={encodeContextAlt({
