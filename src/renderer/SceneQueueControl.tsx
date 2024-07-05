@@ -585,23 +585,40 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
     sessionService.mainImageUpdated();
   };
   const exportPackage = async () => {
-    const exportImpl = async (prefix: string) => {
+    const exportImpl = async (prefix: string, fav: boolean) => {
       const paths = [];
+      await imageService.refreshBatch(curSession!);
       for (const scene of Object.values(curSession!.scenes)) {
+        await gameService.refreshList(curSession!, scene);
+        const cands = imageService.getImages(curSession!, scene);
+        const imageMap: any = {};
+        cands.map((x) => x.split('/').pop()!).forEach((x) => {
+          imageMap[x] = true;
+        });
         const images = [];
-        if (scene.mains.length) {
-          for (const main of scene.mains) {
-            images.push(imageService.getImageDir(curSession!, scene) + '/' + main);
+        if (fav) {
+          if (scene.mains.length) {
+            for (const main of scene.mains) {
+              if (imageMap[main])
+                images.push(imageService.getImageDir(curSession!, scene) + '/' + main);
+            }
+          } else {
+            if (cands.length) {
+              images.push(cands[0]);
+            }
           }
         } else {
-          const cands = imageService.getImages(curSession, scene);
-          if (cands.length) {
-            images.push(cands[0]);
+          for (const cand of cands) {
+            images.push(cand);
           }
         }
         for (let i=0;i<images.length;i++) {
           const path = images[i];
-          if (path) paths.push({ path, name: prefix + scene.name + '.' + i.toString() });
+          if (images.length === 1) {
+            paths.push({ path, name: prefix + scene.name });
+          } else {
+            paths.push({ path, name: prefix + scene.name + '.' + (i+1).toString() });
+          }
         }
       }
       const outFilePath =
@@ -612,31 +629,41 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
         '.zip';
       await backend.zipFiles(paths, outFilePath);
       await backend.showFile(outFilePath);
-      }
-      ctx.pushDialog({
-        type: 'select',
-        text: '파일 이름 형식을 선택해주세요',
-        items: [
-          { text: '(씬이름).(이미지 번호).png', value: 'normal' },
-          { text: '(캐릭터 이름).(씬이름).(이미지 번호)', value: 'prefix' },
-        ],
-        callback: async (format) => {
-          if (!format) return;
-          if (format === 'normal') {
-            await exportImpl('');
-          } else {
-            ctx.pushDialog({
-              type: 'input-confirm',
-              text: '캐릭터 이름을 입력해주세요',
-              callback: async (prefix) => {
-                if (!prefix) return;
-                await exportImpl(prefix + '.');
-              }
-            });
+    }
+    ctx.pushDialog({
+      type: 'select',
+      text: '내보낼 이미지를 선택해주세요',
+      items: [
+        { text: '즐겨찾기 이미지만 내보내기', value: 'fav'},
+        { text: '모든 이미지 전부 내보내기', value: 'all'}
+      ],
+      callback: async (menu) => {
+        ctx.pushDialog({
+          type: 'select',
+          text: '파일 이름 형식을 선택해주세요',
+          items: [
+            { text: '(씬이름).(이미지 번호).png', value: 'normal' },
+            { text: '(캐릭터 이름).(씬이름).(이미지 번호)', value: 'prefix' },
+          ],
+          callback: async (format) => {
+            if (!format) return;
+            if (format === 'normal') {
+              await exportImpl('', menu === 'fav');
+            } else {
+              ctx.pushDialog({
+                type: 'input-confirm',
+                text: '캐릭터 이름을 입력해주세요',
+                callback: async (prefix) => {
+                  if (!prefix) return;
+                  await exportImpl(prefix + '.', menu === 'fav');
+                }
+              });
+            }
           }
-        },
-      })
-    };
+        });
+      },
+    });
+  };
 
   const removeBg = async () => {
     if (!localAIService.ready) {

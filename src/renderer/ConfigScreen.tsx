@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { backend, localAIService, loginService } from './models';
+import React, { useContext, useEffect, useState } from 'react';
+import { backend, imageService, localAIService, loginService } from './models';
 import { Config, ImageEditor, ModelType, RemoveBgQuality } from '../main/config';
 import { grayInput, primaryColor, roundButton } from './styles';
+import { AppContext } from './App';
 
 interface ConfigScreenProps {
   onSave: () => void;
 }
 
 const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
+  const { curSession, pushDialog, pushMessage } = useContext(AppContext)!;
   const [imageEditor, setImageEditor] = useState('');
   const [useGPU, setUseGPU] = useState(false);
   const [ready, setReady] = useState(false);
@@ -58,6 +60,22 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
     };
   }, []);
 
+  const clearImageCache = async () => {
+    if (!curSession) return;
+    pushMessage('이미지 캐시 초기화 시작');
+    for (const scene of Object.values(curSession.scenes)) {
+      try {
+        await backend.deleteDir(imageService.getImageDir(curSession, scene) + '/fastcache');
+      } catch(e) {
+      }
+    }
+    imageService.cache.cache.clear();
+    await imageService.refreshBatch(curSession);
+    pushDialog({
+      type: 'yes-only',
+      text: '이미지 캐시 초기화 완료'
+    });
+  }
   const stageTexts = ['모델 다운로드 중...', '모델 가중치 다운로드 중...', '모델 압축 푸는 중...'];
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -158,6 +176,12 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
           </select>
         </div>
         </>}
+        <button
+          className="mt-4 w-full bg-red-500 text-white py-2 rounded hover:brightness-95 active:brightness-90"
+          onClick={clearImageCache}
+          >
+          이미지 캐시 초기화
+        </button>
         <button
           className="mt-4 w-full bg-sky-500 text-white py-2 rounded hover:brightness-95 active:brightness-90"
           onClick={async () => {
