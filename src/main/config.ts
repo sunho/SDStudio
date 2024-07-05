@@ -9,4 +9,5 @@ export interface Config {
   modelType?: ModelType;
   removeBgQuality?: RemoveBgQuality;
   useCUDA?: boolean;
+  saveLocation?: string;
 }
