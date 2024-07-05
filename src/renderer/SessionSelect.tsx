@@ -73,9 +73,9 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSelectedPreset }) =>
   };
 
   return (
-    <div className="flex gap-2 items-center">
+    <div className="flex gap-2 items-center w-full">
     <span className="hidden md:inline whitespace-nowrap">프로젝트: </span>
-    <div className="md:w-1/5 xl:w-1/4">
+    <div className="md:max-w-80 w-full">
       <DropdownSelect
         menuPlacement="top"
         selectedOption={ctx.curSession?.name}

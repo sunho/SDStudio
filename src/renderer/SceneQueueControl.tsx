@@ -44,6 +44,7 @@ import ResultViewer from './ResultViewer';
 import InPaintEditor from './InPaintEditor';
 import { base64ToDataUri } from './BrushTool';
 import { useDrag, useDrop } from 'react-dnd'
+import { getEmptyImage } from 'react-dnd-html5-backend';
 
 interface SceneCellProps {
   scene: GenericScene;
@@ -76,7 +77,7 @@ export const SceneCell = ({
   const cellSizes3 = ['w-48', 'w-36 md:w-64', ' w-96']
 
   const curIndex = Object.values(getCollection(curSession, scene.type)).indexOf(scene);
-  const [{ isDragging }, drag] = useDrag(
+  const [{ isDragging }, drag, preview] = useDrag(
     () => ({
       type: 'scene',
       item: { scene, curIndex, getImage, curSession, cellSize },
@@ -94,11 +95,15 @@ export const SceneCell = ({
     [curIndex, scene],
   )
 
+  useEffect(() => {
+    preview(getEmptyImage(), { captureDraggingState: true });
+  }, [preview]);
+
   const [, drop] = useDrop(
     () => ({
       accept: 'scene',
       hover({ scene: draggedScene, curIndex: draggedIndex } : { scene: GenericScene, curIndex: number }) {
-        if (draggedScene !== scene) {
+        if (draggedScene != scene) {
           const overIndex = Object.values(getCollection(curSession, scene.type)).indexOf(scene)
           moveScene!(draggedScene, overIndex)
         }

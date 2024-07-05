@@ -38,12 +38,15 @@ import { convertDenDenData, isValidDenDenDataFormat } from './compat';
 import { FloatViewProvider } from './FloatView';
 import { FaImage, FaImages, FaPenFancy, FaPenNib, FaPuzzlePiece } from 'react-icons/fa';
 import { Menu, Item, Separator, Submenu, useContextMenu } from 'react-contexify';
-import 'react-contexify/ReactContexify.css';
+// import 'react-contexify/ReactContexify.css';
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
+import MouseBackEnd from 'react-dnd-mouse-backend'
 import { TouchBackend } from 'react-dnd-touch-backend'
 import { usePreview } from 'react-dnd-preview'
 
+import { getEmptyImage } from 'react-dnd-html5-backend'
+import React from 'react';
 
 export interface Context {
   curSession: Session | undefined;
@@ -514,13 +517,13 @@ export default function App() {
             </FloatViewProvider>
           <div className="grow-0">
             <div className="px-3 py-2 border-t flex gap-3 items-center">
-              <div className="hidden md:block">
+              <div className="hidden md:block flex-1">
                 <SessionSelect
                   setCurSession={setCurSession}
                   setSelectedPreset={setSelectedPreset}
                 />
               </div>
-              <div className="flex gap-4 ml-auto">
+              <div className="flex flex-none gap-4 ml-auto">
                 <TaskQueueControl setSamples={setSamples} />
               </div>
             </div>
