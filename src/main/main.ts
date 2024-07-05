@@ -10,7 +10,7 @@
  */
 import path from 'path';
 import { ImageGenInput, ImageGenService } from './imageGen';
-import { app, BrowserWindow, shell, ipcMain, screen, webContents } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, screen, webContents, dialog } from 'electron';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
@@ -93,7 +93,8 @@ async function readFileAsDataURL(filePath: any) {
   }
 }
 
-const APP_DIR = app.getPath('userData') + '/' + 'SDStudio';
+const DEFAULT_APP_DIR = app.getPath('userData') + '/' + 'SDStudio';
+let APP_DIR = DEFAULT_APP_DIR;
 
 let saveCompleted = false;
 let config: Config = {};
@@ -104,7 +105,7 @@ ipcMain.handle('get-config', async (event) => {
 
 ipcMain.handle('set-config', async (event, newConfig) => {
   config = newConfig;
-  await fs.writeFile(path.join(APP_DIR, 'config.json'), JSON.stringify(config), 'utf-8');
+  await fs.writeFile(path.join(DEFAULT_APP_DIR, 'config.json'), JSON.stringify(config), 'utf-8');
 });
 
 ipcMain.handle('get-version', async (event) => {
@@ -277,6 +278,17 @@ ipcMain.handle(
       .toFile(outputPath);
   },
 );
+
+ipcMain.handle('select-dir', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
+    properties: ['openDirectory']
+  })
+  if (canceled) {
+    return
+  } else {
+    return filePaths[0]
+  }
+});
 
 const util = require('util');
 const { exec } = require('child_process');
@@ -701,19 +713,26 @@ const localAIDir = isDebug
 const localAI = new LocalAIService('http://127.0.0.1:5353');
 
 async function init() {
-  await fs.mkdir(APP_DIR, { recursive: true });
+  await fs.mkdir(DEFAULT_APP_DIR, { recursive: true });
   try {
-    config = JSON.parse(await fs.readFile(path.join(APP_DIR, 'config.json'), 'utf-8'));
+    config = JSON.parse(await fs.readFile(path.join(DEFAULT_APP_DIR, 'config.json'), 'utf-8'));
   } catch(e) {}
   const dbCsvContent = await fs.readFile(path.join(dataDir, 'db.csv'), 'utf-8');
   databases.tagDBId = native.createDB('danbooru');
   native.loadDB(databases.tagDBId, dbCsvContent);
   databases.pieceDBId = native.createDB('pieces');
+  await initFolder();
+}
+
+async function initFolder() {
+  if (config.saveLocation) {
+    APP_DIR = config.saveLocation;
+  }
+  await fs.mkdir(APP_DIR, { recursive: true });
   const handle = chokidar.watch(APP_DIR, {
     persistent: true,
     ignoreInitial: true,
   });
-
   handle.on('change', async (changedPath: string) => {
     let curPath = path.relative(APP_DIR, changedPath);
     const comps = curPath.split(path.sep);
@@ -728,7 +747,6 @@ async function init() {
 }
 
 init();
-
 
 const gotTheLock = app.requestSingleInstanceLock()
 

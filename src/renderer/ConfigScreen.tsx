@@ -58,6 +58,17 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
       text: '이미지 캐시 초기화 완료'
     });
   }
+  const selectFolder = async () => {
+    const folder = await invoke('select-dir');
+    if (!folder) return;
+    const config = await invoke('get-config');
+    config.saveLocation = folder;
+    await invoke('set-config', config);
+    pushDialog({
+      type: 'yes-only',
+      text: '저장 위치 지정 완료. 프로그램을 껏다 켜주세요'
+    })
+  };
   const stageTexts = ['모델 다운로드 중...', '모델 가중치 다운로드 중...', '모델 압축 푸는 중...'];
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -121,6 +132,12 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
           </select>
         </div>
         </>}
+        <button
+          className="mt-4 w-full bg-green-500 text-white py-2 rounded hover:brightness-95 active:brightness-90"
+          onClick={selectFolder}
+          >
+            이미지 및 데이터 저장 위치 지정
+        </button>
         <button
           className="mt-4 w-full bg-red-500 text-white py-2 rounded hover:brightness-95 active:brightness-90"
           onClick={clearImageCache}

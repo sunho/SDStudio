@@ -909,10 +909,14 @@ export class ImageService extends EventTarget {
 
   async refreshBatch(session: Session) {
     for (const scene of Object.values(session.scenes)) {
-      await this.refresh(session, scene, false);
+      try {
+        await this.refresh(session, scene, false);
+      } catch(e){}
     }
     for (const scene of Object.values(session.inpaints)) {
-      await this.refresh(session, scene, false);
+      try {
+        await this.refresh(session, scene, false);
+      } catch(e) {}
     }
     this.dispatchEvent(new CustomEvent('updated', { detail: {batch: true, session}}));
   }
