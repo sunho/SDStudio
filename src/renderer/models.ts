@@ -735,7 +735,7 @@ export class ImageService extends EventTarget {
   }
 
   async fetchImageSmall(path: string, size: number) {
-    if (size === -1) {
+    if (size === -1 || (isMobile && size === 500)) {
       return this.fetchImage(path);
     }
     const smallImagePath = this.getSmallImagePath(path, size);
@@ -771,8 +771,8 @@ export class ImageService extends EventTarget {
     maxHeight: number,
   ) {
     let scale = maxWidth <= 200 ? 1.25 : 1.1;
-    if (isMobile && maxWidth !== 500) {
-      scale *= 0.5;
+    if (isMobile) {
+      scale = 1.0;
     }
     maxWidth = Math.ceil(scale*maxWidth);
     maxHeight = Math.ceil(scale*maxHeight);

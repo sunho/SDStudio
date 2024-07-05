@@ -43,32 +43,30 @@ import Tournament from './Tournament';
 import ResultViewer from './ResultViewer';
 import InPaintEditor from './InPaintEditor';
 import { base64ToDataUri } from './BrushTool';
+import { useDrag, useDrop } from 'react-dnd'
 
 interface SceneCellProps {
   scene: GenericScene;
-  setDisplayScene: (scene: GenericScene) => void;
-  setEditingScene: (scene: GenericScene) => void;
-  setDraggingScene: (scene: GenericScene | undefined) => void;
-  getImage: (scene: GenericScene) => Promise<string | null>;
-  rerender: (obj: {}) => void;
-  draggingScene: GenericScene | undefined;
   curSession: Session;
-  refreshSceneImageFuncs: { [key: string]: () => void };
   cellSize: number;
+  getImage: (scene: GenericScene) => Promise<string | null>;
+  setDisplayScene?: (scene: GenericScene) => void;
+  setEditingScene?: (scene: GenericScene) => void;
+  moveScene?: (scene: GenericScene, index: number) => void;
+  refreshSceneImageFuncs?: { [key: string]: () => void };
+  style?: React.CSSProperties;
 }
 
-
-const SceneCell = ({
+export const SceneCell = ({
   scene,
   refreshSceneImageFuncs,
   getImage,
   setDisplayScene,
+  moveScene,
   setEditingScene,
-  setDraggingScene,
-  rerender,
-  draggingScene,
   curSession,
-  cellSize
+  cellSize,
+  style
 }: SceneCellProps) => {
   const ctx = useContext(AppContext)!;
   const [image, setImage] = useState<string | undefined>(undefined);
@@ -77,42 +75,37 @@ const SceneCell = ({
   const cellSizes2 = ['max-w-48 max-h-48', ' max-w-36 max-h-36 md:max-w-64 md:max-h-64', 'max-w-96 max-h-96']
   const cellSizes3 = ['w-48', 'w-36 md:w-64', ' w-96']
 
-  const handleDragStart = (scene: GenericScene) => {
-    setDraggingScene(scene);
-  };
+  const curIndex = Object.values(getCollection(curSession, scene.type)).indexOf(scene);
+  const [{ isDragging }, drag] = useDrag(
+    () => ({
+      type: 'scene',
+      item: { scene, curIndex, getImage, curSession, cellSize },
+      collect: (monitor) => ({
+        isDragging: monitor.isDragging(),
+      }),
+      end: (item, monitor) => {
+        const { scene: droppedScene, curIndex: droppedIndex} = item
+        const didDrop = monitor.didDrop()
+        if (!didDrop) {
+          moveScene!(droppedScene, droppedIndex)
+        }
+      },
+    }),
+    [curIndex, scene],
+  )
 
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = (
-    event: React.DragEvent<HTMLDivElement>,
-    targetScene: GenericScene,
-  ) => {
-    event.preventDefault();
-    if (draggingScene && draggingScene !== targetScene) {
-      const scenes = Object.values(getCollection(curSession, scene.type));
-      const draggingIndex = scenes.indexOf(draggingScene);
-      const targetIndex = scenes.indexOf(targetScene);
-
-      const reorderedScenes = scenes.filter((scene) => scene !== draggingScene);
-      reorderedScenes.splice(targetIndex, 0, draggingScene);
-
-      setCollection(
-        curSession,
-        scene.type,
-        reorderedScenes.reduce((acc, scene, index) => {
-          acc[scene.name] = scene;
-          return acc;
-        }, {}) as any,
-      );
-
-      sessionService.markUpdated(curSession.name);
-      rerender({});
-    }
-    setDraggingScene(undefined);
-  };
+  const [, drop] = useDrop(
+    () => ({
+      accept: 'scene',
+      hover({ scene: draggedScene, curIndex: draggedIndex } : { scene: GenericScene, curIndex: number }) {
+        if (draggedScene !== scene) {
+          const overIndex = Object.values(getCollection(curSession, scene.type)).indexOf(scene)
+          moveScene!(draggedScene, overIndex)
+        }
+      },
+    }),
+    [moveScene],
+  )
 
   const addToQueue = async (scene: GenericScene) => {
     try {
@@ -146,23 +139,23 @@ const SceneCell = ({
       }
     };
     refreshImage();
-    gameService.addEventListener('updated', refreshImage);
-    sessionService.addEventListener('main-image-updated', refreshImage);
-    refreshSceneImageFuncs[scene.name] = refreshImage;
-    return () => {
-      gameService.removeEventListener('updated', refreshImage);
-      sessionService.removeEventListener('main-image-updated', refreshImage);
-      delete refreshSceneImageFuncs[scene.name];
-    };
+    if (refreshSceneImageFuncs) {
+      gameService.addEventListener('updated', refreshImage);
+      sessionService.addEventListener('main-image-updated', refreshImage);
+      refreshSceneImageFuncs![scene.name] = refreshImage;
+      return () => {
+        gameService.removeEventListener('updated', refreshImage);
+        sessionService.removeEventListener('main-image-updated', refreshImage);
+        delete refreshSceneImageFuncs![scene.name];
+      };
+    }
   }, [scene]);
 
   return (
     <div
-      className={"relative m-2 p-1 bg-white border border-gray-300 " }
-      draggable
-      onDragStart={() => handleDragStart(scene)}
-      onDragOver={handleDragOver}
-      onDrop={(event) => handleDrop(event, scene)}
+      className={"relative m-2 p-1 bg-white border border-gray-300 " + (isDragging ? "opacity-0":"")}
+      style={style}
+      ref={(node) => drag(drop(node))}
       title={encodeContextAlt({
         type: 'scene',
         sceneType: scene.type,
@@ -176,7 +169,7 @@ const SceneCell = ({
       )}
       <div className="-z-10 active:brightness-90 hover:brightness-95 cursor-pointer bg-white"
       onClick={(event) => {
-        setDisplayScene(scene);
+        setDisplayScene?.(scene);
       }}
       >
         <div className={"p-2 flex text-lg text-black " + cellSizes3[cellSize]}
@@ -205,6 +198,7 @@ const SceneCell = ({
               sceneType: scene.type,
               name: scene.name,
             })}
+            draggable={false}
             className={"w-auto h-auto object-scale-down z-0 bg-checkboard " + cellSizes2[cellSize]}
           />
         )}
@@ -233,7 +227,7 @@ const SceneCell = ({
           className={`${roundButton} bg-orange-400`}
           onClick={(e) => {
             e.stopPropagation();
-            setEditingScene(scene);
+            setEditingScene?.(scene);
           }}
         >
           <FaEdit />
@@ -262,9 +256,6 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
     InPaintScene | undefined
   >(undefined);
   const [displayScene, setDisplayScene] = useState<GenericScene | undefined>(
-    undefined,
-  );
-  const [draggingScene, setDraggingScene] = useState<GenericScene | undefined>(
     undefined,
   );
   const refreshSceneImageFuncs = useRef<{ [key: string]: () => void }>({});
@@ -765,6 +756,25 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
     })
   }
 
+  const moveScene = (draggingScene: GenericScene, targetIndex: number) => {
+    const scenes = Object.values(getCollection(curSession, type));
+    const reorderedScenes = scenes.filter((scene) => scene !== draggingScene);
+    reorderedScenes.splice(targetIndex, 0, draggingScene);
+
+    setCollection(
+      curSession,
+      type,
+      reorderedScenes.reduce((acc, scene, index) => {
+        acc[scene.name] = scene;
+        return acc;
+      }, {}) as any,
+    );
+
+    sessionService.markUpdated(curSession.name);
+    rerender({});
+  };
+
+
   return (
     <div className={"flex flex-col h-full " + (className ?? '')}>
       {resultViewer}
@@ -817,9 +827,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
               getImage={getImage}
               setDisplayScene={setDisplayScene}
               setEditingScene={setEditingScene}
-              setDraggingScene={setDraggingScene}
-              rerender={rerender}
-              draggingScene={draggingScene}
+              moveScene={moveScene}
               curSession={curSession}
               refreshSceneImageFuncs={refreshSceneImageFuncs.current}
             />

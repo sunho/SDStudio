@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useContext, useEffect, useState } from 'react';
-import { Session, backend, getFirstFile, imageService, sessionService, taskQueueService } from './models';
+import { PreSet, Session, backend, getFirstFile, imageService, sessionService, taskQueueService } from './models';
 import { AppContext } from './App';
 import { primaryColor, roundButton } from './styles';
 import { DropdownSelect, Option } from './UtilComponents';
@@ -15,9 +15,10 @@ import {
 
 interface Props {
   setCurSession: (session: Session | undefined) => void;
+  setSelectedPreset: (presets: PreSet) => void;
 }
 
-const SessionSelect: React.FC<Props> = ({ setCurSession }) => {
+const SessionSelect: React.FC<Props> = ({ setCurSession, setSelectedPreset }) => {
   const ctx = useContext(AppContext)!;
   const [sessionNames, setSessionNames] = useState<string[]>([]);
   useEffect(() => {
@@ -55,6 +56,7 @@ const SessionSelect: React.FC<Props> = ({ setCurSession }) => {
       if (session) {
         imageService.refreshBatch(session);
         setCurSession(session);
+        setSelectedPreset(Object.values(session.presets)[0]);
       }
     })();
   };

@@ -148,6 +148,10 @@ export class ElectornBackend extends Backend {
     return await invoke('is-local-ai-running');
   }
 
+  async selectDir() {
+    return await invoke('select-dir');
+  }
+
   async removeBackground(inputImageBase64: string, outputPath: string): Promise<void> {
     await invoke('remove-bg', inputImageBase64, outputPath);
   }

@@ -56,10 +56,10 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
     selectedPreset.vibes.push({ image: vibe, info: 1.0, strength: 0.6 });
     updatePresets();
   };
+
   useEffect(() => {
-    props.setSelectedPreset(Object.values(curSession.presets)[0]);
     rerender({});
-  }, [curSession]);
+  }, [ctx.selectedPreset])
 
   const [displayVibe, setDisplayVibe] = useState<string|undefined>(undefined);
   const [samplerSetting, setSamplerSetting] = useState(false);

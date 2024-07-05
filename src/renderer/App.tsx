@@ -21,10 +21,11 @@ import {
   localAIService,
   backend,
   ImageContextAlt,
+  isMobile,
 } from './models';
 import SessionSelect from './SessionSelect';
 import PreSetEditor from './PreSetEdtior';
-import SceneQueuControl from './SceneQueueControl';
+import SceneQueuControl, { SceneCell } from './SceneQueueControl';
 import TaskQueueControl from './TaskQueueControl';
 import NAILogin from './NAILogin';
 import AlertWindow from './AlertWindow';
@@ -36,6 +37,12 @@ import QueueControl from './SceneQueueControl';
 import { convertDenDenData, isValidDenDenDataFormat } from './compat';
 import { FloatViewProvider } from './FloatView';
 import { FaImage, FaImages, FaPenFancy, FaPenNib, FaPuzzlePiece } from 'react-icons/fa';
+import { Menu, Item, Separator, Submenu, useContextMenu } from 'react-contexify';
+import 'react-contexify/ReactContexify.css';
+import { DndProvider } from 'react-dnd'
+import { HTML5Backend } from 'react-dnd-html5-backend'
+import { TouchBackend } from 'react-dnd-touch-backend'
+import { usePreview } from 'react-dnd-preview'
 
 
 export interface Context {
@@ -81,6 +88,24 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     return this.props.children;
   }
 }
+
+const DnDPreview = () => {
+  const preview = usePreview()
+  if (!preview.display) {
+    return null
+  }
+  const {itemType, item, style} = preview;
+  style['rotate'] = '3deg';
+  let res: any = null;
+  if (itemType === 'scene') {
+    const { scene, curSession, getImage, cellSize } = item as any;
+    res = <SceneCell scene={scene} curSession={curSession} getImage={getImage} cellSize={cellSize} style={style} />
+  } else {
+    return <></>
+  }
+  return res;
+}
+
 
 export default function App() {
   useEffect(() => {
@@ -435,18 +460,31 @@ export default function App() {
 
   return (
     <AppContext.Provider value={ctx}>
+      <DndProvider backend={isMobile ? TouchBackend : HTML5Backend} options={{
+        delayTouchStart: 400,
+      }}>
       <div className="flex flex-col relative h-screen w-screen overflow-hidden">
+        <div className="z-30">
+        <DnDPreview/>
+        </div>
         <ErrorBoundary
           onErr={(error, errorInfo) => {
             pushMessage(`${error.message}`);
           }}
         >
+            <Menu id={52}>
+              <Item id="copy" >Copy</Item>
+              <Item id="cut" >Cut</Item>
+              <Separator />
+              <Item disabled>Disabled</Item>
+            </Menu>
             <FloatViewProvider>
             <div className="flex flex-col flex-1 overflow-hidden">
               <div className="grow-0">
                 <NAILogin
-                // @ts-ignore
-                setCurSession={setCurSession} />
+                setCurSession={setCurSession}
+                setSelectedPreset={setSelectedPreset}
+                 />
               </div>
               <div className="flex-1 overflow-hidden">
                 <div className="flex w-full h-full overflow-hidden">
@@ -479,6 +517,7 @@ export default function App() {
               <div className="hidden md:block">
                 <SessionSelect
                   setCurSession={setCurSession}
+                  setSelectedPreset={setSelectedPreset}
                 />
               </div>
               <div className="flex gap-4 ml-auto">
@@ -491,6 +530,7 @@ export default function App() {
         <ConfirmWindow setDialogs={setDialogs} />
         <PromptTooltip />
       </div>
+      </DndProvider>
     </AppContext.Provider>
   );
 }

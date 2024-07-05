@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from 'react';
-import { loginService } from './models';
+import { PreSet, Session, loginService } from './models';
 import { AppContext } from './App';
 import { grayInput, primaryColor, roundButton } from './styles';
 import { FloatView } from './FloatView';
@@ -7,10 +7,11 @@ import ConfigScreen from './ConfigScreen';
 import SessionSelect from './SessionSelect';
 
 interface Props {
-  setCurSession: (session: string) => void;
+  setCurSession: (session: Session|undefined) => void;
+  setSelectedPreset: (presets: PreSet) => void;
 }
 
-const NAILogin = ({ setCurSession } : Props) => {
+const NAILogin = ({ setCurSession, setSelectedPreset } : Props) => {
   const ctx = useContext(AppContext)!;
   const [loggedIn, setLoggedIn] = useState(false);
   const [email, setEmail] = useState('');
@@ -79,8 +80,9 @@ const NAILogin = ({ setCurSession } : Props) => {
       </button>
       <div className="ml-auto block md:hidden">
       <SessionSelect
-        // @ts-ignore
-        setCurSession={setCurSession}/>
+        setCurSession={setCurSession}
+        setSelectedPreset={setSelectedPreset}
+        />
       </div>
       {settings &&<FloatView
         priority={1}

@@ -163,7 +163,11 @@ const Cell = memo(({
       }}
       onDragStart={() => handleDragStart(index)}
       onDrop={() => handleDrop(index)}
+      onDrag={(e) => {
+
+      }}
       onDragOver={handleDragOver}
+      onDragEnter={(e)=>{e.preventDefault();}}
     >
       {path && image && (
         <>
@@ -186,8 +190,8 @@ const Cell = memo(({
               }
             />
             {isMain && (
-              <div className="absolute left-0 top-0 z-10 text-yellow-400 m-2">
-                <FaStar size={30} />
+              <div className="absolute left-0 top-0 z-10 text-yellow-400 m-2 text-md ">
+                <FaStar/>
               </div>
             )}
           </div>
