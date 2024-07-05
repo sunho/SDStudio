@@ -7,7 +7,7 @@ import { FileOpener, FileOpenerOptions } from '@capacitor-community/file-opener'
 import { Buffer } from 'buffer';
 import { v4 as uuidv4 } from 'uuid';
 import Pica from 'pica';
-import { NovelAiImageGenService } from "./genVendors/nai";
+import { NovelAiFetcher, NovelAiImageGenService } from "./genVendors/nai";
 import FetchService from "./fecthService";
 import JSZip from "jszip";
 
@@ -52,9 +52,32 @@ function getDirName(filePath: string): string {
   return parts.join('/');
 }
 
-document.addEventListener('deviceready', function () {
-  cordova.plugins.backgroundMode.enable();
-}, false);
+class AndroidFetcher implements NovelAiFetcher {
+  async fetchArrayBuffer(url: string, body: any, headers: any): Promise<ArrayBuffer> {
+    const controller = new AbortController();
+    const response = await FetchService.fetchData({
+      url: url,
+      body: JSON.stringify(body),
+      headers: JSON.stringify(headers),
+    });
+    function base64ToArrayBuffer(base64: string) {
+      // Decode the base64 string
+      const binaryString = atob(base64);
+
+      // Create a new ArrayBuffer with the same length as the binary string
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+
+      // Write the decoded binary string to the array buffer
+      for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      return bytes.buffer;
+    }
+    return base64ToArrayBuffer(response.data);
+  }
+}
 
 export class AndroidBackend extends Backend {
   private imageGenService: ImageGenService;
@@ -65,7 +88,7 @@ export class AndroidBackend extends Backend {
       recursive: true,
       directory: Directory.Documents,
     });
-    this.imageGenService = new NovelAiImageGenService();
+    this.imageGenService = new NovelAiImageGenService(new AndroidFetcher);
 
   }
 

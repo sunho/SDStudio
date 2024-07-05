@@ -18,7 +18,12 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
-
+    "baseUrl": "./",
+    "paths": {
+      "crypto": [
+        "node_modules/crypto-js"
+      ]
+    }
   },
   "include": ["src/renderer"]
 }

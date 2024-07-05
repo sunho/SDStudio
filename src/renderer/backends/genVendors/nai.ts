@@ -6,24 +6,22 @@ import {
   ImageGenService,
 } from '../imageGen';
 
-import path from 'path';
 import JSZip from 'jszip';
+import { Buffer } from 'buffer';
 
-const TIMEOUT_SECONDS = 120;
-
-import FetchService from '../fecthService';
-
-import axios from 'axios';
 import libsodium_wrappers_sumo_1 from 'libsodium-wrappers-sumo';
-import { connect } from 'http2';
-import { CapacitorHttp } from '@capacitor/core';
+
+export interface NovelAiFetcher {
+  fetchArrayBuffer(url: string, body: any, headers: any): Promise<ArrayBuffer>;
+}
 
 export class NovelAiImageGenService implements ImageGenService {
-  constructor() {
+  constructor(fetcher: NovelAiFetcher) {
     this.apiEndpoint = 'https://api.novelai.net';
     this.headers = {
       'Content-Type': 'application/json',
     };
+    this.fetcher = fetcher;
   }
 
   private translateModel(model: Model): string {
@@ -68,6 +66,7 @@ export class NovelAiImageGenService implements ImageGenService {
 
   private apiEndpoint: string;
   private headers: any;
+  private fetcher: NovelAiFetcher;
 
   private getRandomInt(min: number, max: number): number {
     min = Math.ceil(min);
@@ -162,64 +161,13 @@ export class NovelAiImageGenService implements ImageGenService {
       body.parameters.image = params.image;
       body.parameters.mask = params.mask;
     }
-    console.log(body);
-
-
-    const options = {
-      data: body,
-      cache:  "no-cache",
-      responseType: 'arraybuffer',
-      readTimeout: TIMEOUT_SECONDS * 1000,
-      connectTimeout: TIMEOUT_SECONDS * 1000,
-      url: url + '/ai/generate-image',
-    };
 
     const headers = {
       'Authorization': `Bearer ${authorization}`,
       'Content-Type': 'application/json',
     };
-    const response = await FetchService.fetchData({
-      url: url+'/ai/generate-image',
-      body: JSON.stringify(body),
-      headers: JSON.stringify(headers),
-    });
 
-    // const response = await fetch(url + '/ai/generate-image', {
-    //   method: 'POST',
-    //   headers: {
-    //     ...this.headers,
-    //     'Content-Type': 'application/json',
-    //     'Authorization': `Bearer ${authorization}`,
-    //   },
-    //   body: JSON.stringify(body),
-    //   signal: controller.signal,
-    // });
-
-    // const response = await CapacitorHttp.post(options);
-
-    // Clear the timeout if the request completes in time
-
-    // if (response.status !== 200) {
-    //   throw new Error(`HTTP error! status: ${response.status}`);
-    // }
-
-    // base64 to arraybuf do it
-    function base64ToArrayBuffer(base64: string) {
-      // Decode the base64 string
-      const binaryString = atob(base64);
-
-      // Create a new ArrayBuffer with the same length as the binary string
-      const len = binaryString.length;
-      const bytes = new Uint8Array(len);
-
-      // Write the decoded binary string to the array buffer
-      for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-      }
-
-      return bytes.buffer;
-  }
-    const arrayBuffer = base64ToArrayBuffer(response.data);
+    const arrayBuffer = await this.fetcher.fetchArrayBuffer(url + '/ai/generate-image', body, headers);
     const zip = await JSZip.loadAsync(Buffer.from(arrayBuffer));
     const zipEntries = Object.keys(zip.files);
     if (zipEntries.length === 0) {

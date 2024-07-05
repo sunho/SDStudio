@@ -2,15 +2,35 @@ import { Config } from "../../main/config";
 import { ImageGenInput, ImageGenService } from "./imageGen";
 import { Backend, FileEntry, ResizeImageInput } from "../backend";
 import { SceneContextAlt, ContextAlt, ImageContextAlt } from "../models";
-import { NovelAiImageGenService } from "./genVendors/nai";
+import { NovelAiFetcher, NovelAiImageGenService } from "./genVendors/nai";
 
 const invoke = window.electron?.ipcRenderer?.invoke;
+
+class ElectronFetcher implements NovelAiFetcher {
+  async fetchArrayBuffer(url: string, body: any, headers: any): Promise<Uint8Array> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 120 * 1000);
+    const response = await fetch(url, {
+      body: JSON.stringify(body),
+      headers: headers,
+      method: 'POST',
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch: ${response.statusText}`);
+    }
+    return new Uint8Array(await response.arrayBuffer());
+  }
+}
 
 export class ElectornBackend extends Backend {
   private imageGenService: ImageGenService;
   constructor() {
     super();
-    this.imageGenService = new NovelAiImageGenService();
+    this.imageGenService = new NovelAiImageGenService(new ElectronFetcher);
   }
 
   async getConfig(): Promise<Config> {

@@ -485,9 +485,9 @@ const ResultDetailView = ({
               className="w-full h-full object-contain bg-checkboard"
             />
           )}
-          <div className="absolute bottom-0 right-0 md:top-10 md:right-0 flex gap-3 p-4 w-full">
+          <div className="absolute bottom-0 md:bottom-auto right-0 md:top-10 flex gap-3 p-4 w-full md:w-auto">
             <button
-              className={`${roundButton} h-10 md:h-auto w-20 md:w-auto bg-gray-500 mr-auto md:mr-0 text-lg md:text-base`}
+              className={`${roundButton} ml-0 md:ml-auto h-10 md:h-auto w-20 md:w-auto bg-gray-500 mr-auto md:mr-0 text-lg md:text-base`}
               onClick={() => {
                 setSelectedIndex((selectedIndex - 1 + paths.length) % paths.length);
               }}
