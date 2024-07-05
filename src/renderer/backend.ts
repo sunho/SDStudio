@@ -37,6 +37,7 @@ export abstract class Backend {
   abstract deleteFile(filename: string): Promise<void>;
   abstract deleteDir(filename: string): Promise<void>;
   abstract trashFile(filename: string): Promise<void>;
+  abstract selectDir(): Promise<string|undefined>;
   abstract close(): Promise<void>;
   abstract existFile(filename: string): Promise<boolean>;
   abstract download(url: string, dest: string, filename: string): Promise<void>;

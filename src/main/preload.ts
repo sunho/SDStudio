@@ -38,7 +38,8 @@ export type Channels =
   | 'load-model'
   | 'extract-zip'
   | 'download'
-  | 'remove-bg';
+  | 'remove-bg'
+  | 'select-dir';
 
 const electronHandler = {
   ipcRenderer: {

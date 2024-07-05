@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { backend, imageService, localAIService, loginService } from './models';
+import { backend, imageService, isMobile, localAIService, loginService } from './models';
 import { Config, ImageEditor, ModelType, RemoveBgQuality } from '../main/config';
 import { grayInput, primaryColor, roundButton } from './styles';
 import { AppContext } from './App';
@@ -77,11 +77,11 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
     });
   }
   const selectFolder = async () => {
-    const folder = await invoke('select-dir');
+    const folder = await backend.selectDir();
     if (!folder) return;
-    const config = await invoke('get-config');
+    const config = await backend.getConfig();
     config.saveLocation = folder;
-    await invoke('set-config', config);
+    await backend.setConfig(config);
     pushDialog({
       type: 'yes-only',
       text: '저장 위치 지정 완료. 프로그램을 껏다 켜주세요'
@@ -129,7 +129,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
           </div>
 
         </div>
-        <div className="mb-4">
+        {!isMobile && <> <div className="mb-4">
           <label htmlFor="imageEditor" className="block text-sm font-medium text-gray-700">
             선호 이미지 편집기
           </label>
@@ -192,7 +192,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
           onClick={selectFolder}
           >
             이미지 및 데이터 저장 위치 지정
-        </button>
+        </button></>}
         <button
           className="mt-4 w-full bg-red-500 text-white py-2 rounded hover:brightness-95 active:brightness-90"
           onClick={clearImageCache}

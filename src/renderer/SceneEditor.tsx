@@ -38,6 +38,7 @@ import PromptEditTextArea from './PromptEditTextArea';
 import PreSetEditor from './PreSetEdtior';
 import { TaskProgressBar } from './TaskQueueControl';
 import { Resolution, resolutionMap } from './backends/imageGen';
+import { FloatView } from './FloatView';
 
 interface Props {
   scene: Scene;
@@ -95,26 +96,53 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
     };
   });
 
+  const getMiddlePrompt = () => {
+    if (scene.slots.length === 0 || scene.slots[0].length === 0) {
+      return '';
+    }
+    return scene.slots[0][0].prompt
+  };
+  const onMiddlePromptChange = (txt: string) => {
+    if (scene.slots.length === 0 || scene.slots[0].length === 0) {
+      return;
+    }
+    scene.slots[0][0].prompt = txt;
+    onChanged && onChanged();
+  }
+
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [editDisabled, setEditDisabled] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setEditDisabled(false);
+    }, 100);
+    return () => {
+      clearTimeout(timer);
+    };
+  },[]);
+
   return <div className="flex h-full flex-col md:flex-row">
-    <div className={"overflow-auto flex-none h-1/3 md:h-auto md:w-1/3 md:h-full"}>
-      <div className="h-screen md:h-full">
+    {promptOpen && <FloatView priority={0} onEscape={()=>{setPromptOpen(false)}}>
       <PreSetEditor
         middlePromptMode={true}
-        getMiddlePrompt={() => {
-          if (scene.slots.length === 0 || scene.slots[0].length === 0) {
-            return '';
-          }
-          return scene.slots[0][0].prompt
-        }}
-        onMiddlePromptChange={(txt) => {
-          if (scene.slots.length === 0 || scene.slots[0].length === 0) {
-            return;
-          }
-          scene.slots[0][0].prompt = txt;
-          onChanged && onChanged();
-        }}
+        getMiddlePrompt={getMiddlePrompt}
+        onMiddlePromptChange={onMiddlePromptChange}
         setSelectedPreset={() => {}} />
-        </div>
+    </FloatView>}
+    <div className={"overflow-auto flex-none h-1/3 md:h-auto md:w-1/3 md:h-full"}>
+      <div className={"hidden md:block h-full "}>
+        <PreSetEditor
+          middlePromptMode={true}
+          getMiddlePrompt={getMiddlePrompt}
+          onMiddlePromptChange={onMiddlePromptChange}
+          setSelectedPreset={() => {}} />
+      </div>
+      <div className="h-full flex flex-col p-2">
+        <div className="flex-none font-bold">중위 프롬프트 (이 씬에만 적용됨):</div>
+        <div className="flex-1 p-2"><PromptEditTextArea disabled={editDisabled} onChange={onMiddlePromptChange} value={getMiddlePrompt()}/></div>
+        <div className="flex-none"><button className={`${roundButton} ${primaryColor}`} onClick={() => setPromptOpen(true)}>상세설정</button></div>
+      </div>
     </div>
     <div className="flex-none h-2/3 md:h-auto md:w-2/3 overflow-hidden">
       <div className="flex flex-col h-full">
@@ -160,7 +188,7 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
           </button>
         ) : (
           <button
-            className={`${roundButton} bg-red-500 h-8 w-36 flex items-center justify-center`}
+            className={`${roundButton} bg-red-500 h-8 w-16 md:w-36 flex items-center justify-center`}
             onClick={() => {
               taskQueueService.removeAllTasks();
               taskQueueService.stop();

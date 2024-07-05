@@ -1,13 +1,15 @@
 import { Config } from "../../main/config";
 import { ImageGenInput, ImageGenService } from "./imageGen";
 import { Backend, FileEntry, ResizeImageInput } from "../backend";
-import { SceneContextAlt, ContextAlt, ImageContextAlt } from "../models";
+import { SceneContextAlt, ContextAlt, ImageContextAlt, dataUriToBase64 } from "../models";
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { FileOpener, FileOpenerOptions } from '@capacitor-community/file-opener';
 import { Buffer } from 'buffer';
 import { v4 as uuidv4 } from 'uuid';
 import Pica from 'pica';
 import { NovelAiImageGenService } from "./genVendors/nai";
 import FetchService from "./fecthService";
+import JSZip from "jszip";
 
 declare var cordova: any;
 
@@ -24,21 +26,23 @@ function extname(filename: string): string {
 function getMimeType(filePath: any) {
   const ext = extname(filePath).toLowerCase();
   switch (ext) {
-    case '.jpeg':
-    case '.jpg':
+    case 'jpeg':
+    case 'jpg':
       return 'image/jpeg';
-    case '.png':
+    case 'png':
       return 'image/png';
-    case '.gif':
+    case 'gif':
       return 'image/gif';
-    case '.pdf':
+    case 'pdf':
       return 'application/pdf';
-    case '.txt':
+    case 'txt':
       return 'text/plain';
-    case '.html':
+    case 'html':
       return 'text/html';
+    case 'zip':
+      return 'application/zip';
     default:
-      return 'application/octet-stream';
+      return 'vnd.android.document/directory';
   }
 }
 
@@ -99,11 +103,43 @@ export class AndroidBackend extends Backend {
   }
 
   async showFile(arg: string): Promise<void> {
-    return;
+    const urlRes = await Filesystem.getUri({
+      path: `${APP_DIR}/${arg}`,
+      directory: Directory.Documents,
+    });
+    let mime = getMimeType(arg);
+    if (mime.startsWith('image')) {
+      mime = "image/*";
+    }
+    const fileOpenerOptions: FileOpenerOptions = {
+      filePath: urlRes.uri,
+      openWithDefault: false
+    };
+    await FileOpener.open(fileOpenerOptions);
   }
 
   async zipFiles(files: FileEntry[], outPath: string): Promise<void> {
-    return;
+    const zip = new JSZip();
+
+    for (const file of files) {
+      const content = await this.readDataFile(file.path);
+      zip.file(file.name + '.png', dataUriToBase64(content), {
+        base64: true
+      });
+    }
+
+    const zipContent = await zip.generateAsync({ type: 'blob' });
+
+    const reader = new FileReader();
+    reader.readAsDataURL(zipContent);
+    await new Promise<void>((resolve, reject) => {
+      reader.onloadend = () => {
+        const base64data = reader.result as string;
+        const base64Content = base64data.split(',')[1];
+        this.writeDataFile(outPath, base64Content).then(resolve).catch(reject);
+      };
+      reader.onerror = reject;
+    });
   }
 
   async searchTags(word: string): Promise<any> {
@@ -351,6 +387,10 @@ export class AndroidBackend extends Backend {
 
   async removeBackground(inputImageBase64: string, outputPath: string): Promise<void> {
     return;
+  }
+
+  async selectDir(): Promise<string | undefined> {
+    return undefined;
   }
 
   onDownloadProgress(callback: (progress: any) => void | Promise<void>): () => void{
