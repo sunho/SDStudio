@@ -709,6 +709,22 @@ async function init() {
   databases.tagDBId = native.createDB('danbooru');
   native.loadDB(databases.tagDBId, dbCsvContent);
   databases.pieceDBId = native.createDB('pieces');
+  const handle = chokidar.watch(APP_DIR, {
+    persistent: true,
+    ignoreInitial: true,
+  });
+
+  handle.on('change', async (changedPath: string) => {
+    let curPath = path.relative(APP_DIR, changedPath);
+    const comps = curPath.split(path.sep);
+    if (comps.length === 0) return;
+    if (comps[0] === '.') {
+      comps.shift();
+    }
+    if (comps[0] === 'outs' || comps[0] === 'inpaints') {
+      mainWindow!.webContents.send('image-changed', comps.join('/'));
+    }
+  });
 }
 
 init();

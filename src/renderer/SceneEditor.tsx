@@ -426,12 +426,12 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
               text: '정말로 해당 씬을 삭제하시겠습니까?',
               callback: async () => {
                 delete curSession!.scenes[scene.name];
-                await invoke('trash-file', imageService.getOutputDir(curSession!, scene));
                 updateScene();
                 onClosed();
                 if (onDeleted) {
                   onDeleted();
                 }
+                await invoke('trash-file', imageService.getOutputDir(curSession!, scene));
               },
             });
           }}

@@ -693,6 +693,9 @@ export class ImageService extends EventTarget {
   }
 
   async invalidateCache(path: string) {
+    if (path.includes('fastcache')) {
+      return;
+    }
     await this.acquireMutex(path);
     for (const imageSize of supportedImageSizes) {
       const smallPath = this.getSmallImagePath(path, imageSize);
