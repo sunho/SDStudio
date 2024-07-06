@@ -445,27 +445,7 @@ export class AndroidBackend extends Backend {
     return () => {};
   }
 
-  onDuplicateScene(callback: (ctx: SceneContextAlt) => void | Promise<void>): () => void {
-    return () => {};
-  }
-
   onImageChanged(callback: (path: string) => void | Promise<void>): () => void {
-    return () => {};
-  }
-
-  onDuplicateImage(callback: (ctx: ImageContextAlt) => void | Promise<void>): () => void {
-    return () => {};
-  }
-
-  onCopyImage(callback: (ctx: ImageContextAlt) => void | Promise<void>): () => void {
-    return () => {};
-  }
-
-  onMoveSceneFront(callback: (ctx: SceneContextAlt) => void | Promise<void>): () => void {
-    return () => {};
-  }
-
-  onMoveSceneBack(callback: (ctx: SceneContextAlt) => void | Promise<void>): () => void {
     return () => {};
   }
 

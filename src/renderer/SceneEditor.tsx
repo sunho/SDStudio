@@ -40,6 +40,8 @@ import { TaskProgressBar } from './TaskQueueControl';
 import { Resolution, resolutionMap } from './backends/imageGen';
 import { FloatView } from './FloatView';
 import { v4 as uuidv4 } from 'uuid';
+import { useDrag, useDrop } from 'react-dnd';
+import { getEmptyImage } from 'react-dnd-html5-backend';
 
 interface Props {
   scene: Scene;
@@ -139,9 +141,9 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
           onMiddlePromptChange={onMiddlePromptChange}
           setSelectedPreset={() => {}} />
       </div>
-      <div className="h-full flex flex-col p-2">
+      <div className="h-full flex flex-col p-2 overflow-hidden block md:hidden">
         <div className="flex-none font-bold">중위 프롬프트 (이 씬에만 적용됨):</div>
-        <div className="flex-1 p-2"><PromptEditTextArea disabled={editDisabled} onChange={onMiddlePromptChange} value={getMiddlePrompt()}/></div>
+        <div className="flex-1 p-2 overflow-hidden"><PromptEditTextArea disabled={editDisabled} onChange={onMiddlePromptChange} value={getMiddlePrompt()}/></div>
         <div className="flex-none"><button className={`${roundButton} ${primaryColor}`} onClick={() => setPromptOpen(true)}>상세설정</button></div>
       </div>
     </div>
@@ -204,6 +206,94 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
   </div>
 };
 
+interface SlotPieceProps {
+  scene: Scene;
+  piece: PromptPiece;
+  onChanged?: () => void;
+  removePiece?: (piece: PromptPiece) => void;
+  moveSlotPiece?: (from: string, to: string) => void;
+  style?: React.CSSProperties;
+}
+
+export const SlotPiece = ({ scene, piece, onChanged, removePiece, moveSlotPiece, style }: SlotPieceProps) => {
+  const [{ isDragging }, drag, preview] = useDrag(
+    () => ({
+      type: 'slot',
+      item: { scene, piece },
+      collect: (monitor) => {
+        return {
+          isDragging: monitor.isDragging(),
+        }
+      },
+    }),
+    [scene, piece],
+  )
+
+  const [{ isOver }, drop] = useDrop(
+    () => ({
+      accept: 'slot',
+      canDrop: () => true,
+      collect: (monitor) => {
+        if (monitor.isOver()) {
+          return {
+            isOver: true,
+          }
+        }
+        return { isOver: false }
+      },
+      drop: async (item: any, monitor) => {
+        if (!moveSlotPiece) return;
+        moveSlotPiece(item.piece.id, piece.id!);
+      },
+    }), [scene, piece],
+  )
+
+  useEffect(() => {
+    preview(getEmptyImage(), { captureDraggingState: true });
+  }, [preview]);
+
+  return <div
+    key={piece.id!}
+    ref={(node) => drag(drop(node))}
+    style={style}
+    className={'p-3 m-2 bg-gray-200 rounded-xl ' + (isDragging ? 'opacity-0' : '') + (isOver ? ' outline outline-sky-500' : '')}
+  >
+    <div className={"mb-3 h-24 w-48"}>
+    <PromptEditTextArea
+      whiteBg
+      disabled={!moveSlotPiece}
+      value={piece.prompt}
+      onChange={(s) => {
+        if (!moveSlotPiece) return;
+        piece.prompt = s;
+        onChanged && onChanged();
+      }}
+    />
+    </div>
+    <div className="flex gap-2">
+      <label>활성화</label>
+      <input
+        type="checkbox"
+        checked={piece.enabled}
+        onChange={(e) => {
+          if (!moveSlotPiece) return;
+          piece.enabled = e.currentTarget.checked;
+          onChanged && onChanged();
+        }}
+      />
+      <button
+        className="active:brightness-90 hover:brightness-95 ml-auto"
+        onClick={() => {
+          if (!moveSlotPiece) return;
+          removePiece && removePiece(piece);
+        }}
+      >
+        <FaTrash size={20} color="#ef4444" />
+      </button>
+    </div>
+  </div>
+}
+
 const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
   const textAreaRef = useRef<any>([]);
   const [_, rerender] = useState<{}>({});
@@ -217,11 +307,6 @@ const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
       }
     }
   },[scene]);
-  const dragItem = useRef<{
-    piece: PromptPiece;
-    slotIndex: number;
-    pieceIndex: number;
-  } | null>(null);
 
   useEffect(() => {
     let dirty = false;
@@ -242,56 +327,42 @@ const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
     }
   });
 
-  const onDragStart = (
-    e: any,
-    piece: PromptPiece,
-    slotIndex: number,
-    pieceIndex: number,
-  ) => {
-    const eleRef = textAreaRef.current[slotIndex]?.[pieceIndex]?.current;
-    if (eleRef) {
-      const rect = eleRef.getBoundingClientRect();
-      const isWithinElement =
-        e.clientX >= rect.left &&
-        e.clientX <= rect.right &&
-        e.clientY >= rect.top &&
-        e.clientY <= rect.bottom;
-      if (isWithinElement) {
-        e.preventDefault();
-        return;
-      }
+  const removePiece = (slot: PromptPieceSlot, pieceIndex: number) => {
+    slot.splice(pieceIndex, 1);
+    if (slot.length === 0) {
+      scene.slots.splice(scene.slots.indexOf(slot), 1);
     }
-    dragItem.current = { piece, slotIndex, pieceIndex };
-    e.dataTransfer.effectAllowed = 'move';
+    onChanged && onChanged();
+    rerender({});
   };
 
-  const onDragOver = (e: any) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const onDrop = (
-    e: any,
-    targetSlotIndex: number,
-    targetPieceIndex: number,
+  const moveSlotPiece = (
+    from: string,
+    to: string,
   ) => {
-    e.preventDefault();
-    const { piece, slotIndex, pieceIndex } = dragItem.current!;
-
-    if (slotIndex === targetSlotIndex && pieceIndex === targetPieceIndex) {
-      dragItem.current = null;
+    if (from === to)
       return;
-    }
+    const fromSlotIndex = scene.slots.findIndex((slot) =>
+      slot.some((piece) => piece.id === from),
+    );
+    const fromPieceIndex = scene.slots[fromSlotIndex].findIndex(
+      (piece) => piece.id === from,
+    );
+    const toSlotIndex = scene.slots.findIndex((slot) =>
+      slot.some((piece) => piece.id === to),
+    );
+    const toPieceIndex = scene.slots[toSlotIndex].findIndex(
+      (piece) => piece.id === to,
+    );
 
-    scene.slots[slotIndex].splice(pieceIndex, 1);
-    scene.slots[targetSlotIndex].splice(targetPieceIndex, 0, piece);
-    if (scene.slots[slotIndex].length === 0) {
-      scene.slots.splice(slotIndex, 1);
+    const piece = scene.slots[fromSlotIndex][fromPieceIndex];
+    scene.slots[fromSlotIndex].splice(fromPieceIndex, 1);
+    scene.slots[toSlotIndex].splice(toPieceIndex, 0, piece);
+    if (scene.slots[fromSlotIndex].length === 0) {
+      scene.slots.splice(fromSlotIndex, 1);
     }
 
     onChanged && onChanged();
-
-    dragItem.current = null;
   };
 
   return (
@@ -299,49 +370,7 @@ const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
       {scene.slots.map((slot, slotIndex) => (
         <div key={slotIndex}>
           {slot.map((piece, pieceIndex) => (
-            <div
-              key={piece.id!}
-              draggable
-              onDragStart={(e) => onDragStart(e, piece, slotIndex, pieceIndex)}
-              onDragOver={onDragOver}
-              onDrop={(e) => onDrop(e, slotIndex, pieceIndex)}
-              className={'p-3 m-2 bg-gray-200 rounded-xl'}
-            >
-              <div className={"mb-3 " + (big ? ' h-56 w-96' : ' h-24 w-48')}>
-              <PromptEditTextArea
-                whiteBg
-                innerRef={textAreaRef.current[slotIndex]?.[pieceIndex]}
-                value={scene.slots[slotIndex][pieceIndex].prompt}
-                onChange={(s) => {
-                  scene.slots[slotIndex][pieceIndex].prompt = s;
-                  onChanged && onChanged();
-                }}
-              />
-              </div>
-              <div className="flex gap-2">
-                <label>활성화</label>
-                <input
-                  type="checkbox"
-                  checked={piece.enabled}
-                  onChange={(e) => {
-                    piece.enabled = e.currentTarget.checked;
-                    onChanged && onChanged();
-                  }}
-                />
-                <button
-                  className="active:brightness-90 hover:brightness-95 ml-auto"
-                  onClick={() => {
-                    slot.splice(pieceIndex, 1);
-                    if (slot.length === 0) {
-                      scene.slots.splice(scene.slots.indexOf(slot), 1);
-                    }
-                    onChanged && onChanged();
-                  }}
-                >
-                  <FaTrash size={big ? 25 : 20} color="#ef4444" />
-                </button>
-              </div>
-            </div>
+            <SlotPiece key={piece.id!} scene={scene} piece={piece} onChanged={onChanged} removePiece={(piece: PromptPiece) => removePiece(slot, slot.indexOf(piece)!)} moveSlotPiece={moveSlotPiece}/>
           ))}
           <button
             className="p-2 m-2 w-14 bg-gray-200 rounded-xl flex justify-center"

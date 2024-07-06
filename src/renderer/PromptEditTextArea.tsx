@@ -1040,9 +1040,10 @@ const PromptEditTextArea = ({
     <div
       ref={innerRef}
       spellCheck={false}
+      draggable={true} onDragStart={event => event.preventDefault()}
       className={bgColor + (!fullScreen ? ' overflow-hidden h-full relative' : ' left-0 m-4 p-2 overflow-hidden fixed z-30 h-96 prompt-full')}
     >
-      <div className="absolute right-0 top-0">
+      <div className="absolute right-0 top-0 z-10">
         <button
           onClick={() => {
             if(!disabled)
