@@ -1,4 +1,4 @@
-import { createRef, useContext, useEffect, useRef, useState } from 'react';
+import { createRef, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AppContext } from './App';
 import { PieceLibrary, backend, promptService, sessionService } from './models';
 import { DropdownSelect } from './UtilComponents';
@@ -12,6 +12,130 @@ import {
   FaTrashAlt,
 } from 'react-icons/fa';
 import { FaTrash } from 'react-icons/fa';
+import { useDrag, useDrop } from 'react-dnd';
+import { getEmptyImage } from 'react-dnd-html5-backend';
+
+interface PieceCellProps {
+  pieceName: string;
+  value: string;
+  name: string;
+  curPieceLibrary: PieceLibrary;
+  onUpdated?: () => void;
+  width?: number;
+  style?: React.CSSProperties;
+  movePiece?: (fromIndex: string, toIndex: string) => void;
+}
+export const PieceCell = ({ pieceName, value, name, curPieceLibrary, onUpdated, movePiece, width, style }: PieceCellProps) => {
+  const { curSession, pushDialog, pushMessage } = useContext(AppContext)!;
+
+  const containerRef = useRef<any>();
+  const elementRef = createRef<any>();
+
+  const [curWidth, setCurWidth] = useState<number>(0);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      if (!containerRef.current) return;
+      setCurWidth(containerRef.current.getBoundingClientRect().width);
+    }
+
+    measure();
+    window.addEventListener("resize", measure);
+    return () => {
+      window.removeEventListener("resize", measure);
+    };
+}, [])
+
+  const [{ isDragging }, drag, preview] = useDrag({
+    type: 'piece',
+    item: { pieceName, curPieceLibrary, name, value, width: curWidth },
+    canDrag: () => true,
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  }, [curWidth, pieceName]);
+
+  const [, drop] = useDrop({
+    accept: 'piece',
+    hover: (draggedItem: any) => {
+      if (draggedItem.pieceName !== pieceName) {
+        movePiece!(draggedItem.pieceName, pieceName);
+        onUpdated!();
+      }
+    },
+  },[curWidth, pieceName]);
+
+  useEffect(() => {
+    preview(getEmptyImage(), { captureDraggingState: true });
+  }, [preview]);
+
+  return <div className={"p-3 bg-white border border-gray-300 my-2 " + (isDragging ? "opacity-0" : "")}
+    style={style ? {...style, width: width} : {}}
+    ref={(node) => {
+      if (movePiece) {
+        drag(drop(node));
+        containerRef.current = node;
+      }
+      return null
+    }}
+    >
+      <div className="flex pb-2">
+      <div className="font-bold" onDoubleClick={() => {
+        if (!movePiece) return;
+        pushDialog({
+          type: 'input-confirm',
+          text: '조각의 이름을 변경합니다',
+          callback: (name) => {
+            if (!name) return;
+            if (name in curPieceLibrary.pieces) {
+              pushMessage('조각이 이미 존재합니다');
+              return;
+            }
+            curPieceLibrary.pieces[name] = curPieceLibrary!.pieces[pieceName];
+            curPieceLibrary.multi[name] = curPieceLibrary!.multi[pieceName];
+            delete curPieceLibrary!.pieces[pieceName];
+            delete curPieceLibrary!.multi[pieceName];
+            onUpdated!();
+            sessionService.reloadPieceLibraryDB(curSession!);
+          },
+        });
+      }}>{pieceName}</div>
+      <button
+        className="ml-auto"
+        onClick={() => {
+          if (!movePiece) return;
+          delete curPieceLibrary.pieces[pieceName];
+          delete curPieceLibrary.multi[pieceName];
+          onUpdated!();
+          sessionService.reloadPieceLibraryDB(curSession!);
+        }}
+      >
+        <FaTrash size={20} color="#ef4444" />
+      </button>
+    </div>
+    <div className="h-20">
+    <PromptEditTextArea
+      innerRef={elementRef}
+      disabled={!movePiece}
+      lineHighlight
+      value={value}
+      onChange={(txt) => {
+        curPieceLibrary.pieces[pieceName] = txt;
+        sessionService.markUpdated(curSession!.name);
+      }}
+    />
+    </div>
+    <div className={"mt-1 " + grayLabel}>
+    랜덤 줄 선택 모드: <input checked={curPieceLibrary.multi[pieceName]} type="checkbox"
+        onChange={(e) => {
+          if (!movePiece) return;
+          curPieceLibrary.multi[pieceName] = e.target.checked;
+          onUpdated!();
+        }}
+      />
+    </div>
+  </div>
+}
 
 const PieceEditor = () => {
   const { curSession, pushMessage, pushDialog } = useContext(AppContext)!;
@@ -33,7 +157,6 @@ const PieceEditor = () => {
     );
   }, [selectedPieceLibrary]);
 
-  const draggedItem = useRef<string | null>(null);
   const elementsRef = useRef<{[key: string] : any}>({});
 
   useEffect(() => {
@@ -44,50 +167,21 @@ const PieceEditor = () => {
     }
   }, [curPieceLibrary]);
 
-  const handleDragStart = (e: any, key: string) => {
-    const eleRef = elementsRef.current[key]?.current;
-    if (eleRef) {
-      const rect = eleRef.getBoundingClientRect();
-      const isWithinElement =
-        e.clientX >= rect.left &&
-        e.clientX <= rect.right &&
-        e.clientY >= rect.top &&
-        e.clientY <= rect.bottom;
-      if (isWithinElement) {
-        e.preventDefault();
-        return;
-      }
-    }
-    draggedItem.current = key;
-    e.dataTransfer.effectAllowed = 'move';
-  };
+  const movePiece = (from: string, to: string) => {
+    const newPieces = { ...curPieceLibrary!.pieces };
+    const keys = Object.keys(newPieces);
+    const fromIndex = keys.indexOf(from);
+    const toIndex = keys.indexOf(to);
+    const [movedKey] = keys.splice(fromIndex, 1);
+    keys.splice(toIndex, 0, movedKey);
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, key: string) => {
-    e.preventDefault();
+    const reorderedPieces: any = {};
+    keys.forEach((key) => {
+      reorderedPieces[key] = newPieces[key];
+    });
+    curPieceLibrary!.pieces = reorderedPieces;
+    onUpdated();
   };
-
-  const handleDrop = (e: any , key: string) => {
-    e.preventDefault();
-    if (draggedItem.current !== key) {
-      const reorderedPieces: any = {};
-      const keys = Object.keys(curPieceLibrary!.pieces);
-      const draggedIndex = keys.indexOf(draggedItem.current!);
-      const targetIndex = keys.indexOf(key);
-      const [removed] = keys.splice(draggedIndex, 1);
-      keys.splice(targetIndex, 0, removed);
-      keys.forEach(k => {
-        reorderedPieces[k] = curPieceLibrary!.pieces[k];
-      });
-      curPieceLibrary!.pieces = reorderedPieces;
-      onUpdated();
-    }
-    draggedItem.current = null;
-  };
-
-  const handleDragEnd = () => {
-    draggedItem.current = null;
-  };
-
 
   return (
     <div className="flex flex-col h-full">
@@ -169,68 +263,7 @@ const PieceEditor = () => {
       {curPieceLibrary && (
         <div className="h-min-0 flex-1 overflow-auto">
           {Object.entries(curPieceLibrary.pieces).map(([key, value]) => (
-            <div
-              draggable
-              onDragStart={(e) => handleDragStart(e, key)}
-              onDragOver={(e) => {handleDragOver(e,key);}}
-              onDragEnd={handleDragEnd}
-              onDrop={(e) => handleDrop(e, key)}
-              key={curPieceLibrary.description + " " + key}
-              className="p-3 bg-white border border-gray-300 my-2">
-              <div className="flex pb-2">
-                <div className="font-bold" onDoubleClick={() => {
-                  pushDialog({
-                    type: 'input-confirm',
-                    text: '조각의 이름을 변경합니다',
-                    callback: (name) => {
-                      if (!name) return;
-                      if (name in curPieceLibrary.pieces) {
-                        pushMessage('조각이 이미 존재합니다');
-                        return;
-                      }
-                      curPieceLibrary!.pieces[name] = curPieceLibrary!.pieces[key];
-                      curPieceLibrary!.multi[name] = curPieceLibrary!.multi[key];
-                      delete curPieceLibrary!.pieces[key];
-                      delete curPieceLibrary!.multi[key];
-                      elementsRef.current[name] = elementsRef.current[key];
-                      delete elementsRef.current[key];
-                      onUpdated();
-                      sessionService.reloadPieceLibraryDB(curSession!);
-                    },
-                  });
-                }}>{key}</div>
-                <button
-                  className="ml-auto"
-                  onClick={() => {
-                    delete curPieceLibrary.pieces[key];
-                    delete curPieceLibrary.multi[key];
-                    onUpdated();
-                    sessionService.reloadPieceLibraryDB(curSession!);
-                  }}
-                >
-                  <FaTrash size={20} color="#ef4444" />
-                </button>
-              </div>
-              <div className="h-20">
-              <PromptEditTextArea
-                innerRef={elementsRef.current[key]}
-                lineHighlight
-                value={value}
-                onChange={(txt) => {
-                  curPieceLibrary.pieces[key] = txt;
-                  sessionService.markUpdated(curSession!.name);
-                }}
-              />
-              </div>
-              <div className={"mt-1 " + grayLabel}>
-              랜덤 줄 선택 모드: <input checked={curPieceLibrary.multi[key]} type="checkbox"
-                  onChange={(e) => {
-                    curPieceLibrary.multi[key] = e.target.checked;
-                    onUpdated();
-                  }}
-                />
-              </div>
-            </div>
+            <PieceCell key={curPieceLibrary.description! + " " + key} pieceName={key} value={value} name={curPieceLibrary.description} curPieceLibrary={curPieceLibrary} onUpdated={onUpdated} elementsRef={elementsRef} movePiece={movePiece} />
           ))}
           <button
             className="py-2 px-8 bg-gray-200 rounded-xl"

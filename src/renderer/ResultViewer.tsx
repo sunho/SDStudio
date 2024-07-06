@@ -48,6 +48,8 @@ import { FloatView } from './FloatView';
 import memoizeOne from 'memoize-one';
 import { FaPlus } from 'react-icons/fa6';
 import { useContextMenu } from 'react-contexify';
+import { useDrag, useDrop } from 'react-dnd';
+import { getEmptyImage } from 'react-dnd-html5-backend';
 
 interface ImageGalleryProps {
   scene: GenericScene;
@@ -64,6 +66,34 @@ interface ImageGalleryRef {
   refresh: () => void;
 }
 
+export const CellPreview = ({path, cellSize, imageSize, style} : {path: string, cellSize: number, imageSize: number, style: React.CSSProperties}) => {
+  const [image, setImage] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    const fetchImage = async () => {
+      try {
+        const base64Image = await imageService.fetchImageSmall(path, imageSize)!;
+        setImage(base64Image!);
+      } catch (e: any) {
+        setImage(undefined);
+      }
+    };
+    fetchImage();
+  }, [path, imageSize]);
+
+  return (
+    <div className="relative" style={style}>
+      {image && <img
+        src={image}
+        style={{
+          maxWidth: cellSize,
+          maxHeight: cellSize,
+        }}
+        className="image-anime relative bg-checkboard w-auto h-auto"
+      />}
+    </div>
+  );
+};
+
 const Cell = memo(({
   columnIndex,
   rowIndex,
@@ -76,7 +106,6 @@ const Cell = memo(({
     onSelected,
     columnCount,
     refreshImageFuncs,
-    draggedIndex,
     isMainImage,
     onFilenameChange,
     imageSize,
@@ -84,31 +113,6 @@ const Cell = memo(({
 
   const index = rowIndex * columnCount + columnIndex;
   const path = filePaths[index];
-
-  const handleDragStart = (index: number) => {
-    draggedIndex.current = index;
-  };
-
-  const handleDrop = async (index: number) => {
-    if (
-      draggedIndex.current !== null &&
-      draggedIndex.current !== index &&
-      index < filePaths.length
-    ) {
-      await swapImages(filePaths[draggedIndex.current], filePaths[index]);
-      await refreshImageFuncs.current.get(filePaths[draggedIndex.current])?.();
-      await refreshImageFuncs.current.get(filePaths[index])?.();
-      if (onFilenameChange) {
-        onFilenameChange(filePaths[index], filePaths[draggedIndex.current]);
-      }
-      draggedIndex.current = null;
-    }
-  };
-
-  const handleDragOver = (event: React.DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  };
 
   const [image, setImage] = useState<string | undefined>(undefined);
   const [_, forceUpdate] = useState<{}>({});
@@ -148,6 +152,56 @@ const Cell = memo(({
     id: ContextMenuType.Image,
   });
 
+  const [{ isDragging }, drag, preview] = useDrag(
+    () => ({
+      type: 'image',
+      item: { scene, path, cellSize, imageSize, index },
+      collect: (monitor) => {
+        const diff = monitor.getDifferenceFromInitialOffset();
+        if (diff){
+          const dist = Math.sqrt(diff.x ** 2 + diff.y ** 2);
+          if (dist > 20) {
+            hideAll();
+          }
+        }
+        return {
+          isDragging: monitor.isDragging(),
+        }
+      },
+    }),
+    [path, imageSize, index],
+  )
+
+  const [{ isOver }, drop] = useDrop(
+    () => ({
+      accept: 'image',
+      canDrop: () => (index < filePaths.length),
+      collect: (monitor) => {
+        if (monitor.isOver()) {
+          return {
+            isOver: true,
+          }
+        }
+        return { isOver: false }
+      },
+      drop: async (item: any, monitor) => {
+        const { path: draggedPath, index: draggedIndex } = item
+        if (draggedIndex !== index) {
+          await swapImages(filePaths[draggedIndex], filePaths[index]);
+          await refreshImageFuncs.current.get(filePaths[draggedIndex])?.();
+          await refreshImageFuncs.current.get(filePaths[index])?.();
+          if (onFilenameChange) {
+            onFilenameChange(filePaths[index], filePaths[draggedIndex]);
+          }
+        }
+      },
+    }), [path, imageSize, index],
+  )
+
+  useEffect(() => {
+    preview(getEmptyImage(), { captureDraggingState: true });
+  }, [preview]);
+
   return (
     <div
       key={index.toString() + path + imageSize.toString()}
@@ -158,7 +212,7 @@ const Cell = memo(({
         starable: true,
       })}
       style={style}
-      className="image-cell relative hover:brightness-95 active:brightness-90 bg-white cursor-pointer"
+      className={"image-cell relative hover:brightness-95 active:brightness-90 bg-white cursor-pointer " + (isDragging ? "opacity-0" : "") + (isOver ? " outline outline-sky-500" : "")}
       draggable
       onClick={() => {
         if (path) {
@@ -167,13 +221,7 @@ const Cell = memo(({
           }
         }
       }}
-      onDragStart={() => handleDragStart(index)}
-      onDrop={() => handleDrop(index)}
-      onDrag={(e) => {
-
-      }}
-      onDragOver={handleDragOver}
-      onDragEnter={(e)=>{e.preventDefault();}}
+      ref={(node) => drag(drop(node))}
     >
       {path && image && (
         <>

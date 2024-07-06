@@ -51,11 +51,6 @@ export abstract class Backend {
   abstract isLocalAIRunning(): Promise<boolean>;
   abstract removeBackground(inputImageBase64: string, outputPath: string): Promise<void>;
   abstract onDownloadProgress(callback: (progress: any) => void): void;
-  abstract onDuplicateScene(callback: (ctx: SceneContextAlt) => void): () => void;
   abstract onImageChanged(callback: (path: string) => void): () => void;
-  abstract onDuplicateImage(callback: (ctx: ContextAlt) => void): () => void;
-  abstract onCopyImage(callback: (ctx: ContextAlt) => void): () => void;
-  abstract onMoveSceneFront(callback: (ctx: SceneContextAlt) => void): () => void;
-  abstract onMoveSceneBack(callback: (ctx: SceneContextAlt) => void): () => void;
   abstract onClose(callback: () => void): () => void;
 }

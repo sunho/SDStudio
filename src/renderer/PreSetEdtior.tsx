@@ -305,26 +305,30 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
             {selectedPreset!.vibes.map(vibe => (
               <div className="border border-gray-300 mt-2 p-2 flex gap-2 items-begin">
                 <img src={base64ToDataUri(vibe.image)} className="flex-none w-28 h-28 object-cover"/>
-                <div className="flex gap-2 flex-col w-full">
-                  <div className="flex items-cente">
-                    <div className={"w-36 " + grayLabel}>정보 추출률 (IS):</div>
-                    <input className="flex-1" type="range" step="0.01" min="0" max="1" value={vibe.info} onChange={(e) => {
-                      vibe.info = parseFloat(e.target.value);
-                      updatePresets();
-                    }}
-                    disabled={props.middlePromptMode && presetEditLock}
-                      />
-                    <div className="w-11 text-lg text-center">{vibe.info}</div>
+                <div className="flex flex-col gap-2 w-full">
+                  <div className="flex w-full items-center md:flex-row flex-col">
+                    <div className={"whitespace-nowrap flex-none mr-auto md:mr-0" + grayLabel}>정보 추출률 (IS):</div>
+                    <div className="flex flex-1 md:w-auto w-full gap-1">
+                      <input className="flex-1" type="range" step="0.01" min="0" max="1" value={vibe.info} onChange={(e) => {
+                        vibe.info = parseFloat(e.target.value);
+                        updatePresets();
+                      }}
+                      disabled={props.middlePromptMode && presetEditLock}
+                        />
+                      <div className="w-11 flex-none text-lg text-center">{vibe.info}</div>
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <div className={"w-36 flex-none " + grayLabel}>레퍼런스 강도 (RS):</div>
-                    <input className="flex-1" type="range" step="0.01" min="0" max="1" value={vibe.strength} onChange={(e) => {
-                      vibe.strength = parseFloat(e.target.value);
-                      updatePresets();
-                    }}
-                    disabled={props.middlePromptMode && presetEditLock}
-                    />
-                    <div className="w-11 text-lg text-center">{vibe.strength}</div>
+                  <div className="flex w-full md:flex-row flex-col items-center">
+                    <div className={"whitepace-nowrap flex-none mr-auto md:mr-0" + grayLabel}>레퍼런스 강도 (RS):</div>
+                    <div className="flex flex-1 md:w-auto w-full gap-1">
+                      <input className="flex-1" type="range" step="0.01" min="0" max="1" value={vibe.strength} onChange={(e) => {
+                        vibe.strength = parseFloat(e.target.value);
+                        updatePresets();
+                      }}
+                      disabled={props.middlePromptMode && presetEditLock}
+                      />
+                      <div className="w-11 flex-none text-lg text-center">{vibe.strength}</div>
+                    </div>
                   </div>
                   <div className="flex-none flex ml-auto mt-auto">
                     <button className={`${roundButton} h-8 px-8 ml-auto ` + ((props.middlePromptMode && presetEditLock) ? 'bg-gray-400' : 'bg-red-500')} onClick={() => {

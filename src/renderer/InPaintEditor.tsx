@@ -239,7 +239,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
           <input type="checkbox" checked={originalImage} onChange={(e) => {setOriginalImage(e.target.checked)}} />
         </div>
         </div>
-        <div className="mt-auto flex-1 flex flex-col md:block overflow-hidden">
+        <div className="mt-auto flex-1 md:flex-none flex flex-col md:block overflow-hidden">
           <div className={"flex-none pt-2 pb-1 " + grayLabel}>
             프롬프트
           </div>

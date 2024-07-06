@@ -32,7 +32,7 @@ import TaskQueueControl from './TaskQueueControl';
 import NAILogin from './NAILogin';
 import AlertWindow from './AlertWindow';
 import { DropdownSelect, TabComponent } from './UtilComponents';
-import PieceEditor from './PieceEditor';
+import PieceEditor, { PieceCell } from './PieceEditor';
 import PromptTooltip from './PromptTooltip';
 import ConfirmWindow, { Dialog } from './ConfirmWindow';
 import QueueControl from './SceneQueueControl';
@@ -45,8 +45,9 @@ import { HTML5Backend } from 'react-dnd-html5-backend'
 import { TouchBackend } from 'react-dnd-touch-backend'
 import { usePreview } from 'react-dnd-preview'
 
-import { getEmptyImage } from 'react-dnd-html5-backend'
 import React from 'react';
+import { CellPreview } from './ResultViewer';
+import { SlotPiece } from './SceneEditor';
 
 export interface Context {
   curSession: Session | undefined;
@@ -98,11 +99,19 @@ const DnDPreview = () => {
     return null
   }
   const {itemType, item, style} = preview;
-  style['rotate'] = '3deg';
+  style['rotate'] = '2deg';
+  style['transformOrigin'] = 'center';
   let res: any = null;
   if (itemType === 'scene') {
     const { scene, curSession, getImage, cellSize } = item as any;
     res = <SceneCell scene={scene} curSession={curSession} getImage={getImage} cellSize={cellSize} style={style} />
+  }  else if (itemType === 'image') {
+    const { path, cellSize, imageSize } = item as any;
+    res = <CellPreview path={path} cellSize={cellSize} imageSize={imageSize} style={style} />
+  } else if (itemType === 'piece') {
+    res = <PieceCell {...item as any} style={style} />;
+  } else if (itemType === 'slot'){
+    res = <SlotPiece {...item as any} style={style} />;
   } else {
     return <></>
   }
