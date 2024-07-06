@@ -104,11 +104,11 @@ export class NovelAiImageGenService implements ImageGenService {
         },
       );
       if (!reponse.ok) {
-        throw new Error('Login failed: ' + reponse.statusText);
+        throw new Error('HTTP error:' + reponse.status);
       }
       return await reponse.json();
     } catch (error: any) {
-      throw new Error(`login Error: ${error.message}`);
+      throw new Error(`${error.message}`);
     }
   }
 

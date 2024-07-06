@@ -43,7 +43,9 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSelectedPreset }) =>
               return;
             }
             await sessionService.add(inputValue);
-            setCurSession(await sessionService.get(inputValue)!);
+            const newSession = (await sessionService.get(inputValue))!;
+            setCurSession(newSession);
+            setSelectedPreset(Object.values(newSession.presets)[0]);
           }
         },
       });

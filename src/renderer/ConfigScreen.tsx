@@ -18,6 +18,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
   const [stage, setStage] = useState(0);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
   useEffect(() => {
     (async () => {
       const config = await backend.getConfig();
@@ -58,6 +59,15 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
       loginService.removeEventListener('change', onChange);
     };
   }, []);
+  const login = () => {
+    (async () => {
+      try {
+        await loginService.login(email, password);
+      } catch (err: any) {
+        pushMessage('로그인 실패:' + err.message);
+      }
+    })();
+  };
 
   const clearImageCache = async () => {
     if (!curSession) return;
@@ -121,7 +131,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
                 <span className={`${roundTag} bg-red-500`}>No</span>
               )}
             </p>
-            <button className={`bg-sky-500 text-white py-1 px-2 rounded hover:brightness-95 active:brightness-90 ml-auto`} onClick={()=>{}}>
+            <button className={`bg-sky-500 text-white py-1 px-2 rounded hover:brightness-95 active:brightness-90 ml-auto`} onClick={login}>
               로그인
             </button>
             </div>

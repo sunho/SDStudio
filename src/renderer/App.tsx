@@ -189,8 +189,9 @@ export default function App() {
           const sess = await sessionService.get(json.name);
           if (!sess) {
             await sessionService.createFrom(json.name, json);
-            if (taskQueueService.isEmpty())
-              setCurSession(await sessionService.get(json.name));
+            const newSession = (await sessionService.get(json.name))!;
+            setCurSession(newSession);
+            setSelectedPreset(Object.values(newSession.presets)[0]);
             pushDialog({
               type: 'yes-only',
               text: '프로젝트를 임포트 했습니다',
@@ -205,7 +206,9 @@ export default function App() {
                 }
                 try {
                   await sessionService.createFrom(value, json);
-                  setCurSession(await sessionService.get(value));
+                  const newSession = (await sessionService.get(value))!;
+                  setCurSession(newSession);
+                  setSelectedPreset(Object.values(newSession.presets)[0]);
                 } catch (e) {
                   pushMessage('이미 존재하는 프로젝트 이름입니다.');
                 }
