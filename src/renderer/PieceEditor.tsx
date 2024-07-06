@@ -178,7 +178,27 @@ const PieceEditor = () => {
               key={curPieceLibrary.description + " " + key}
               className="p-3 bg-white border border-gray-300 my-2">
               <div className="flex pb-2">
-                <div className="font-bold">{key}</div>
+                <div className="font-bold" onDoubleClick={() => {
+                  pushDialog({
+                    type: 'input-confirm',
+                    text: '조각의 이름을 변경합니다',
+                    callback: (name) => {
+                      if (!name) return;
+                      if (name in curPieceLibrary.pieces) {
+                        pushMessage('조각이 이미 존재합니다');
+                        return;
+                      }
+                      curPieceLibrary!.pieces[name] = curPieceLibrary!.pieces[key];
+                      curPieceLibrary!.multi[name] = curPieceLibrary!.multi[key];
+                      delete curPieceLibrary!.pieces[key];
+                      delete curPieceLibrary!.multi[key];
+                      elementsRef.current[name] = elementsRef.current[key];
+                      delete elementsRef.current[key];
+                      onUpdated();
+                      sessionService.reloadPieceLibraryDB(curSession!);
+                    },
+                  });
+                }}>{key}</div>
                 <button
                   className="ml-auto"
                   onClick={() => {
