@@ -1,5 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@100..900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,7 +9,7 @@ body { font-size: 16px; }
 @media screen and (max-width: 768px) { body { font-size: 14px; }}
 
 body {
-  font-family: 'Noto Sans', sans-serif;
+  font-family: "Noto Sans KR", sans-serif;
 }
 
 .alert-window {
@@ -260,9 +260,9 @@ input[type='number']::-webkit-outer-spin-button {
 .syntax-wildcard {
   color: #0ea5e9;
   white-space: inherit;
+  word-break: inherit;
   /* font-size: 1.05em; */
   font-weight: 800;
-  word-break: inherit;
 }
 
 .syntax-multi-wildcard {
@@ -279,13 +279,8 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 .syntax-line {
-  display: flex;
-  width: 100%;
-  margin-top: 1px;
-  margin-bottom: 1px;
-  height: 1px;
-  opacity: 0.4;
-  background-color: gray;
+  white-space: inherit;
+  word-break: inherit;
 }
 
 .syntax-split {
@@ -350,7 +345,7 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 .native-text-area-container {
-  font-family: 'Noto Sans Mono', monospace;
+  font-family: monospace, 'Noto Sans Mono';
   position: relative;
   text-align: left;
   box-sizing: border-box;

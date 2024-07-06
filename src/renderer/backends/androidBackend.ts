@@ -14,6 +14,7 @@ import { BackgroundMode } from "@anuradev/capacitor-background-mode"
 import { TagDB } from "./tagDB";
 // @ts-ignore
 import DBCSV from '../../../assets/db.txt';
+import { version } from "../../../package.json"
 
 const APP_DIR = ".SDStudio";
 let config: Config = {};
@@ -125,11 +126,11 @@ export class AndroidBackend extends Backend {
   }
 
   async getVersion(): Promise<string> {
-    return '';
+    return version;
   }
 
   async openWebPage(url: string): Promise<void> {
-    return;
+    window.open(url);
   }
 
   async generateImage(arg: ImageGenInput): Promise<void> {

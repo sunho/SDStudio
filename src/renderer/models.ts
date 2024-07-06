@@ -7,7 +7,7 @@ import { ElectornBackend } from './backends/electronBackend';
 import { AndroidBackend } from './backends/androidBackend';
 
 const PROMPT_SERVICE_INTERVAL = 5000;
-const UPDATE_SERVICE_INTERVAL = 60*1000;
+const UPDATE_SERVICE_INTERVAL = 240*1000;
 const SESSION_SERVICE_INTERVAL = 5000;
 const FAST_TASK_TIME_ESTIMATOR_SAMPLE_COUNT = 16;
 const TASK_TIME_ESTIMATOR_SAMPLE_COUNT = 128;
@@ -1748,7 +1748,7 @@ export const highlightPrompt = (session: Session, text: string, lineHighlight: b
         return word;
       }
       if (word === ',') {
-        return '<span className="syntax-word">' + word + '</span>';
+        return word;
       }
       const classNames = [];
       let leftTrimPos = 0;
@@ -1826,7 +1826,7 @@ export const highlightPrompt = (session: Session, text: string, lineHighlight: b
       return res;
     })
     .join('')
-    return '<span>' + word + '</span>'
+    return '<span class="syntax-line">' + word + '</span>'
   }).join('\n');
   return `${words}`;
 };
