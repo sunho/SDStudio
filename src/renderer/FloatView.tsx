@@ -32,7 +32,6 @@ interface FloatViewProviderProps {
 
 export const FloatViewProvider: React.FC<FloatViewProviderProps> = ({ children }) => {
   const [views, setViews] = useState<FloatView[]>([]);
-  console.log(views)
 
   const registerView = (view: FloatView) => {
     setViews((prevViews) => [...prevViews, view].sort((a, b) => b.id - a.id));

@@ -254,7 +254,6 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
         const x = (clientX - rect.left) * (canvas.width / rect.width);
         const y = (clientY - rect.top) * (canvas.height / rect.height);
         curPosRef.current = { x, y };
-        console.log("BITCH", x, y);
         if (isDrawingRef.current) {
           draw(e);
         } else {

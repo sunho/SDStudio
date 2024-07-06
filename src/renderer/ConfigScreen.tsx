@@ -29,7 +29,6 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
       setReady(localAIService.ready);
     }
     const onProgress = (e: any) => {
-      console.log(e);
       setProgress(e.detail.percent);
     }
     const onStage = (e:any) => {
