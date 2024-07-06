@@ -719,6 +719,8 @@ interface EditTextAreaProps {
   onDownArrow: () => void;
   onEnter: () => void;
   onEsc: () => void;
+  onFocus: () => void;
+  onBlur: () => void;
   closeAutoComplete: () => void;
 }
 
@@ -819,7 +821,7 @@ const EmulatedEditTextArea = forwardRef<EditTextAreaRef, any>(({
 });
 
 const NativeEditTextArea = forwardRef(({
-  value, disabled, highlight, onUpdated, history, redo, onUpArrow, onDownArrow, onEnter, onEsc, closeAutoComplete
+  value, disabled, highlight, onUpdated, history, redo, onUpArrow, onDownArrow, onEnter, onEsc, closeAutoComplete, onFocus, onBlur
 } : EditTextAreaProps, ref) => {
   const textareaRef = useRef<any>(null);
   const highlightRef = useRef<any>(null);
@@ -845,6 +847,8 @@ const NativeEditTextArea = forwardRef(({
     };
 
     textareaRef.current.addEventListener('input', handleInput);
+    textareaRef.current.addEventListener('focus', onFocus);
+    textareaRef.current.addEventListener('blur', onBlur);
 
     handleInput();
 
@@ -856,6 +860,8 @@ const NativeEditTextArea = forwardRef(({
       window.removeEventListener('mousedown', handleWindowMouseDown);
       if (!textareaRef.current) return;
       textareaRef.current.removeEventListener('input', handleInput);
+      textareaRef.current.removeEventListener('focus', onFocus);
+      textareaRef.current.removeEventListener('blur', onBlur);
     };
   }, []);
 
@@ -1015,6 +1021,16 @@ const PromptEditTextArea = ({
     closeAutoComplete();
   };
 
+  const onFoucs = () => {
+    if (isMobile)
+      setFullScreen(true);
+  }
+
+  const onBlur = () => {
+    if (isMobile)
+      setFullScreen(false);
+  }
+
   let bgColor = whiteBg ? 'bg-gray-100' : 'bg-gray-200';
   if (fullScreen)
     bgColor = 'bg-white shadow-lg'
@@ -1037,7 +1053,7 @@ const PromptEditTextArea = ({
           {!fullScreen ? <FaExpand></FaExpand> : <FaTimes></FaTimes>}
         </button>
       </div>
-      <NativeEditTextArea ref={editorRef} value={value} disabled={disabled} highlight={highlight} onUpdated={onUpdated} history={historyRef.current} redo={redoRef.current} onUpArrow={onUpArrow} onDownArrow={onDownArrow} onEnter={onEnter} onEsc={onEsc} closeAutoComplete={closeAutoComplete}/>
+      <NativeEditTextArea ref={editorRef} value={value} disabled={disabled} highlight={highlight} onUpdated={onUpdated} history={historyRef.current} redo={redoRef.current} onUpArrow={onUpArrow} onDownArrow={onDownArrow} onEnter={onEnter} onEsc={onEsc} closeAutoComplete={closeAutoComplete} onFocus={onFoucs} onBlur={onBlur}/>
     </div>
     <PromptAutoComplete key={id} curWord={curWord} tags={tags} clientX={clientX} clientY={clientY} selectedTag={selectedTag} onSelectTag={onSelectTag}/>
      {fullScreen && <div className="fixed bg-black opacity-15 w-screen h-screen top-0 left-0 z-20" onClick={() => {setFullScreen(false);}}></div>}
