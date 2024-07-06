@@ -157,16 +157,6 @@ const PieceEditor = () => {
     );
   }, [selectedPieceLibrary]);
 
-  const elementsRef = useRef<{[key: string] : any}>({});
-
-  useEffect(() => {
-    if (curPieceLibrary) {
-      for (const key in curPieceLibrary.pieces) {
-        elementsRef.current[key] = createRef();
-      }
-    }
-  }, [curPieceLibrary]);
-
   const movePiece = (from: string, to: string) => {
     const newPieces = { ...curPieceLibrary!.pieces };
     const keys = Object.keys(newPieces);
@@ -263,7 +253,7 @@ const PieceEditor = () => {
       {curPieceLibrary && (
         <div className="h-min-0 flex-1 overflow-auto">
           {Object.entries(curPieceLibrary.pieces).map(([key, value]) => (
-            <PieceCell key={curPieceLibrary.description! + " " + key} pieceName={key} value={value} name={curPieceLibrary.description} curPieceLibrary={curPieceLibrary} onUpdated={onUpdated} elementsRef={elementsRef} movePiece={movePiece} />
+            <PieceCell key={curPieceLibrary.description! + " " + key} pieceName={key} value={value} name={curPieceLibrary.description} curPieceLibrary={curPieceLibrary} onUpdated={onUpdated} movePiece={movePiece} />
           ))}
           <button
             className="py-2 px-8 bg-gray-200 rounded-xl"
@@ -278,7 +268,6 @@ const PieceEditor = () => {
                     return;
                   }
                   curPieceLibrary!.pieces[name] = '';
-                  elementsRef.current[name] = createRef();
                   onUpdated();
                   sessionService.reloadPieceLibraryDB(curSession!);
                 },
