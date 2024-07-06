@@ -7,7 +7,7 @@ import { WordTag, backend, calcGapMatch, highlightPrompt, isMobile, promptServic
 import { FaBook, FaBox, FaBrush, FaDatabase, FaExpand, FaPaintBrush, FaTag, FaTimes, FaTimesCircle } from 'react-icons/fa';
 import { FaPerson, FaStar } from "react-icons/fa6";
 import { FixedSizeList as List } from 'react-window';
-
+import getCaretCoordinates from 'textarea-caret';
 
 interface PromptEditTextAreaProps {
   value: string;
@@ -710,7 +710,7 @@ function replaceMiddleWord(str: string, newWord: string) {
 
 interface EditTextAreaProps {
   value: string;
-  disabled: boolean;
+  disabled?: boolean;
   highlight: (text: string, curWord: string, updateAutoComplete: boolean) => string;
   onUpdated: (text: string) => void;
   history: Denque<HistoryEntry>;
@@ -726,6 +726,7 @@ interface EditTextAreaRef {
   onCloseAutoComplete: () => void;
   onOpenAutoComplete: () => void;
   setCurWord: (word: string) => void;
+  getCaretCoords(): Promise<number[]>;
 }
 
 const EmulatedEditTextArea = forwardRef<EditTextAreaRef, any>(({
@@ -784,6 +785,19 @@ const EmulatedEditTextArea = forwardRef<EditTextAreaRef, any>(({
     },
     setCurWord: (word: string) => {
       editorModelRef.current.setCurWord(word);
+    },
+    getCaretCoords: async () => {
+      let selection = window.getSelection()!;
+      if (selection.rangeCount === 0) return;
+      let range = selection.getRangeAt(0);
+      let rect = range.getBoundingClientRect();
+      if (rect.right === 0 && rect.top === 0) {
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        selection = window.getSelection()!;
+        range = selection.getRangeAt(0);
+        rect = range.getBoundingClientRect();
+      }
+      return [rect.right, rect.top];
     }
   }));
 
@@ -797,10 +811,119 @@ const EmulatedEditTextArea = forwardRef<EditTextAreaRef, any>(({
     </div>
     <textarea
       className="absolute top-0 left-0 opacity-0 w-0 h-0"
+      disabled={disabled}
       ref={clipboardRef}
       value=''
       onChange={(e) => {e.target.value=''}}></textarea>
     </>
+});
+
+const NativeEditTextArea = forwardRef(({
+  value, disabled, highlight, onUpdated, history, redo, onUpArrow, onDownArrow, onEnter, onEsc, closeAutoComplete
+} : EditTextAreaProps, ref) => {
+  const textareaRef = useRef<any>(null);
+  const highlightRef = useRef<any>(null);
+  const containerRef = useRef<any>(null);
+  const isAutoComplete = useRef(false);
+
+  useEffect(() => {
+    if (!textareaRef.current || !highlightRef.current) return;
+    const getCurWord = () => {
+      let start = textareaRef.current.selectionStart;;
+      const curText = textareaRef.current.value;
+      let startIdx = start;
+      while (startIdx > 0 && !',\n'.includes(curText[startIdx - 1])) {
+        startIdx--;
+      }
+      return curText.substring(startIdx, start).trim();
+    };
+
+    const handleInput = () => {
+      const text = textareaRef.current.value;
+      highlightRef.current.innerHTML = highlight(text, getCurWord(), true) + '<span></span><br>';
+      onUpdated(text);
+    };
+
+    textareaRef.current.addEventListener('input', handleInput);
+
+    handleInput();
+
+    const handleWindowMouseDown = (e: any) => {
+      closeAutoComplete();
+    };
+    window.addEventListener('mousedown', handleWindowMouseDown);
+    return () => {
+      window.removeEventListener('mousedown', handleWindowMouseDown);
+      if (!textareaRef.current) return;
+      textareaRef.current.removeEventListener('input', handleInput);
+    };
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    onCloseAutoComplete: () => {
+      isAutoComplete.current = false;
+    },
+    onOpenAutoComplete: () => {
+      isAutoComplete.current = true;
+    },
+    setCurWord: (word: string) => {
+      const start = textareaRef.current.selectionStart;
+      let curText = textareaRef.current.value;
+      let startIdx = start;
+      while (startIdx > 0 && !',\n'.includes(curText[startIdx-1])) {
+        startIdx--;
+      }
+      if (startIdx !== 0 && curText[startIdx-1] !== '\n')
+        word = ' ' + word;
+      const newText = curText.substring(0, startIdx) + word + curText.substring(start);
+      textareaRef.current.value = newText;
+      onUpdated(newText);
+      textareaRef.current.selectionEnd = startIdx + word.length;
+      highlightRef.current.innerHTML = highlight(newText, '', false) + '<span></span><br>';
+    },
+    getCaretCoords: async () => {
+      const caret = getCaretCoordinates(textareaRef.current!, textareaRef.current!.selectionEnd);
+      const rect = textareaRef.current!.getBoundingClientRect();
+      return [caret.left + rect.left, caret.top + rect.top];
+    }
+  }));
+
+  return (
+    <div className="w-full h-full overflow-auto">
+      <div ref={containerRef} className="native-text-area-container">
+        <div
+          ref={highlightRef}
+          className="native-text-area-highlight select-none"
+        ></div>
+        <textarea
+          ref={textareaRef}
+          className="native-text-area-input native-text-area-highlight"
+          defaultValue={value}
+          disabled={disabled}
+          onKeyDown={(e: any) => {
+            if (e.key === 'ArrowUp') {
+              if (isAutoComplete.current) {
+                e.preventDefault();
+              }
+              onUpArrow();
+            }
+            else if (e.key === 'ArrowDown') {
+              if (isAutoComplete.current) {
+                e.preventDefault();
+              }
+              onDownArrow();
+            }
+            else if (e.key === 'Enter') {
+              if (isAutoComplete.current)
+                e.preventDefault();
+              onEnter();
+            }
+            else if (e.key === 'Escape') onEsc();
+          }}
+        ></textarea>
+      </div>
+    </div>
+  );
 });
 
 const PromptEditTextArea = ({
@@ -857,21 +980,11 @@ const PromptEditTextArea = ({
         cntRef.current++;
         const myId = cntRef.current;
         action(trimByBraces(word)).then(async (tags: any[]) => {
-          console.log(tags);
           if (myId !== cntRef.current) return;
           if (tags.length > 0) {
-            let selection = window.getSelection()!;
-            if (selection.rangeCount === 0) return;
-            let range = selection.getRangeAt(0);
-            let rect = range.getBoundingClientRect();
-            if (rect.right === 0 && rect.top === 0) {
-              await new Promise(resolve => requestAnimationFrame(resolve));
-              selection = window.getSelection()!;
-              range = selection.getRangeAt(0);
-              rect = range.getBoundingClientRect();
-            }
-            setClientX(rect.right);
-            setClientY(rect.top);
+            const [x,y] = await editorRef.current!.getCaretCoords();
+            setClientX(x);
+            setClientY(y);
             setSelectedTag(0);
             setCurWord(word);
             setTags(tags);
@@ -924,7 +1037,7 @@ const PromptEditTextArea = ({
           {!fullScreen ? <FaExpand></FaExpand> : <FaTimes></FaTimes>}
         </button>
       </div>
-      <EmulatedEditTextArea ref={editorRef} value={value} disabled={disabled} highlight={highlight} onUpdated={onUpdated} history={historyRef.current} redo={redoRef.current} onUpArrow={onUpArrow} onDownArrow={onDownArrow} onEnter={onEnter} onEsc={onEsc} closeAutoComplete={closeAutoComplete}/>
+      <NativeEditTextArea ref={editorRef} value={value} disabled={disabled} highlight={highlight} onUpdated={onUpdated} history={historyRef.current} redo={redoRef.current} onUpArrow={onUpArrow} onDownArrow={onDownArrow} onEnter={onEnter} onEsc={onEsc} closeAutoComplete={closeAutoComplete}/>
     </div>
     <PromptAutoComplete key={id} curWord={curWord} tags={tags} clientX={clientX} clientY={clientY} selectedTag={selectedTag} onSelectTag={onSelectTag}/>
      {fullScreen && <div className="fixed bg-black opacity-15 w-screen h-screen top-0 left-0 z-20" onClick={() => {setFullScreen(false);}}></div>}

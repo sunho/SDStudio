@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@400;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -239,30 +240,42 @@ input[type='number']::-webkit-outer-spin-button {
 
 .syntax-error {
   color: red;
+  white-space: inherit;
+  word-break: inherit;
 }
 
 .syntax-strong {
   font-weight: 800;
-  font-size: 1.05em;
+  white-space: inherit;
+  word-break: inherit;
+  /* font-size: 1.05em;*/
 }
 
 .syntax-weak {
   font-style: italic;
+  white-space: inherit;
+  word-break: inherit;
 }
 
 .syntax-wildcard {
   color: #0ea5e9;
-  font-size: 1.05em;
+  white-space: inherit;
+  /* font-size: 1.05em; */
   font-weight: 800;
+  word-break: inherit;
 }
 
 .syntax-multi-wildcard {
   color: #22c55e;
-  font-size: 1.05em;
+  white-space: inherit;
+  /* font-size: 1.05em; */
   font-weight: 800;
+  word-break: inherit;
 }
 
 .syntax-word {
+  white-space: inherit;
+  word-break: inherit;
 }
 
 .syntax-line {
@@ -276,9 +289,11 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 .syntax-split {
-  font-size: 1.3em;
+  /* font-size: 1.3em; */
   color: #ff8e38;
+  white-space: inherit;
   font-weight: 800;
+  word-break: inherit;
 }
 
 .bg-checkboard {
@@ -332,4 +347,51 @@ input[type='number']::-webkit-outer-spin-button {
   border-radius: 4px;
   background-color: rgba(0, 0, 0, .5);
   box-shadow: 0 0 1px rgba(255, 255, 255, .5);
+}
+
+.native-text-area-container {
+  font-family: 'Noto Sans Mono', monospace;
+  position: relative;
+  text-align: left;
+  box-sizing: border-box;
+  padding: 0;
+  overflow: hidden;
+}
+
+.native-text-area-highlight {
+  margin: 0;
+  border: 0;
+  background: none;
+  box-sizing: inherit;
+  display: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-style: inherit;
+  font-variant-ligatures: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  tab-size: inherit;
+  text-indent: inherit;
+  text-rendering: inherit;
+  text-transform: inherit;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  outline: 0;
+}
+
+.native-text-area-input {
+  position: absolute;
+  color: blue;
+  top: 0;
+  left: 0;
+  resize: none;
+  width: 100%;
+  height: 100%;
+  opacity: 0.5;
+  overflow: hidden;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  /* -webkit-text-fill-color: transparent; */
 }
