@@ -796,7 +796,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
             씬 추가
           </button>
           <button
-            className={`${roundButton} bg-gray-400`}
+            className={`${roundButton} bg-sky-500`}
             onClick={addAllToQueue}
           >
             모두 예약추가
@@ -811,7 +811,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
           )}
           {!isMobile && type === 'scene' && (
           <button
-            className={`${roundButton} ${primaryColor}`}
+            className={`${roundButton} bg-gray-400`}
             onClick={openMenu}
           >
             다른 일괄 작업

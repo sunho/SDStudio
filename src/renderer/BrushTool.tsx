@@ -77,6 +77,7 @@ interface Props {
 export interface BrushToolRef {
   getMaskBase64(): string;
   clear(): void;
+  undo(): void;
 }
 
 const BrushTool = forwardRef<BrushToolRef, Props>(
@@ -89,6 +90,17 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
     const historyRef = useRef<any>([]);
     const curImageRef = useRef<any>(undefined);
     const brushColor = 'rgba(0, 0, 255, 1)';
+
+    const undoImpl = () => {
+      const canvas = canvasRef.current as any;
+      const ctx = canvas.getContext('2d')!;
+      if (historyRef.current.length > 1) {
+        const imageData = historyRef.current[historyRef.current.length - 1];
+        curImageRef.current = imageData;
+        ctx.putImageData(imageData, 0, 0);
+        historyRef.current.pop();
+      }
+    }
 
     useImperativeHandle(ref, () => ({
       getMaskBase64() {
@@ -103,6 +115,9 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
         ctx.clearRect(0, 0, imageWidth, imageHeight);
         curImageRef.current = ctx.getImageData(0, 0, imageWidth, imageHeight);
       },
+      undo() {
+        undoImpl();
+      }
     }));
 
     useEffect(() => {
@@ -205,12 +220,7 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
 
       const undo = (e: any) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-          if (historyRef.current.length > 1) {
-            const imageData = historyRef.current[historyRef.current.length - 1];
-            curImageRef.current = imageData;
-            ctx.putImageData(imageData, 0, 0);
-            historyRef.current.pop();
-          }
+          undoImpl();
         }
       };
 

@@ -828,21 +828,63 @@ const NativeEditTextArea = forwardRef(({
   const containerRef = useRef<any>(null);
   const isAutoComplete = useRef(false);
 
+  const getCurWord = () => {
+    let start = textareaRef.current.selectionStart;;
+    const curText = textareaRef.current.value;
+    let startIdx = start;
+    while (startIdx > 0 && !',\n'.includes(curText[startIdx - 1])) {
+      startIdx--;
+    }
+    return curText.substring(startIdx, start).trim();
+  };
+
+  const renderText = () => {
+    const text = textareaRef.current.value;
+    highlightRef.current.innerHTML = highlight(text, getCurWord(), true) + '<span></span><br>';
+  }
+
+  const pushHistory = () => {
+    const text = textareaRef.current.value;
+    const start = textareaRef.current.selectionStart;
+    const end = textareaRef.current.selectionEnd;
+    if (history.length > MAX_HISTORY_SIZE) {
+      history.shift();
+    }
+    history.push({ text, cursorPos: [start, end], copmositionBuffer: []});
+    redo.clear();
+  };
+
+  const doUndo = () => {
+    if (history.length > 1) {
+      const prev = history.pop()!;
+      redo.push(prev);
+      const entry = history.peekBack()!;
+      textareaRef.current.value = entry.text;
+      onUpdated(entry.text);
+      textareaRef.current.selectionStart = entry.cursorPos[0];
+      textareaRef.current.selectionEnd = entry.cursorPos[1];
+      renderText();
+    }
+  };
+
+  const doRedo = () => {
+    if (redo.length > 0) {
+      const entry = redo.pop()!;
+      history.push(entry);
+      textareaRef.current.value = entry.text;
+      onUpdated(entry.text);
+      textareaRef.current.selectionStart = entry.cursorPos[0];
+      textareaRef.current.selectionEnd = entry.cursorPos[1];
+      renderText();
+    }
+  };
+
   useEffect(() => {
     if (!textareaRef.current || !highlightRef.current) return;
-    const getCurWord = () => {
-      let start = textareaRef.current.selectionStart;;
-      const curText = textareaRef.current.value;
-      let startIdx = start;
-      while (startIdx > 0 && !',\n'.includes(curText[startIdx - 1])) {
-        startIdx--;
-      }
-      return curText.substring(startIdx, start).trim();
-    };
-
     const handleInput = () => {
       const text = textareaRef.current.value;
-      highlightRef.current.innerHTML = highlight(text, getCurWord(), true) + '<span></span><br>';
+      renderText();
+      pushHistory();
       onUpdated(text);
     };
 
@@ -886,6 +928,7 @@ const NativeEditTextArea = forwardRef(({
       onUpdated(newText);
       textareaRef.current.selectionEnd = startIdx + word.length;
       highlightRef.current.innerHTML = highlight(newText, '', false) + '<span></span><br>';
+      pushHistory();
     },
     getCaretCoords: async () => {
       const caret = getCaretCoordinates(textareaRef.current!, textareaRef.current!.selectionEnd);
@@ -925,6 +968,17 @@ const NativeEditTextArea = forwardRef(({
               onEnter();
             }
             else if (e.key === 'Escape') onEsc();
+            else if ((e.key === 'z' || e.key === 'Z') && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              if (e.shiftKey)
+                doRedo();
+              else
+                doUndo();
+            }
+            else if (e.key === 'y' && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              doRedo();
+            }
           }}
         ></textarea>
       </div>

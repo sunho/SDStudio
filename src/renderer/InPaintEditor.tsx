@@ -266,21 +266,30 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
           />
           </div>
         </div>
-        <div className="flex items-center gap-4 ml-auto pb-2">
-          <label htmlFor="brushSize">{isMobile?"":"브러시 크기:"} {brushSize}</label>
+        <div className="flex items-center gap-2 md:gap-4 md:ml-auto pb-2 overflow-hidden w-full">
+          <label className="flex-none" htmlFor="brushSize">{isMobile?"":"브러시 크기:"} {brushSize}</label>
           <input
             id="brushSize"
             type="range"
             min="1"
             max="100"
             value={brushSize}
+            className="flex-1 min-w-0 md:flex-none"
             onChange={(e: any) => setBrushSize(e.target.value)}
           />
+          {isMobile&&<button
+            className={`${roundButton} bg-gray-400 flex-none`}
+            onClick={() => {
+              brushTool.current!.undo();
+            }}>
+            실행취소
+            </button>
+          }
           <button
-            className={`${roundButton} ${primaryColor}`}
+            className={`${roundButton} ${primaryColor} flex-none`}
             onClick={() => brushTool.current!.clear()}
           >
-            마스크 초기화
+            {isMobile?"":"마스크"}초기화
           </button>
         </div>
       </div>
