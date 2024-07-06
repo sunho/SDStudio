@@ -15,7 +15,7 @@ import { TagDB } from "./tagDB";
 // @ts-ignore
 import DBCSV from '../../../assets/db.txt';
 
-const APP_DIR = "SDStudio";
+const APP_DIR = ".SDStudio";
 let config: Config = {};
 const pica = new Pica();
 
@@ -311,14 +311,14 @@ export class AndroidBackend extends Backend {
   }
 
   async deleteFile(filename: string): Promise<void> {
-    return await Filesystem.deleteFile({
+    await Filesystem.deleteFile({
       path: `${APP_DIR}/${filename}`,
       directory: Directory.Documents,
     });
   }
 
   async deleteDir(filename: string): Promise<void> {
-    return await Filesystem.rmdir({
+    await Filesystem.rmdir({
       path: `${APP_DIR}/${filename}`,
       directory: Directory.Documents,
       recursive: true,
@@ -326,7 +326,7 @@ export class AndroidBackend extends Backend {
   }
 
   async trashFile(filename: string): Promise<void> {
-    return;
+    await this.deleteFile(filename);
   }
 
   async close(): Promise<void> {

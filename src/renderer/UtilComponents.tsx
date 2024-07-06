@@ -5,6 +5,7 @@ import { primaryColor, roundButton } from './styles';
 import { FaAddressBook, FaAmilia, FaDAndD, FaFileUpload, FaPenNib, FaTimes } from 'react-icons/fa';
 import { Scrollbars } from 'react-custom-scrollbars-2';
 import { FaAnchor, FaOpencart, FaPerson } from 'react-icons/fa6';
+import { FloatView } from './FloatView';
 
 export interface Option<T> {
   value: T;
@@ -211,9 +212,10 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs, toggleVi
         </div>
       </div>
       <div className="flex-1 overflow-hidden relative">
-        {!tabs[activeTab].banToggle && toggleViewOpen && <div className="z-10 absolute h-full w-full overflow-hidden bg-white">
+        {!tabs[activeTab].banToggle && toggleViewOpen && <FloatView priority={0} onEscape={()=>setToggleViewOpen(false)}>
+        <div className="z-10 absolute h-full w-full overflow-hidden bg-white">
           {toggleView}
-        </div>}
+        </div></FloatView>}
         {tabs.map((tab, index) => (
           <div
             key={index}

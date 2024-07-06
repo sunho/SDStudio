@@ -13,6 +13,7 @@ import {
   extractMiddlePrompt,
   extractPromptDataFromBase64,
   imageService,
+  isMobile,
   promptService,
   sessionService,
   toPARR,
@@ -154,8 +155,9 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
 
   const brushTool = useRef<BrushToolRef | null>(null);
   return (
-    <div className="flex py-4 h-full w-full">
-      <div className="px-3 flex flex-col grow-0 w-1/2 xl:w-1/3 gap-2">
+    <div className="md:flex py-4 h-full w-full">
+      <div className="px-3 flex flex-col grow-0 h-1/2 md:h-auto md:w-1/2 xl:w-1/3 gap-2 overflow-hidden">
+        <div className="flex flex-wrap gap-2">
         <div className="mb-1 flex items-center gap-3 flex-none">
           <label>
             씬 이름:{' '}
@@ -182,9 +184,9 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
             저장
           </button>
         </div>
-        <div className="flex gap-3 items-center flex-none text-eplsis overflow-hidden gap-3 mb-1">
+        <div className="inline-flex md:flex gap-3 items-center flex-none text-eplsis overflow-hidden gap-3 mb-1">
           <span>이미지: </span>
-          <div className="w-48">
+          <div className="w-24 md:w-48">
             <FileUploadBase64
               onFileSelect={async (file: string) => {
                 try {
@@ -199,7 +201,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
               }}
             ></FileUploadBase64>
           </div>
-          <button
+          {!isMobile && <button
             className={`${roundButton} ${primaryColor}`}
             onClick={() => {
               const path = sessionService.getInpaintOrgPath(curSession!, editingScene as InPaintScene);
@@ -207,10 +209,10 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
               backend.watchImage(path);
             }}>
             이미지 편집
-          </button>
+          </button>}
         </div>
-        <div className="flex-none flex whitespace-nowrap gap-3 items-center">
-          <span>해상도:</span>
+        <div className="flex-none inline-flex md:flex whitespace-nowrap gap-3 items-center">
+          {!isMobile&&<span>해상도:</span>}
           <div className="w-36">
           <DropdownSelect
             options={resolutionOptions}
@@ -236,11 +238,12 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
           <span>비마스크영역 편집 방지:</span>
           <input type="checkbox" checked={originalImage} onChange={(e) => {setOriginalImage(e.target.checked)}} />
         </div>
-        <div className="mt-auto flex-none">
-          <div className={"pt-2 pb-1 " + grayLabel}>
+        </div>
+        <div className="mt-auto flex-1 flex flex-col md:block overflow-hidden">
+          <div className={"flex-none pt-2 pb-1 " + grayLabel}>
             프롬프트
           </div>
-          <div className="h-36 mb-2">
+          <div className="flex-1 md:h-36 mb-2 overflow-hidden">
           <PromptEditTextArea
             value={currentPrompt}
             key={sceneName}
@@ -250,10 +253,10 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
           />
           </div>
 
-        <div className={"pt-2 pb-1 " + grayLabel}>
+        <div className={"flex-none pt-2 pb-1 " + grayLabel}>
           네거티브 프롬프트
         </div>
-          <div className="h-36 mb-2">
+          <div className="flex-1 md:h-36 mb-2 overflow-hidden">
           <PromptEditTextArea
             value={currentUC}
             key={sceneName}
@@ -264,7 +267,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
           </div>
         </div>
         <div className="flex items-center gap-4 ml-auto pb-2">
-          <label htmlFor="brushSize">브러시 크기: {brushSize}</label>
+          <label htmlFor="brushSize">{isMobile?"":"브러시 크기:"} {brushSize}</label>
           <input
             id="brushSize"
             type="range"
@@ -281,7 +284,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
           </button>
         </div>
       </div>
-      <div className="w-1/2 xl:w-2/3 h-full overflow-hidden flex relative justify-center items-center">
+      <div className="h-1/2 md:h-auto md:w-1/2 xl:w-2/3 h-full overflow-hidden flex relative justify-center items-center">
         <BrushTool
           brushSize={brushSize}
           mask={mask ? base64ToDataUri(mask) : undefined}
@@ -290,7 +293,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
           imageWidth={width}
           imageHeight={height}
         />
-        <div className="canvas-tooltip">ctrl+z 로 실행 취소 가능</div>
+        {!isMobile&&<div className="canvas-tooltip">ctrl+z 로 실행 취소 가능</div>}
       </div>
     </div>
   );
