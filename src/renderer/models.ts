@@ -76,6 +76,7 @@ export interface PieceLibrary {
 
 export interface PromptPiece {
   prompt: string;
+  id?: string;
   enabled: boolean | undefined;
 }
 

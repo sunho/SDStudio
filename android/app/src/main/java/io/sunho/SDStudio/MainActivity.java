@@ -10,6 +10,7 @@ import android.provider.Settings;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.Logger;
 
+import io.sunho.SDStudio.SDSNative;
 import io.sunho.SDStudio.FetchService;
 
 public class MainActivity extends BridgeActivity {
@@ -17,6 +18,7 @@ public class MainActivity extends BridgeActivity {
   public void onCreate(Bundle savedInstanceState) {
     registerPlugin(FetchService.class);
     registerPlugin(ImageResizer.class);
+    registerPlugin(TagDB.class);
     if (Build.VERSION.SDK_INT >= 30) {
       if (!Environment.isExternalStorageManager()) {
         try {
@@ -26,10 +28,14 @@ public class MainActivity extends BridgeActivity {
           getpermission.setData(uri);
           startActivity(getpermission);
         } catch (Exception ex) {
-          Logger.error(ex.getMessage());
-          Intent intent = new Intent();
-          intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-          startActivity(intent);
+          try {
+            Logger.error(ex.getMessage());
+            Intent intent = new Intent();
+            intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+            startActivity(intent);
+          } catch (Exception ex2) {
+            Logger.error(ex2.getMessage());
+          }
         }
       }
     }

@@ -22,6 +22,11 @@ body {
   top: 20vh;
 }
 
+@media screen and (max-width: 768px) { .prompt-full {
+  width: 90vw;
+  left: 0;
+}}
+
 .prog-list {
   height: 50vh;
 }

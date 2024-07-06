@@ -92,7 +92,7 @@ export const SceneCell = ({
         }
       },
     }),
-    [curIndex, scene],
+    [curIndex, scene, cellSize],
   )
 
   useEffect(() => {

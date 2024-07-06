@@ -39,6 +39,7 @@ import PreSetEditor from './PreSetEdtior';
 import { TaskProgressBar } from './TaskQueueControl';
 import { Resolution, resolutionMap } from './backends/imageGen';
 import { FloatView } from './FloatView';
+import { v4 as uuidv4 } from 'uuid';
 
 interface Props {
   scene: Scene;
@@ -207,6 +208,15 @@ const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
   const textAreaRef = useRef<any>([]);
   const [_, rerender] = useState<{}>({});
   const { curSession, selectedPreset, pushMessage } = useContext(AppContext)!;
+  useEffect(() => {
+    for (const slot of scene.slots) {
+      for (const piece of slot) {
+        if (!piece.id) {
+          piece.id = uuidv4();
+        }
+      }
+    }
+  },[scene]);
   const dragItem = useRef<{
     piece: PromptPiece;
     slotIndex: number;
@@ -290,7 +300,7 @@ const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
         <div key={slotIndex}>
           {slot.map((piece, pieceIndex) => (
             <div
-              key={pieceIndex}
+              key={piece.id!}
               draggable
               onDragStart={(e) => onDragStart(e, piece, slotIndex, pieceIndex)}
               onDragOver={onDragOver}
@@ -336,7 +346,7 @@ const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
           <button
             className="p-2 m-2 w-14 bg-gray-200 rounded-xl flex justify-center"
             onClick={() => {
-              slot.push({ prompt: '', enabled: true });
+              slot.push({ prompt: '', enabled: true, id: uuidv4()});
               onChanged && onChanged();
             }}
           >
@@ -347,7 +357,7 @@ const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
       <button
         className="p-2 m-2 h-14 flex items-center bg-gray-200 rounded-xl"
         onClick={() => {
-          scene.slots.push([{ prompt: '', enabled: true }]);
+          scene.slots.push([{ prompt: '', enabled: true, id: uuidv4() }]);
           onChanged && onChanged();
         }}
       >
