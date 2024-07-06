@@ -212,7 +212,7 @@ const Cell = memo(({
         starable: true,
       })}
       style={style}
-      className={"image-cell relative hover:brightness-95 active:brightness-90 bg-white cursor-pointer " + (isDragging ? "opacity-0" : "") + (isOver ? " outline outline-sky-500" : "")}
+      className={"image-cell relative hover:brightness-95 active:brightness-90 bg-white cursor-pointer " + (isDragging ? "opacity-0" : "") + (isOver ? " border-2 border-sky-500" : "")}
       draggable
       onClick={() => {
         if (path) {

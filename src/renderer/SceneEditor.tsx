@@ -258,7 +258,7 @@ export const SlotPiece = ({ scene, piece, onChanged, removePiece, moveSlotPiece,
     style={style}
     className={'p-3 m-2 bg-gray-200 rounded-xl ' + (isDragging ? 'opacity-0' : '') + (isOver ? ' outline outline-sky-500' : '')}
   >
-    <div className={"mb-3 h-24 w-48"}>
+    <div className={"mb-3 h-12 w-28 md:h-24 md:w-48"}>
     <PromptEditTextArea
       whiteBg
       disabled={!moveSlotPiece}
@@ -270,7 +270,7 @@ export const SlotPiece = ({ scene, piece, onChanged, removePiece, moveSlotPiece,
       }}
     />
     </div>
-    <div className="flex gap-2">
+    <div className="flex gap-2 select-none">
       <label>활성화</label>
       <input
         type="checkbox"

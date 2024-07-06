@@ -170,7 +170,7 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs, toggleVi
     <div className="h-full flex flex-col px-1 md:p-2">
       <div
         className={
-          'flex p-1 md:p-2 flex-none gap-2 items-center w-full mb-1 md:mb-0'
+          'flex p-1 md:p-0 md:py-2 flex-none gap-2 items-center w-full mb-1 md:mb-0'
         }
       >
         <div className="md:flex gap-1 w-full hidden">
