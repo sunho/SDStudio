@@ -26,6 +26,7 @@ import {
   backend,
   isMobile,
   deleteImageFiles,
+  ContextMenuType,
 } from './models';
 import { AppContext } from './App';
 import { FloatView } from './FloatView';
@@ -45,6 +46,7 @@ import InPaintEditor from './InPaintEditor';
 import { base64ToDataUri } from './BrushTool';
 import { useDrag, useDrop } from 'react-dnd'
 import { getEmptyImage } from 'react-dnd-html5-backend';
+import { useContextMenu } from 'react-contexify';
 
 interface SceneCellProps {
   scene: GenericScene;
@@ -70,6 +72,9 @@ export const SceneCell = ({
   style
 }: SceneCellProps) => {
   const ctx = useContext(AppContext)!;
+  const { show, hideAll } = useContextMenu({
+    id: ContextMenuType.Scene,
+  });
   const [image, setImage] = useState<string | undefined>(undefined);
 
   const cellSizes = ['w-48 h-48', 'w-36 h-36 md:w-64 md:h-64', 'w-96 h-96']
@@ -81,9 +86,18 @@ export const SceneCell = ({
     () => ({
       type: 'scene',
       item: { scene, curIndex, getImage, curSession, cellSize },
-      collect: (monitor) => ({
-        isDragging: monitor.isDragging(),
-      }),
+      collect: (monitor) => {
+        const diff = monitor.getDifferenceFromInitialOffset();
+        if (diff){
+          const dist = Math.sqrt(diff.x ** 2 + diff.y ** 2);
+          if (dist > 20) {
+            hideAll();
+          }
+        }
+        return {
+          isDragging: monitor.isDragging(),
+        }
+      },
       end: (item, monitor) => {
         const { scene: droppedScene, curIndex: droppedIndex} = item
         const didDrop = monitor.didDrop()
@@ -161,11 +175,18 @@ export const SceneCell = ({
       className={"relative m-2 p-1 bg-white border border-gray-300 " + (isDragging ? "opacity-0":"")}
       style={style}
       ref={(node) => drag(drop(node))}
-      title={encodeContextAlt({
-        type: 'scene',
-        sceneType: scene.type,
-        name: scene.name,
-      })}
+      onContextMenu={e => {
+        show({
+          event: e,
+          props: {
+            ctx: {
+              type: 'scene',
+              sceneType: scene.type,
+              name: scene.name,
+            }
+          }
+        });
+      }}
     >
       {getSceneQueueCount(scene) > 0 && (
         <span className="absolute right-0 bg-yellow-400 inline-block mr-3 px-2 py-1 text-center align-middle rounded-md font-bold text-white">
@@ -177,32 +198,16 @@ export const SceneCell = ({
         setDisplayScene?.(scene);
       }}
       >
-        <div className={"p-2 flex text-lg text-black " + cellSizes3[cellSize]}
-          title={encodeContextAlt({
-            type: 'scene',
-            sceneType: scene.type,
-            name: scene.name,
-          })}
-        >
+        <div className={"p-2 flex text-lg text-black " + cellSizes3[cellSize]}>
           <div className="truncate flex-1">{scene.name}</div>
           <div className="flex-none text-gray-400">{imageService.getOutputs(curSession!, scene).length} </div>
         </div>
       <div className={"relative image-cell flex-none overflow-hidden " + (cellSizes[cellSize])}
-        title={encodeContextAlt({
-          type: 'scene',
-          sceneType: scene.type,
-          name: scene.name,
-        })}
       >
 
         {image && (
           <img
             src={image}
-            alt={encodeContextAlt({
-              type: 'scene',
-              sceneType: scene.type,
-              name: scene.name,
-            })}
             draggable={false}
             className={"w-auto h-auto object-scale-down z-0 bg-checkboard " + cellSizes2[cellSize]}
           />

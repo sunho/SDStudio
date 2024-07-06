@@ -10,6 +10,7 @@ import React, {
   forwardRef,
 } from 'react';
 import {
+  ContextMenuType,
   GenericScene,
   InPaintScene,
   Scene,
@@ -46,6 +47,7 @@ import QueueControl from './SceneQueueControl';
 import { FloatView } from './FloatView';
 import memoizeOne from 'memoize-one';
 import { FaPlus } from 'react-icons/fa6';
+import { useContextMenu } from 'react-contexify';
 
 interface ImageGalleryProps {
   scene: GenericScene;
@@ -142,6 +144,10 @@ const Cell = memo(({
     cellSize = style.width;
   }
 
+  const { show, hideAll } = useContextMenu({
+    id: ContextMenuType.Image,
+  });
+
   return (
     <div
       key={index.toString() + path + imageSize.toString()}
@@ -178,12 +184,19 @@ const Cell = memo(({
                 maxWidth: cellSize,
                 maxHeight: cellSize,
               }}
-              alt={encodeContextAlt({
-                type: 'image',
-                path,
-                scene: scene.name,
-                starable: true,
-              })}
+              onContextMenu={(e) => {
+                show({
+                  event: e,
+                  props: {
+                    ctx: {
+                      type: 'image',
+                      path,
+                      scene: scene.name,
+                      starable: true,
+                    }
+                  }
+                });
+              }}
               className={
                 'image-anime relative bg-checkboard w-auto h-auto ' +
                 (isMain ? 'border-2 border-yellow-400' : '')
@@ -389,6 +402,10 @@ const ResultDetailView = ({
   });
 
   const [showPrompt, setShowPrompt] = useState<boolean>(false);
+  const { show, hideAll } = useContextMenu({
+    id: ContextMenuType.Image,
+  });
+
 
   return (
       <div className="z-10 bg-white w-full h-full flex overflow-hidden flex-col md:flex-row">
@@ -476,12 +493,19 @@ const ResultDetailView = ({
           {image && (
             <img
               src={image}
-              alt={encodeContextAlt({
-                type: 'image',
-                path: paths[selectedIndex],
-                scene: scene.name,
-                starable: true,
-              })}
+              onContextMenu={(e) => {
+                show({
+                  event: e,
+                  props: {
+                    ctx: {
+                      type: 'image',
+                      path: paths[selectedIndex],
+                      scene: scene.name,
+                      starable: true,
+                    }
+                  }
+                });
+              }}
               className="w-full h-full object-contain bg-checkboard"
             />
           )}

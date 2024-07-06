@@ -8,9 +8,11 @@ import {
   shuffleArray,
   encodeContextAlt,
   backend,
+  ContextMenuType,
 } from './models';
 import { AppContext } from './App';
 import { roundButton } from './styles';
+import { useContextMenu } from 'react-contexify';
 
 interface TournamentProps {
   scene: Scene | InPaintScene;
@@ -24,6 +26,9 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
   const [players, setPlayers] = useState<string[]>([]);
   const lock = useRef(false);
   const [finalRank, setFinalRank] = useState(-1);
+  const { show } = useContextMenu({
+    id: ContextMenuType.Image
+  })
   const loadRoundInitial = () => {
     const [finalizedRank, newRound] = gameService.nextRound(scene.game!);
     if (!scene.round) {
@@ -262,10 +267,17 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
                   'active:brightness-90 hover:brightness-95 cursor-pointer imageSmall '
                 }
                 src={images[0]}
-                alt={encodeContextAlt({
-                  type: 'image',
-                  path: players[0]
-                })}
+                onContextMenu={(e) => {
+                  show({
+                    event: e,
+                    props: {
+                      ctx: {
+                        type: 'image',
+                        path: players[0]
+                      }
+                    }
+                  })
+                }}
               />
             </div>
             <div className="bg-gray-300 h-px w-full md:w-px md:h-full flex-none"></div>
@@ -282,10 +294,17 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
                   'active:brightness-90 hover:brightness-95 cursor-pointer imageSmall'
                 }
                 src={images[1]}
-                alt={encodeContextAlt({
-                  type: 'image',
-                  path: players[1]
-                })}
+                onContextMenu={(e) => {
+                  show({
+                    event: e,
+                    props: {
+                      ctx: {
+                        type: 'image',
+                        path: players[1]
+                      }
+                    }
+                  })
+                }}
               />
             </div>
           </div>

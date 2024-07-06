@@ -59,7 +59,7 @@ export const FloatViewProvider: React.FC<FloatViewProviderProps> = ({ children }
     if (views.length > 0) {
       closeTopView();
     } else {
-      CapacitorApp.exitApp();
+      CapacitorApp.minimizeApp();
     }
   };
 
