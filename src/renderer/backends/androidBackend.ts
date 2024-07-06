@@ -10,8 +10,10 @@ import Pica from 'pica';
 import { NovelAiFetcher, NovelAiImageGenService } from "./genVendors/nai";
 import FetchService from "./fecthService";
 import JSZip from "jszip";
-
-declare var cordova: any;
+import { BackgroundMode } from "@anuradev/capacitor-background-mode"
+import { TagDB } from "./tagDB";
+// @ts-ignore
+import DBCSV from '../../../assets/db.txt';
 
 const APP_DIR = "SDStudio";
 let config: Config = {};
@@ -79,8 +81,11 @@ class AndroidFetcher implements NovelAiFetcher {
   }
 }
 
+
 export class AndroidBackend extends Backend {
   private imageGenService: ImageGenService;
+  private tagDBId?: number;
+  private piecesDBId?: number;
   constructor() {
     super();
     Filesystem.mkdir({
@@ -89,7 +94,20 @@ export class AndroidBackend extends Backend {
       directory: Directory.Documents,
     });
     this.imageGenService = new NovelAiImageGenService(new AndroidFetcher);
+    (async () => {
+      if (await BackgroundMode.checkBatteryOptimizations()){
+        await BackgroundMode.requestDisableBatteryOptimizations();
+      }
+      await BackgroundMode.enable();
+      await BackgroundMode.disableWebViewOptimizations();
+    })();
 
+    (async () => {
+      this.tagDBId = (await TagDB.createDB({name: "tags"})).id;
+      this.piecesDBId = (await TagDB.createDB({name: "pieces"})).id;
+      const csv = await fetch(DBCSV).then(res => res.text());
+      await TagDB.loadDB({id: this.tagDBId, path: csv});
+    })();
   }
 
   async getConfig(): Promise<Config> {
@@ -166,15 +184,21 @@ export class AndroidBackend extends Backend {
   }
 
   async searchTags(word: string): Promise<any> {
-    return;
+    const args = {id: this.tagDBId!, query: word};
+    return (await TagDB.search(args)).results;
   }
 
   async loadPiecesDB(pieces: string[]): Promise<void> {
-    return;
+    const csv = pieces.map((x: string) => {
+      return `<${x}>,0,0,null`;
+    }).join('\n');
+    const args = {id:this.piecesDBId!, path: csv};
+    await TagDB.loadDB(args);
   }
 
   async searchPieces(word: string): Promise<any> {
-    return;
+    const args = {id: this.piecesDBId!, query: word};
+    return (await TagDB.search(args)).results;
   }
 
   async listFiles(arg: string): Promise<string[]> {

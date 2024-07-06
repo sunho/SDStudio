@@ -1,6 +1,6 @@
 import { Scrollbars } from 'react-custom-scrollbars-2';
 import * as Hangul from 'hangul-js';
-import { DOMElement, createRef, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { DOMElement, createRef, forwardRef, useCallback, useContext, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { AppContext } from './App';
 import Denque from 'denque';
 import { WordTag, backend, calcGapMatch, highlightPrompt, isMobile, promptService } from './models';
@@ -84,12 +84,12 @@ class CursorMemorizeEditor {
   container: HTMLElement;
   editor: HTMLElement;
   clipboard: HTMLElement;
-  highlightPrompt: (editor: CursorMemorizeEditor, text: string, curWord: string, updateAutoComplete: boolean) => string;
-  onUpdated: (editor: CursorMemorizeEditor, text: string) => void;
-  onUpArrow: (editor: CursorMemorizeEditor) => void;
-  onDownArrow: (editor: CursorMemorizeEditor) => void;
-  onEnter: (editor: CursorMemorizeEditor) => void;
-  onEsc: (editor: CursorMemorizeEditor) => void;
+  highlightPrompt: (text: string, curWord: string, updateAutoComplete: boolean) => string;
+  onUpdated: (text: string) => void;
+  onUpArrow: () => void;
+  onDownArrow: () => void;
+  onEnter: () => void;
+  onEsc: () => void;
   autocomplete: boolean;
   historyBuf: any;
   redoBuf: any;
@@ -98,14 +98,14 @@ class CursorMemorizeEditor {
     container: HTMLElement,
     editor: HTMLElement,
     clipboard: HTMLElement,
-    highlightPrompt: (editor: CursorMemorizeEditor, text: string, curWord: string, updateAutoComplete: boolean) => string,
-    onUpdated: (editor: CursorMemorizeEditor, text: string) => void,
+    highlightPrompt: (text: string, curWord: string, updateAutoComplete: boolean) => string,
+    onUpdated: (text: string) => void,
     historBuf: any,
     redoBuf: any,
-    onUpArrow: (editor: CursorMemorizeEditor) => void,
-    onDownArrow: (editor: CursorMemorizeEditor) => void,
-    onEnter: (editor: CursorMemorizeEditor) => void,
-    onEsc: (editor: CursorMemorizeEditor) => void
+    onUpArrow: () => void,
+    onDownArrow: () => void,
+    onEnter: () => void,
+    onEsc: () => void
   ) {
     this.container = container;
     this.compositionBuffer = [];
@@ -222,12 +222,12 @@ class CursorMemorizeEditor {
   updateDOM(text: string, newPos: number, updateAutoComplete: boolean = true) {
     this.domText = text;
     const cur = this.getCurWord(newPos)
-    this.editor.innerHTML = this.highlightPrompt(this, text, cur, updateAutoComplete) + '<span></span><br>';
+    this.editor.innerHTML = this.highlightPrompt(text, cur, updateAutoComplete) + '<span></span><br>';
   }
 
   updateCurText(text: string, push: boolean = true) {
     this.curText = text;
-    this.onUpdated(this, text);
+    this.onUpdated(text);
   }
 
   pushHistory() {
@@ -358,12 +358,12 @@ class CursorMemorizeEditor {
       if (this.autocomplete && ! e.shiftKey) {
         if (e.key === 'ArrowUp') {
           e.preventDefault();
-          this.onUpArrow(this);
+          this.onUpArrow();
           return;
         }
         if (e.key === 'ArrowDown') {
           e.preventDefault();
-          this.onDownArrow(this);
+          this.onDownArrow();
           return;
         }
       }
@@ -422,7 +422,7 @@ class CursorMemorizeEditor {
       if (e.key === 'Enter') {
         e.preventDefault();
         if (this.autocomplete) {
-          this.onEnter(this);
+          this.onEnter();
           return;
         }
         let cursor = start;
@@ -512,7 +512,7 @@ class CursorMemorizeEditor {
       if (e.key === 'Escape') {
         e.preventDefault();
         if (this.autocomplete) {
-          this.onEsc(this);
+          this.onEsc();
         } else {
           this.flushCompositon(this.previousRange);
         }
@@ -654,9 +654,10 @@ const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSe
       style={
         {
           display: (tags.length > 0 && (clientX !== 0 || clientY !== 0)) ? 'block' : 'none',
-          width: '400px',
+          width: '90vw',
+          maxWidth: '400px',
           height: '200px',
-          left: posX,
+          left: isMobile ? "5vw" : posX,
           top: posY,
         }
       }>
@@ -666,7 +667,6 @@ const PromptAutoComplete = ({ tags, curWord, clientX, clientY, selectedTag, onSe
         height={200}
         itemCount={tags.length}
         itemSize={31}
-        width={400}
         /*
         // @ts-ignore */
         overscanRowCount={16}
@@ -685,7 +685,6 @@ interface PromptEditTextAreaProps {
   lineHighlight?: boolean;
   onChange: (value: string) => void;
 }
-
 
 function useLatest(value: any) {
   const ref = useRef(value);
@@ -709,104 +708,38 @@ function replaceMiddleWord(str: string, newWord: string) {
   return trimmedLeft + newWord + trimmedRight;
 }
 
-const PromptEditTextArea = ({
-  value,
-  onChange,
-  disabled,
-  whiteBg,
-  lineHighlight,
-  innerRef,
-}: PromptEditTextAreaProps) => {
-  const { curSession } = useContext(AppContext)!;
+interface EditTextAreaProps {
+  value: string;
+  disabled: boolean;
+  highlight: (text: string, curWord: string, updateAutoComplete: boolean) => string;
+  onUpdated: (text: string) => void;
+  history: Denque<HistoryEntry>;
+  redo: Denque<HistoryEntry>;
+  onUpArrow: () => void;
+  onDownArrow: () => void;
+  onEnter: () => void;
+  onEsc: () => void;
+  closeAutoComplete: () => void;
+}
+
+interface EditTextAreaRef {
+  onCloseAutoComplete: () => void;
+  onOpenAutoComplete: () => void;
+  setCurWord: (word: string) => void;
+}
+
+const EmulatedEditTextArea = forwardRef<EditTextAreaRef, any>(({
+  value, disabled, highlight, onUpdated, history, redo, onUpArrow, onDownArrow, onEnter, onEsc, closeAutoComplete
+  }: EditTextAreaProps, ref: any) => {
   const editorRef = useRef<any>(null);
   const containerRef = useRef<any>(null);
   const clipboardRef = useRef<any>(null);
   const editorModelRef = useRef<any>(null);
-  const historyRef = useRef<Denque<HistoryEntry>>(new Denque<HistoryEntry>());
-  const redoRef = useRef<Denque<HistoryEntry>>(new Denque<HistoryEntry>());
-  const [tags, setTags] = useState<any[]>([]);
-  const [selectedTag, setSelectedTag] = useState<number>(0);
-  const [curWord, setCurWord] = useState<string>('');
-  const [clientX, setClientX] = useState(0);
-  const [clientY, setClientY] = useState(0);
-  const tagsRef = useLatest(tags);
-  const [id, setId] = useState(0);
-  const cntRef = useRef(0);
-  const selectedTagRef = useLatest(selectedTag);
-  const curWordRef = useLatest(curWord);
-  const [fullScreen, setFullScreen] = useState(false);
-
-  const closeAutoComplete = () => {
-    setTags([]);
-    setSelectedTag(0);
-    editorModelRef.current.autocomplete = false;
-    setId(id => id + 1);
-  };
-
-  const onUpArrow = (me: CursorMemorizeEditor) => {
-    if (tagsRef.current.length === 0) return;
-    setSelectedTag((selectedTagRef.current - 1 + tagsRef.current.length) % tagsRef.current.length)
-  };
-  const onDownArrow = (me: CursorMemorizeEditor) => {
-    if (tagsRef.current.length === 0) return;
-    setSelectedTag((selectedTagRef.current + 1) % tagsRef.current.length);
-  };
-  const onEsc = (me: CursorMemorizeEditor) => {
-    closeAutoComplete();
-  };
 
   useEffect(() => {
     if (!editorRef.current) return;
-    const onUpdated = (me: CursorMemorizeEditor, text: string) => {
-      onChange(text);
-    };
-    const highlight = (me: CursorMemorizeEditor, text: string, word: string, updateAutoComplete: boolean) => {
-      if (updateAutoComplete) {
-        if (word === '') {
-          closeAutoComplete();
-        } else {
-          const action = word.startsWith('<') ? backend.searchPieces : backend.searchTags;
-          cntRef.current++;
-          const myId = cntRef.current;
-          action(trimByBraces(word)).then(async (tags: any[]) => {
-            if (myId !== cntRef.current) return;
-            if (tags.length > 0) {
-              let selection = window.getSelection()!;
-              if (selection.rangeCount === 0) return;
-              let range = selection.getRangeAt(0);
-              let rect = range.getBoundingClientRect();
-              if (rect.right === 0 && rect.top === 0) {
-                await new Promise(resolve => requestAnimationFrame(resolve));
-                selection = window.getSelection()!;
-                range = selection.getRangeAt(0);
-                rect = range.getBoundingClientRect();
-              }
-              setClientX(rect.right);
-              setClientY(rect.top);
-              setSelectedTag(0);
-              setCurWord(word);
-              setTags(tags);
-              editorModelRef.current.autocomplete = true;
-            } else {
-              closeAutoComplete();
-            }
-          });
-        }
-      }
-      return highlightPrompt(curSession!, text, lineHighlight ?? false);
-    }
-
-    const onEnter = (me: CursorMemorizeEditor) => {
-      if (tagsRef.current.length === 0) return;
-      const tag = tagsRef.current[selectedTagRef.current];
-      const tagWord = tag.redirect.trim()!=='null' ? tag.redirect.trim() : tag.word;
-      const newWord = replaceMiddleWord(curWordRef.current, tagWord);
-      editorModelRef.current.setCurWord(newWord);
-      closeAutoComplete();
-    };
-
     const editor = new CursorMemorizeEditor(containerRef.current, editorRef.current,
-      clipboardRef.current, highlight, onUpdated, historyRef.current, redoRef.current,
+      clipboardRef.current, highlight, onUpdated, history, redo,
       onUpArrow, onDownArrow, onEnter, onEsc
     );
     editorModelRef.current = editor;
@@ -816,16 +749,6 @@ const PromptEditTextArea = ({
     editorRef.current.addEventListener('keydown', handleKeyDown);
     const handleBeforeInput = (e: any) => editor.handleBeforeInput(e);
     editorRef.current.addEventListener('beforeinput', handleBeforeInput);
-    const handleFocus = () => {
-      if (isMobile)
-        setFullScreen(true);
-    };
-    const handleBlur = () => {
-      if (isMobile && !editorModelRef.current.shuffling)
-        setFullScreen(false);
-    };
-    editorRef.current.addEventListener('focus', handleFocus);
-    editorRef.current.addEventListener('blur', handleBlur);
     const handleCompositionUpdate = (e: any) => editor.handleCompositionUpdate(e);
     if (!isMacPlatform()) {
       editorRef.current.addEventListener('compositionupdate', handleCompositionUpdate);
@@ -843,8 +766,6 @@ const PromptEditTextArea = ({
       if (editorRef.current === null) return;
       editorRef.current.removeEventListener('keydown', handleKeyDown);
       editorRef.current.removeEventListener('beforeinput', handleBeforeInput);
-      editorRef.current.removeEventListener('focus', handleFocus);
-      editorRef.current.removeEventListener('blur', handleBlur);
       if (!isMacPlatform()) {
         editorRef.current.removeEventListener('compositionupdate', handleCompositionUpdate);
       }
@@ -854,12 +775,130 @@ const PromptEditTextArea = ({
     };
   }, []);
 
+  useImperativeHandle(ref, () => ({
+    onCloseAutoComplete: () => {
+      editorModelRef.current.autocomplete = false;
+    },
+    onOpenAutoComplete: () => {
+      editorModelRef.current.autocomplete = true;
+    },
+    setCurWord: (word: string) => {
+      editorModelRef.current.setCurWord(word);
+    }
+  }));
+
+  return <>
+    <div ref={containerRef} className="overflow-auto h-full">
+      <div
+        className={'w-full min-h-full focus:outline-0 whitespace-pre-wrap align-middle'}
+        ref={editorRef}
+        contentEditable={disabled ? 'false' : 'true'}
+      ></div>
+    </div>
+    <textarea
+      className="absolute top-0 left-0 opacity-0 w-0 h-0"
+      ref={clipboardRef}
+      value=''
+      onChange={(e) => {e.target.value=''}}></textarea>
+    </>
+});
+
+const PromptEditTextArea = ({
+  value,
+  onChange,
+  disabled,
+  whiteBg,
+  lineHighlight,
+  innerRef,
+}: PromptEditTextAreaProps) => {
+  const { curSession } = useContext(AppContext)!;
+  const editorRef = useRef<EditTextAreaRef|null>(null);
+  const historyRef = useRef<Denque<HistoryEntry>>(new Denque<HistoryEntry>());
+  const redoRef = useRef<Denque<HistoryEntry>>(new Denque<HistoryEntry>());
+  const [tags, setTags] = useState<any[]>([]);
+  const [selectedTag, setSelectedTag] = useState<number>(0);
+  const [curWord, setCurWord] = useState<string>('');
+  const [clientX, setClientX] = useState(0);
+  const [clientY, setClientY] = useState(0);
+  const tagsRef = useLatest(tags);
+  const [id, setId] = useState(0);
+  const cntRef = useRef(0);
+  const selectedTagRef = useLatest(selectedTag);
+  const curWordRef = useLatest(curWord);
+  const [fullScreen, setFullScreen] = useState(false);
+
+  const closeAutoComplete = () => {
+    setTags([]);
+    setSelectedTag(0);
+    editorRef.current!.onCloseAutoComplete();
+    setId(id => id + 1);
+  };
+
+  const onUpArrow = () => {
+    if (tagsRef.current.length === 0) return;
+    setSelectedTag((selectedTagRef.current - 1 + tagsRef.current.length) % tagsRef.current.length)
+  };
+  const onDownArrow = () => {
+    if (tagsRef.current.length === 0) return;
+    setSelectedTag((selectedTagRef.current + 1) % tagsRef.current.length);
+  };
+  const onEsc = () => {
+    closeAutoComplete();
+  };
+  const onUpdated = (text: string) => {
+    onChange(text);
+  };
+  const highlight = (text: string, word: string, updateAutoComplete: boolean) => {
+    if (updateAutoComplete) {
+      if (word === '') {
+        closeAutoComplete();
+      } else {
+        const action = word.startsWith('<') ? backend.searchPieces.bind(backend) : backend.searchTags.bind(backend);
+        cntRef.current++;
+        const myId = cntRef.current;
+        action(trimByBraces(word)).then(async (tags: any[]) => {
+          console.log(tags);
+          if (myId !== cntRef.current) return;
+          if (tags.length > 0) {
+            let selection = window.getSelection()!;
+            if (selection.rangeCount === 0) return;
+            let range = selection.getRangeAt(0);
+            let rect = range.getBoundingClientRect();
+            if (rect.right === 0 && rect.top === 0) {
+              await new Promise(resolve => requestAnimationFrame(resolve));
+              selection = window.getSelection()!;
+              range = selection.getRangeAt(0);
+              rect = range.getBoundingClientRect();
+            }
+            setClientX(rect.right);
+            setClientY(rect.top);
+            setSelectedTag(0);
+            setCurWord(word);
+            setTags(tags);
+            editorRef.current!.onOpenAutoComplete();
+          } else {
+            closeAutoComplete();
+          }
+        });
+      }
+    }
+    return highlightPrompt(curSession!, text, lineHighlight ?? false);
+  }
+  const onEnter = () => {
+    if (tagsRef.current.length === 0) return;
+    const tag = tagsRef.current[selectedTagRef.current];
+    const tagWord = tag.redirect.trim()!=='null' ? tag.redirect.trim() : tag.word;
+    const newWord = replaceMiddleWord(curWordRef.current, tagWord);
+    editorRef.current!.setCurWord(newWord);
+    closeAutoComplete();
+  };
+
   const onSelectTag = (idx: number) => {
     if (tagsRef.current.length === 0) return;
     const tag = tagsRef.current[idx];
     const tagWord = tag.redirect.trim()!=='null' ? tag.redirect.trim() : tag.word;
     const newWord = replaceMiddleWord(curWordRef.current, tagWord);
-    editorModelRef.current.setCurWord(newWord);
+    editorRef.current!.setCurWord(newWord);
     closeAutoComplete();
   };
 
@@ -874,31 +913,20 @@ const PromptEditTextArea = ({
       spellCheck={false}
       className={bgColor + (!fullScreen ? ' overflow-hidden h-full relative' : ' left-0 m-4 p-2 overflow-hidden fixed z-30 h-96 prompt-full')}
     >
-    <div className="absolute right-0 top-0">
-      <button
-        onClick={() => {
-          if(!disabled)
-            setFullScreen(!fullScreen);
-        }}
-        className="text-gray-500 hover:text-gray-600 opacity-50 mr-1 mt-1"
-      >
-        {!fullScreen ? <FaExpand></FaExpand> : <FaTimes></FaTimes>}
-      </button>
-    </div>
-    <div ref={containerRef} className="overflow-auto h-full">
-      <div
-        className={'w-full min-h-full focus:outline-0 whitespace-pre-wrap align-middle'}
-        ref={editorRef}
-        contentEditable={disabled ? 'false' : 'true'}
-      ></div>
+      <div className="absolute right-0 top-0">
+        <button
+          onClick={() => {
+            if(!disabled)
+              setFullScreen(!fullScreen);
+          }}
+          className="text-gray-500 hover:text-gray-600 opacity-50 mr-1 mt-1"
+        >
+          {!fullScreen ? <FaExpand></FaExpand> : <FaTimes></FaTimes>}
+        </button>
+      </div>
+      <EmulatedEditTextArea ref={editorRef} value={value} disabled={disabled} highlight={highlight} onUpdated={onUpdated} history={historyRef.current} redo={redoRef.current} onUpArrow={onUpArrow} onDownArrow={onDownArrow} onEnter={onEnter} onEsc={onEsc} closeAutoComplete={closeAutoComplete}/>
     </div>
     <PromptAutoComplete key={id} curWord={curWord} tags={tags} clientX={clientX} clientY={clientY} selectedTag={selectedTag} onSelectTag={onSelectTag}/>
-    <textarea
-      className="absolute top-0 left-0 opacity-0 w-0 h-0"
-      ref={clipboardRef}
-      value=''
-      onChange={(e) => {e.target.value=''}}></textarea>
-    </div>
      {fullScreen && <div className="fixed bg-black opacity-15 w-screen h-screen top-0 left-0 z-20" onClick={() => {setFullScreen(false);}}></div>}
      </>
     );
