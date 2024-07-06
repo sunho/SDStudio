@@ -28,6 +28,10 @@ const configuration: webpack.Configuration = {
           },
         },
       },
+      {
+        test: /\.txt$/i,
+        use: 'raw-loader',
+      },
     ],
   },
 

@@ -1740,15 +1740,17 @@ export const highlightPrompt = (session: Session, text: string, lineHighlight: b
   let [parenFine, lastPos] = parenCheck(text);
   let offset = 0;
   const words = text
-    .split(/([,\n])/)
+    .split('\n')
+    .map(x => {
+    const word = x.split(/([,])/)
     .map((word: string, index) => {
       if (word === '\n'){
-        return word + (lineHighlight ? '<span class="syntax-line"></span>' : '');
-      }
-      if (word === ',') {
         return word;
       }
-      const classNames = ['syntax-word'];
+      if (word === ',') {
+        return '<span className="syntax-word">' + word + '</span>';
+      }
+      const classNames = [];
       let leftTrimPos = 0;
       while (leftTrimPos < word.length && isWhitespace(word[leftTrimPos])) {
         leftTrimPos++;
@@ -1758,8 +1760,8 @@ export const highlightPrompt = (session: Session, text: string, lineHighlight: b
         rightTrimPos--;
       }
       if (leftTrimPos > rightTrimPos) {
-        let res = `<span class="syntax-word">`;
-        res += nbsp.repeat(word.length) + '</span>';
+        let res = ``;
+        res += ' '.repeat(word.length) + '';
         offset += word.length + 1;
         return res;
       }
@@ -1815,11 +1817,17 @@ export const highlightPrompt = (session: Session, text: string, lineHighlight: b
       }
       pword = pword.replace('<', '&lt;').replace('>', '&gt');
       let res = `<span ${js} class="${classNames.join(' ')}">`;
-      res += `${word.substring(0, leftTrimPos)}${pword}${word.substring(rightTrimPos + 1, word.length)}</span>`;
+      if (classNames.length === 0)
+        res = '';
+      res += `${word.substring(0, leftTrimPos)}${pword}${word.substring(rightTrimPos + 1, word.length)}`;
+      if (classNames.length !== 0)
+        res += '</span>'
       offset += word.length + 1;
       return res;
     })
-    .join('');
+    .join('')
+    return '<span>' + word + '</span>'
+  }).join('\n');
   return `${words}`;
 };
 

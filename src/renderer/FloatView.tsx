@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, memo, useEffect, ReactNode, useRef } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import { App as CapacitorApp } from '@capacitor/app';
+import { isMobile } from './models';
 
 interface FloatView {
   id: number;
@@ -64,10 +65,12 @@ export const FloatViewProvider: React.FC<FloatViewProviderProps> = ({ children }
 
   useEffect(() => {
     document.addEventListener('keydown', handleEscape);
-    CapacitorApp.addListener('backButton', handleBackButton);
+    if (isMobile)
+      CapacitorApp.addListener('backButton', handleBackButton);
     return () => {
       document.removeEventListener('keydown', handleEscape);
-      CapacitorApp.removeAllListeners();
+      if (isMobile)
+        CapacitorApp.removeAllListeners();
     };
   }, [views]);
 
