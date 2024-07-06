@@ -300,9 +300,10 @@ export default function App() {
                 for (const key in json.scenes) {
                   if (key in cur.scenes) {
                     cur.scenes[key].slots = json.scenes[key].slots;
+                    cur.scenes[key].resolution = json.scenes[key].resolution;
                   } else {
                     cur.scenes[key] = json.scenes[key];
-                    cur.scenes[key].main = undefined;
+                    cur.scenes[key].mains = [];
                     cur.scenes[key].game = undefined;
                   }
                 }
