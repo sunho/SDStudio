@@ -213,9 +213,8 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs, toggleVi
       </div>
       <div className="flex-1 overflow-hidden relative">
         {!tabs[activeTab].banToggle && toggleViewOpen && <FloatView priority={0} onEscape={()=>setToggleViewOpen(false)}>
-        <div className="z-10 absolute h-full w-full overflow-hidden bg-white">
           {toggleView}
-        </div></FloatView>}
+        </FloatView>}
         {tabs.map((tab, index) => (
           <div
             key={index}

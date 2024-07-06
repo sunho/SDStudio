@@ -2664,26 +2664,31 @@ declare global {
 
 export async function getFirstFile() {
   return new Promise((resolve, reject) => {
-      // Create a hidden file input element
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.style.display = 'none';
+    // Create a hidden file input element
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.style.display = 'none';
 
-      // Listen for file selection
-      input.addEventListener('change', (event: any) => {
-          const file = event.target.files[0];
-          if (file) {
-              resolve(file);
-          } else {
-              reject(new Error('No file selected'));
-          }
-      });
+    // Listen for file selection
+    input.addEventListener('change', (event: any) => {
+        const file = event.target.files[0];
+        if (file) {
+            resolve(file);
+        } else {
+            reject(new Error('No file selected'));
+        }
+    });
 
-      // Trigger the file input click
-      document.body.appendChild(input);
-      input.click();
+    // Trigger the file input click
+    document.body.appendChild(input);
+    input.click();
 
-      // Clean up the DOM
-      document.body.removeChild(input);
+    // Clean up the DOM
+    document.body.removeChild(input);
   });
+}
+
+export enum ContextMenuType {
+  Image = 'image',
+  Scene = 'scene',
 }

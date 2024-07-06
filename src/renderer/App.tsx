@@ -1,4 +1,5 @@
 import './App.css';
+import './contexify.css';
 import {
   Component,
   ReactNode,
@@ -22,6 +23,7 @@ import {
   backend,
   ImageContextAlt,
   isMobile,
+  ContextMenuType,
 } from './models';
 import SessionSelect from './SessionSelect';
 import PreSetEditor from './PreSetEdtior';
@@ -38,7 +40,6 @@ import { convertDenDenData, isValidDenDenDataFormat } from './compat';
 import { FloatViewProvider } from './FloatView';
 import { FaImage, FaImages, FaPenFancy, FaPenNib, FaPuzzlePiece } from 'react-icons/fa';
 import { Menu, Item, Separator, Submenu, useContextMenu } from 'react-contexify';
-// import 'react-contexify/ReactContexify.css';
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { TouchBackend } from 'react-dnd-touch-backend'
@@ -108,7 +109,6 @@ const DnDPreview = () => {
   return res;
 }
 
-
 export default function App() {
   useEffect(() => {
     return () => {
@@ -148,125 +148,13 @@ export default function App() {
       console.log(progress);
       localAIService.notifyDownloadProgress(progress.percent);
     });
-    const removeDuplicateSceneListener = backend.onDuplicateScene(async (ctx: SceneContextAlt) => {
-      const field = ctx.sceneType === 'scene' ? 'scenes' : 'inpaints';
-      const scene = curSession![field][ctx.name];
-      if (!scene) {
-        return;
-      }
-      const newScene = JSON.parse(JSON.stringify(scene));
-      let cnt = 0;
-      const newName = () => (ctx.name + '_copy' + (cnt === 0 ? '' : cnt.toString()));
-      while (newName() in curSession![field]) {
-        cnt++;
-      }
-      newScene.name = newName();
-      curSession![field][newName()] = newScene;
-      sessionService.markUpdated(curSession!.name);
-      sessionService.sceneOrderChanged();
-    });
     const removeImageChangedListener = backend.onImageChanged(async (path: string) => {
       console.log('image-changed', path);
       imageService.invalidateCache(path);
     });
-    const removeDuplicateImageListener = backend.onDuplicateImage(async (ctx: ImageContextAlt) => {
-      const tmp = ctx.path.slice(0, ctx.path.lastIndexOf('/'));
-      const dir = tmp.split('/').pop()!;
-      const parDir = tmp.slice(0, tmp.lastIndexOf('/')) as any;
-      const field = parDir.startsWith('outs') ? 'scenes' : 'inpaints';
-      console.log(parDir);
-      const scene = (curSession! as any)[field][dir];
-      if (!scene) {
-        return;
-      }
-
-      await backend.copyFile(
-        ctx.path,
-        tmp +
-          '/' +
-          Date.now().toString() +
-          '.png',
-      );
-      imageService.refresh(curSession!, scene);
-      pushDialog({
-        type: 'yes-only',
-        text: '이미지를 복제했습니다',
-      });
-    });
-    const removeCopyImageListener = backend.onCopyImage((ctx: ImageContextAlt) => {
-      pushDialog({
-        type: 'dropdown',
-        text: '이미지를 어디에 복사할까요?',
-        items: Object.keys(curSession!.scenes).map((key) => ({
-          text: key,
-          value: key,
-        })),
-        callback: async (value) => {
-          if (!value)
-            return;
-
-          const scene = curSession!.scenes[value];
-          if (!scene) {
-            return;
-          }
-
-          await backend.copyFile(
-            ctx.path,
-            imageService.getImageDir(curSession!, scene) +
-              '/' +
-              Date.now().toString() +
-              '.png',
-          );
-          imageService.refresh(curSession!, scene);
-          pushDialog({
-            type: 'yes-only',
-            text: '이미지를 복사했습니다',
-          });
-        },
-      });
-    });
-    const removeMoveSceneFrontListener = backend.onMoveSceneFront((ctx: SceneContextAlt) => {
-      const field = ctx.sceneType === 'scene' ? 'scenes' : 'inpaints';
-      const scene = curSession![field][ctx.name];
-      if (!scene) {
-        return;
-      }
-      const newScenes: any = {};
-      newScenes[ctx.name] = scene;
-      for (const key in curSession![field]) {
-        if (key !== ctx.name) {
-          newScenes[key] = curSession![field][key];
-        }
-      }
-      curSession![field] = newScenes;
-      sessionService.markUpdated(curSession!.name);
-      sessionService.sceneOrderChanged();
-    });
-    const removeMoveSceneBackListener = backend.onMoveSceneBack((ctx: SceneContextAlt) => {
-      const field = ctx.sceneType === 'scene' ? 'scenes' : 'inpaints';
-      const scene = curSession![field][ctx.name];
-      if (!scene) {
-        return;
-      }
-      const newScenes: any = {};
-      for (const key in curSession![field]) {
-        if (key !== ctx.name) {
-          newScenes[key] = curSession![field][key];
-        }
-      }
-      newScenes[ctx.name] = scene;
-      curSession![field] = newScenes;
-      sessionService.markUpdated(curSession!.name);
-      sessionService.sceneOrderChanged();
-    });
     return () => {
       removeDonwloadProgressListener();
-      removeCopyImageListener();
-      removeMoveSceneFrontListener();
-      removeMoveSceneBackListener();
       removeImageChangedListener();
-      removeDuplicateImageListener();
-      removeDuplicateSceneListener();
     };
   },[curSession]);
 
@@ -427,6 +315,7 @@ export default function App() {
       window.removeEventListener('drop', handleDrop);
     };
   }, [curSession, dialogs, messages]);
+
   useEffect(() => {
     window.curSession = curSession;
     if (curSession)
@@ -435,6 +324,142 @@ export default function App() {
       window.curSession = undefined;
     };
   }, [curSession]);
+
+  const ContextMenuList = () => {
+    const duplicateScene = async (ctx: SceneContextAlt) => {
+      const field = ctx.sceneType === 'scene' ? 'scenes' : 'inpaints';
+      const scene = curSession![field][ctx.name];
+      if (!scene) {
+        return;
+      }
+      const newScene = JSON.parse(JSON.stringify(scene));
+      let cnt = 0;
+      const newName = () => (ctx.name + '_copy' + (cnt === 0 ? '' : cnt.toString()));
+      while (newName() in curSession![field]) {
+        cnt++;
+      }
+      newScene.name = newName();
+      curSession![field][newName()] = newScene;
+      sessionService.markUpdated(curSession!.name);
+      sessionService.sceneOrderChanged();
+    };
+    const moveSceneFront = (ctx: SceneContextAlt) => {
+      const field = ctx.sceneType === 'scene' ? 'scenes' : 'inpaints';
+      const scene = curSession![field][ctx.name];
+      if (!scene) {
+        return;
+      }
+      const newScenes: any = {};
+      newScenes[ctx.name] = scene;
+      for (const key in curSession![field]) {
+        if (key !== ctx.name) {
+          newScenes[key] = curSession![field][key];
+        }
+      }
+      curSession![field] = newScenes;
+      sessionService.markUpdated(curSession!.name);
+      sessionService.sceneOrderChanged();
+    };
+    const moveSceneBack = (ctx: SceneContextAlt) => {
+      const field = ctx.sceneType === 'scene' ? 'scenes' : 'inpaints';
+      const scene = curSession![field][ctx.name];
+      if (!scene) {
+        return;
+      }
+      const newScenes: any = {};
+      for (const key in curSession![field]) {
+        if (key !== ctx.name) {
+          newScenes[key] = curSession![field][key];
+        }
+      }
+      newScenes[ctx.name] = scene;
+      curSession![field] = newScenes;
+      sessionService.markUpdated(curSession!.name);
+      sessionService.sceneOrderChanged();
+    };
+    const handleSceneItemClick = ({id, props}: any) => {
+      const ctx = props.ctx as SceneContextAlt;
+      if (id === 'duplicate') {
+        duplicateScene(ctx);
+      } else if (id === 'move-front') {
+        moveSceneFront(ctx);
+      } else if (id === 'move-back') {
+        moveSceneBack(ctx);
+      }
+    }
+    const duplicateImage = async (ctx: ImageContextAlt) => {
+      const tmp = ctx.path.slice(0, ctx.path.lastIndexOf('/'));
+      const dir = tmp.split('/').pop()!;
+      const parDir = tmp.slice(0, tmp.lastIndexOf('/')) as any;
+      const field = parDir.startsWith('outs') ? 'scenes' : 'inpaints';
+      const scene = (curSession! as any)[field][dir];
+      if (!scene) {
+        return;
+      }
+      await backend.copyFile(
+        ctx.path,
+        tmp +
+          '/' +
+          Date.now().toString() +
+          '.png',
+      );
+      imageService.refresh(curSession!, scene);
+      pushDialog({
+        type: 'yes-only',
+        text: '이미지를 복제했습니다',
+      });
+    };
+    const copyImage = (ctx: ImageContextAlt) => {
+      pushDialog({
+        type: 'dropdown',
+        text: '이미지를 어디에 복사할까요?',
+        items: Object.keys(curSession!.scenes).map((key) => ({
+          text: key,
+          value: key,
+        })),
+        callback: async (value) => {
+          if (!value)
+            return;
+
+          const scene = curSession!.scenes[value];
+          if (!scene) {
+            return;
+          }
+
+          await backend.copyFile(
+            ctx.path,
+            imageService.getImageDir(curSession!, scene) +
+              '/' +
+              Date.now().toString() +
+              '.png',
+          );
+          imageService.refresh(curSession!, scene);
+          pushDialog({
+            type: 'yes-only',
+            text: '이미지를 복사했습니다',
+          });
+        },
+      });
+    };
+    const handleImageItemClick = ({id, props}: any) => {
+      if (id === 'duplicate') {
+        duplicateImage(props.ctx as ImageContextAlt);
+      } else if (id === 'copy') {
+        copyImage(props.ctx as ImageContextAlt);
+      }
+    };
+    return <>
+      <Menu id={ContextMenuType.Scene}>
+        <Item id="duplicate" onClick={handleSceneItemClick}>해당 씬 복제</Item>
+        <Item id="move-front" onClick={handleSceneItemClick}>해당 씬 맨 위로</Item>
+        <Item id="move-back" onClick={handleSceneItemClick}>해당 씬 맨 뒤로</Item>
+      </Menu>
+      <Menu id={ContextMenuType.Image}>
+        <Item id="duplicate" onClick={handleImageItemClick}>해당 이미지 복제</Item>
+        <Item id="copy" onClick={handleImageItemClick}>다른 씬으로 이미지 복사</Item>
+      </Menu>
+    </>;
+  }
 
   const pushMessage = (msg: string) => {
     setMessages((prev) => [...prev, msg]);
@@ -475,13 +500,8 @@ export default function App() {
             pushMessage(`${error.message}`);
           }}
         >
-            <Menu id={52}>
-              <Item id="copy" >Copy</Item>
-              <Item id="cut" >Cut</Item>
-              <Separator />
-              <Item disabled>Disabled</Item>
-            </Menu>
             <FloatViewProvider>
+            <ContextMenuList/>
             <div className="flex flex-col flex-1 overflow-hidden">
               <div className="grow-0">
                 <NAILogin
