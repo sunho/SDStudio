@@ -55,6 +55,11 @@ body {
 .show-toolbar {
   height: calc(100% - 55px);
 }
+@media screen and (max-width: 768px) {
+  .show-toolbar {
+    height: calc(100% - 49px);
+  }
+}
 
 .clear-textarea {
   display: block;

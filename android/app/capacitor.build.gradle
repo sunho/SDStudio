@@ -12,6 +12,7 @@ dependencies {
     implementation project(':anuradev-capacitor-background-mode')
     implementation project(':capacitor-community-file-opener')
     implementation project(':capacitor-community-http')
+    implementation project(':capacitor-app')
     implementation project(':capacitor-filesystem')
 
 }

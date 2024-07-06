@@ -716,7 +716,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
           isHidden={selectedTab !== 0}
           onSelected={onSelected}
         />
-        <QueueControl type='inpaint' className={selectedTab === 1 ? 'px-4 ' : 'hidden'}
+        <QueueControl type='inpaint' className={selectedTab === 1 ? 'px-1 md:px-4 ' : 'hidden'}
           onClose={(x)=>{setSelectedTab(x)}}
           filterFunc={(x: any) => {
             return !!(x.sceneRef && x.sceneRef === scene.name);

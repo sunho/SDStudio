@@ -186,8 +186,10 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
 
       const draw = (e: any) => {
         const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        const x = (clientX - rect.left) * (canvas.width / rect.width);
+        const y = (clientY - rect.top) * (canvas.height / rect.height);
 
         if (isDrawingRef.current) {
           const lastPos = lastPosRef.current;
@@ -213,6 +215,7 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
       };
 
       const startDrawing = (e: any) => {
+        e.preventDefault();
         ctx.putImageData(curImageRef.current, 0, 0);
         const imageData = curImageRef.current;
         historyRef.current.push(imageData);
@@ -234,10 +237,14 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
       };
 
       const drawIfDrawing = (e: any) => {
+        e.preventDefault();
         const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        const x = (clientX - rect.left) * (canvas.width / rect.width);
+        const y = (clientY - rect.top) * (canvas.height / rect.height);
         curPosRef.current = { x, y };
+        console.log("BITCH", x, y);
         if (isDrawingRef.current) {
           draw(e);
         } else {
@@ -254,6 +261,9 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
       canvas.addEventListener('mousemove', drawIfDrawing);
       canvas.addEventListener('mouseup', stopDrawing);
       canvas.addEventListener('mouseleave', stopDrawing);
+      canvas.addEventListener('touchstart', startDrawing);
+      canvas.addEventListener('touchmove', drawIfDrawing);
+      canvas.addEventListener('touchend', stopDrawing);
       window.addEventListener('keydown', undo);
 
       return () => {
@@ -261,6 +271,9 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
         canvas.removeEventListener('mousemove', drawIfDrawing);
         canvas.removeEventListener('mouseup', stopDrawing);
         canvas.removeEventListener('mouseleave', stopDrawing);
+        canvas.removeEventListener('touchstart', startDrawing);
+        canvas.removeEventListener('touchmove', drawIfDrawing);
+        canvas.removeEventListener('touchend', stopDrawing);
         window.removeEventListener('keydown', undo);
       };
     }, [brushSize]);
