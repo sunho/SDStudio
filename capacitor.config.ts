@@ -4,10 +4,10 @@ const config: CapacitorConfig = {
   appId: 'io.sunho.SDStudio',
   appName: 'SDStudio',
   webDir: 'dist',
-  server: {
-    url: "http://192.168.0.116:5173",
-    cleartext: true
-  },
+  // server: {
+  //   url: "http://192.168.0.116:5173",
+  //   cleartext: true
+  // },
   android: { allowMixedContent: true },
   plugins: {
     CapacitorHttp: {
