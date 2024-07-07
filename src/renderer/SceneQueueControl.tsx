@@ -42,6 +42,8 @@ import Tournament from './Tournament';
 import ResultViewer from './ResultViewer';
 import InPaintEditor from './InPaintEditor';
 import { base64ToDataUri } from './BrushTool';
+import SceneSelector from './SceneSelector';
+import { Resolution, resolutionMap } from '../main/imageGen';
 
 interface SceneCellProps {
   scene: GenericScene;
@@ -248,6 +250,11 @@ interface QueueControlProps {
   onClose?: (x: number) => void;
   showPannel?: boolean;
   className?: string;
+}
+
+interface SceneSelectorItem {
+  text: string;
+  callback: (scenes: Scene[]) => void;
 }
 
 const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }: QueueControlProps) => {
@@ -661,12 +668,12 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
     });
   };
 
-  const removeBg = async () => {
+  const removeBg = async (selected: Scene[]) => {
     if (!localAIService.ready) {
       ctx.pushMessage('환경설정에서 배경 제거 기능을 활성화해주세요');
       return;
     }
-    for (const scene of Object.values(curSession!.scenes)) {
+    for (const scene of selected) {
       if (scene.mains.length === 0) {
         const images = gameService.getOutputs(curSession!, scene);
         if (!images.length)
@@ -718,50 +725,128 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
     return <></>
   },[displayScene]);
 
+  const [sceneSelector, setSceneSelector] = useState<SceneSelectorItem | undefined>(undefined);
+  const handleBatchProcess = async (value: string, selected: Scene[]) => {
+    if (value === 'removeAll') {
+      ctx.pushDialog({
+        type: 'confirm',
+        text: '정말로 모든 이미지를 삭제하시겠습니까?',
+        callback: async () => {
+          for (const scene of selected) {
+            const paths = imageService.getImages(curSession, scene);
+            await deleteImageFiles(curSession!, paths);
+          }
+        }
+      });
+    } else if (value === 'removeAllExcept') {
+      ctx.pushDialog({
+        type: 'input-confirm',
+        text: '몇등 이하 이미지를 삭제할지 입력해주세요.',
+        callback: async (value) => {
+          if (value) {
+            for (const scene of selected) {
+              const paths = imageService.getImages(curSession, scene);
+              const n = parseInt(value);
+              await deleteImageFiles(curSession!, paths.slice(n).filter((x) => !isMainImage || !isMainImage(x)));
+            }
+          }
+        }
+      });
+    } else if (value === 'changeResolution') {
+      const options = Object.entries(resolutionMap).filter(x=>(x[1].width > 1000)).map(([key, value]) => {
+        return {
+          text: `${value.width}x${value.height}`,
+          value: key
+        }
+      });
+      ctx.pushDialog({
+        type: 'dropdown',
+        text: '변경할 해상도를 선택해주세요',
+        items: options,
+        callback: async (value?: string) => {
+          if (!value) return;
+          const action = () => {
+            for (const scene of selected) {
+              scene.resolution = value as Resolution;
+            }
+          }
+          updateScenes();
+          if (value.includes('large') || value.includes('wallpaper')) {
+            ctx.pushDialog({
+              text: 'Anlas를 소모하는 해상도 입니다. 계속하겠습니까?',
+              type: 'confirm',
+              callback: () => {
+                action();
+              }
+            })
+          } else {
+            action();
+          }
+        }
+      })
+    } else if (value === 'removeAllFav') {
+      ctx.pushDialog({
+        type: 'confirm',
+        text: '정말로 모든 즐겨찾기를 해제하겠습니까?',
+        callback: () => {
+          for (const scene of selected) {
+            scene.mains = [];
+          }
+          updateScenes();
+          sessionService.mainImageUpdated();
+        }
+      });
+    } else if (value === 'setFav') {
+      ctx.pushDialog({
+        type: 'input-confirm',
+        text: '몇등까지 즐겨찾기로 지정할지 입력해주세요',
+        callback: async (value) => {
+          if (value) {
+            const n = parseInt(value);
+            for (const scene of selected) {
+              const cands = gameService.getOutputs(curSession!, scene).slice(0, n).map(x => x.split('/').pop()!);
+              scene.mains = scene.mains.concat(cands).filter((x, i, self) => self.indexOf(x) === i);
+            }
+            updateScenes();
+            sessionService.mainImageUpdated();
+          }
+        }
+      });
+    } else if (value === 'removeBg') {
+      removeBg(selected);
+    } else {
+      console.log('Not implemented');
+    }
+  }
+
   const openMenu = () => {
     ctx.pushDialog({
       type: 'select',
-      text: '일괄 작업을 선택해주세요',
+      text: '선택할 씬들에 적용할 대량 작업을 선택해주세요',
       items: [
-        {'text': '모든 씬 즐겨찾기 배경 제거', 'value': 'removeBg'},
-        {'text': '모든 씬 이미지 전부 삭제', 'value': 'removeAll'},
-        {'text': '모든 씬 즐겨찾기 제외 n등 이하 이미지 삭제', 'value': 'removeAllExcept'},
+        {'text': '즐겨찾기 이미지 배경 제거', 'value': 'removeBg'},
+        {'text': '즐겨찾기 제외 n등 이하 이미지 삭제', 'value': 'removeAllExcept'},
+        {'text': '해상도 변경 ', 'value': 'changeResolution'},
+        {'text': '즐겨찾기 전부 해제', 'value': 'removeAllFav'},
+        {'text': '이미지 전부 삭제', 'value': 'removeAll'},
+        {'text': '상위 n등 즐겨찾기 지정', 'value': 'setFav'},
       ],
-      callback: async (value) => {
-        if (value === 'removeAll') {
-          ctx.pushDialog({
-            type: 'confirm',
-            text: '정말로 모든 이미지를 삭제하시겠습니까?',
-            callback: async () => {
-              for (const scene of Object.values(curSession!.scenes)) {
-                const paths = imageService.getImages(curSession, scene);
-                await deleteImageFiles(curSession!, paths);
-              }
-            }
-          });
-        } else if (value === 'removeAllExcept') {
-          ctx.pushDialog({
-            type: 'input-confirm',
-            text: '몇등 이하 이미지를 삭제할지 입력해주세요.',
-            callback: async (value) => {
-              if (value) {
-                for (const scene of Object.values(curSession!.scenes)) {
-                  const paths = imageService.getImages(curSession, scene);
-                  const n = parseInt(value);
-                  await deleteImageFiles(curSession!, paths.slice(n).filter((x) => !isMainImage || !isMainImage(x)));
-                }
-              }
-            }
-          });
-        } else {
-          removeBg();
-        }
+      callback: (value, text) => {
+        setSceneSelector({text: text!, callback: (selected) => {
+          setSceneSelector(undefined);
+          handleBatchProcess(value!, selected);
+        }});
       }
     })
   }
 
   return (
     <div className={"flex flex-col h-full " + (className ?? '')}>
+      {sceneSelector &&
+        <FloatView priority={0} onEscape={() => setSceneSelector(undefined)}>
+          <SceneSelector text={sceneSelector.text} scenes={Object.values(curSession!.scenes)} onConfirm={sceneSelector.callback} getImage={getImage}/>
+        </FloatView>
+      }
       {resultViewer}
       {panel}
       {!!showPannel &&
@@ -789,7 +874,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
             className={`${roundButton} ${primaryColor}`}
             onClick={openMenu}
           >
-            다른 일괄 작업
+            대량 작업
           </button>)}
         </div>
         <div className="ml-auto mr-2">

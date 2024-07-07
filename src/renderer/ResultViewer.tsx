@@ -357,9 +357,27 @@ const ResultDetailView = ({
       forceUpdate({});
     };
     fetchImage();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        setSelectedIndex((selectedIndex - 1 + paths.length) % paths.length);
+      } else if (e.key === 'ArrowRight') {
+        setSelectedIndex((selectedIndex + 1) % paths.length);
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        pushDialog({
+          type: 'confirm',
+          text: '정말로 파일을 삭제하시겠습니까?',
+          callback: async () => {
+            await deleteImageFiles(curSession!, [paths[selectedIndex]]);
+            onClose();
+          },
+        });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
     sessionService.addEventListener('main-image-updated', rerender);
     imageService.addEventListener('image-cache-invalidated', fetchImage);
     return () => {
+      window.removeEventListener('keydown', handleKeyDown);
       sessionService.removeEventListener('main-image-updated', rerender);
       imageService.removeEventListener('image-cache-invalidated', fetchImage);
     };
