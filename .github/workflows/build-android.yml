@@ -39,16 +39,10 @@ jobs:
       - name: Build Capacitor Android Project
         run: npx cap sync android
 
-      - name: Extract Android signing key from env
-        run: |
-          echo "${{ secrets.RELEASE_KEYSTORE }}" > android/release.jks.base64
-          base64 -d android/release.jks.base64 > android/release.decrypted.jks
-
       - name: Build the Android app
         run: |
           cd android
           ./gradlew bundle && ./gradlew assembleRelease
-
 
       - uses: r0adkll/sign-android-release@v1
         name: Sign app APK
@@ -59,6 +53,8 @@ jobs:
           alias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "34.0.0"
 
       - uses: actions/upload-artifact@v2
         with:
