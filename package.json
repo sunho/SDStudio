@@ -25,7 +25,7 @@
     "build:dll": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true TS_NODE_PROJECT=tsconfig.app.json webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.ts",
     "build:main": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true TS_NODE_PROJECT=tsconfig.app.json webpack --config ./.erb/configs/webpack.config.main.prod.ts",
     "build:renderer": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true TS_NODE_PROJECT=tsconfig.app.json webpack --config ./.erb/configs/webpack.config.renderer.prod.ts",
-    "postinstall": "ts-node --project tsconfig.app.json .erb/scripts/check-native-dep.js && electron-builder install-app-deps && npm run build:dll",
+    "postinstall-electron": "ts-node --project tsconfig.app.json .erb/scripts/check-native-dep.js && electron-builder install-app-deps && npm run build:dll",
     "lint": "cross-env NODE_ENV=development eslint . --ext .js,.jsx,.ts,.tsx",
     "package-corss": "ts-node --project tsconfig.app.json ./.erb/scripts/clean.js dist && npm run build && electron-builder build -w --x64 --publish never && npm run build:dll",
     "package": "TS_NODE_PROJECT=tsconfig.app.json ts-node --project tsconfig.app.json ./.erb/scripts/clean.js dist && npm run build && electron-builder build --publish never && npm run build:dll",
