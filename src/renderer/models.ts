@@ -2367,12 +2367,16 @@ class AppUpdateNoticeService extends EventTarget {
 
 export const appUpdateNoticeService = new AppUpdateNoticeService();
 
-export const deleteImageFiles = async (curSession: Session, paths: string[]) => {
+export const deleteImageFiles = async (curSession: Session, paths: string[], scene?: GenericScene) => {
   for (const path of paths) {
     await backend.trashFile(path);
     await imageService.invalidateCache(path);
   }
-  await imageService.refreshBatch(curSession);
+  if (scene) {
+    await imageService.refresh(curSession, scene);
+  } else {
+    await imageService.refreshBatch(curSession);
+  }
 }
 
 export interface ImageContextAlt {
