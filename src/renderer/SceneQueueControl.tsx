@@ -753,7 +753,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
         }
       });
     } else if (value === 'changeResolution') {
-      const options = Object.entries(resolutionMap).filter(x=>(x[1].width > 1000)).map(([key, value]) => {
+      const options = Object.entries(resolutionMap).filter(x=>(!x[0].includes('small'))).map(([key, value]) => {
         return {
           text: `${value.width}x${value.height}`,
           value: key
