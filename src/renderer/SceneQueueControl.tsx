@@ -733,23 +733,23 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
   const resultViewerRef = useRef<any>(null);
   const resultViewer = useMemo(() => {
     if (displayScene) return <FloatView
-          priority={2}
-          showToolbar
-          onEscape={() => {
-            gameService.refreshList(curSession!, displayScene);
-            sessionService.mainImageUpdated();
-            setDisplayScene(undefined);
-          }}
-        >
-          <ResultViewer
-            ref={resultViewerRef}
-            scene={displayScene}
-            isMainImage={isMainImage}
-            onFilenameChange={onFilenameChange}
-            onEdit={onEdit}
-            buttons={buttons}
-          />
-        </FloatView>
+        priority={2}
+        showToolbar
+        onEscape={() => {
+          gameService.refreshList(curSession!, displayScene);
+          sessionService.mainImageUpdated();
+          setDisplayScene(undefined);
+        }}
+      >
+        <ResultViewer
+          ref={resultViewerRef}
+          scene={displayScene}
+          isMainImage={isMainImage}
+          onFilenameChange={onFilenameChange}
+          onEdit={onEdit}
+          buttons={buttons}
+        />
+      </FloatView>
     return <></>
   },[displayScene]);
 

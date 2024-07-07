@@ -29,7 +29,6 @@ import {
   queueGenericScene,
   removeTaskFromGenericScene,
   sessionService,
-  swapImages,
   taskQueueService,
 } from './models';
 import { BiBrush, BiImage } from "react-icons/bi";
@@ -110,6 +109,7 @@ const Cell = memo(({
     imageSize,
   } = data as any;
 
+  const { curSession } = useContext(AppContext)!;
   const index = rowIndex * columnCount + columnIndex;
   const path = filePaths[index];
 
@@ -185,14 +185,40 @@ const Cell = memo(({
         return { isOver: false }
       },
       drop: async (item: any, monitor) => {
-        const { path: draggedPath, index: draggedIndex } = item
+        const mscene = scene as GenericScene;
+        let { path: draggedPath, index: draggedIndex } = item
+        draggedPath = draggedPath.split('/').pop()!;
+        const dropPath = path.split('/').pop()!;
+
         if (draggedIndex !== index) {
-          await swapImages(filePaths[draggedIndex], filePaths[index]);
-          await refreshImageFuncs.current.get(filePaths[draggedIndex])?.();
-          await refreshImageFuncs.current.get(filePaths[index])?.();
-          if (onFilenameChange) {
-            onFilenameChange(filePaths[index], filePaths[draggedIndex]);
+          const getPlayer = (path: string) => {
+            if (mscene.game) {
+              for (const player of mscene.game) {
+                if (player.path === path) {
+                  return player;
+                }
+              }
+            }
+            return undefined;
+          };
+          const draggedPlayer = getPlayer(draggedPath);
+          const dropPlayer = getPlayer(dropPath);
+          if (draggedPlayer) {
+            mscene.game = mscene.game!.filter((player) => player.path !== draggedPath);
           }
+          if (dropPlayer) {
+            mscene.game!.push({
+              path: draggedPath,
+              rank: dropPlayer.rank,
+            });
+            gameService.cleanGame(mscene.game!);
+            mscene.round = undefined;
+          }
+          const draggedImageIndex = mscene.imageMap.indexOf(draggedPath);
+          const dropImageIndex = mscene.imageMap.indexOf(dropPath);
+          mscene.imageMap.splice(draggedImageIndex, 1);
+          mscene.imageMap.splice(dropImageIndex, 0, draggedPath);
+          await imageService.refresh(curSession!, mscene);
         }
       },
     }), [path, imageSize, index],
