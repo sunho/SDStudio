@@ -76,6 +76,7 @@ export function convertDenDenData(
       slots: [[{ enabled: true, prompt: preset.presetPrompt }]],
       resolution: 'portrait',
       mains: [],
+      imageMap: [],
       round: undefined,
       game: undefined,
     };

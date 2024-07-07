@@ -143,6 +143,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
         prompt: currentPrompt,
         uc: currentUC,
         resolution: resolution,
+        imageMap: [],
         round: undefined,
         game: undefined,
       };
