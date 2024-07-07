@@ -2061,13 +2061,6 @@ export const renameImage = async (oldPath: string, newPath: string) => {
   await imageService.renameImage(oldPath, newPath);
 };
 
-export const swapImages = async (a: string, b: string) => {
-  const tmp = changeFilename(a, a.split('/').pop() + uuidv4() + '.png');
-  await renameImage(a, tmp);
-  await renameImage(b, a);
-  await renameImage(tmp, b);
-};
-
 export type SceneType = 'scene' | 'inpaint';
 
 export interface Round {
@@ -2141,6 +2134,9 @@ export class GameService extends EventTarget {
       if (b[1] == null) {
         return -1;
       }
+      if (b[1] === a[1]) {
+        return a[0] - b[0];
+      }
       return b[1] - a[1] ;
     }
     const cvtMap: any = {};
@@ -2175,6 +2171,22 @@ export class GameService extends EventTarget {
       rank: files.length - 1,
     }));
   };
+
+  cleanGame(game: Game) {
+    sortGame(game);
+    let curRank = 0;
+    let prev = -1;
+    let cnt = 0;
+    for (let i=0;i<game.length;i++) {
+      if (game[i].rank !== prev) {
+        prev = game[i].rank;
+        curRank += cnt;
+        cnt = 0;
+      }
+      game[i].rank = curRank;
+      cnt++;
+    }
+  }
 
   nextRound(game: Game): [number, Round | undefined] {
     sortGame(game);
