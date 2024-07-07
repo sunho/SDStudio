@@ -50,24 +50,24 @@ const SceneSelector: React.FC<SceneSelectorProps> = ({ scenes, text, getImage, o
   };
 
   return (
-    <div className="p-4 flex flex-col h-full">
+    <div className="p-2 md:p-4 flex flex-col h-full">
       <div className="flex items-center gap-2 text-gray-700 flex-none">
-        <FaObjectGroup size={25}/>
-        <div className="text-xl "> 씬을 선택하고 해당 작업을 적용합니다: <span className="font-bold text-black">{text}</span></div>
+        <FaObjectGroup className="text-lg md:text-xl"/>
+        <div className="text-lg md:text-xl flex flex-col md:flex-row"> <span>씬을 선택하고 해당 작업을 적용합니다:</span> <span className="font-bold text-black">{text}</span></div>
       </div>
-      <div className="px-1 pt-3 flex flex-col flex-1 overflow-hidden">
+      <div className="px-1 pt-2 md:pt-3 flex flex-col flex-1 overflow-hidden">
         <div className="gap-2 flex flex-none overflow-hidden">
           <button className={`${roundButton} bg-sky-500`} onClick={selectAllScenes}>모두 선택</button>
           <button className={`${roundButton} bg-gray-500`} onClick={clearAllSelections}>모두 선택 해제</button>
         </div>
         <div className="flex-1 overflow-hidden pt-4 pb-2">
-          <div className="flex flex-wrap h-full overflow-auto gap-2">
+          <div className="flex flex-wrap h-full overflow-auto gap-2 content-start">
             {scenes.map(scene => (
-              <div className={"hover:brightness-95 active:brightness-90 cursor-pointer p-2 border border-gray-400 flex flex-col items-center " + (selectedScenes.some(selected => selected.name === scene.name) ? "border-sky-500 bg-sky-200":"bg-white")}
+              <div className={"hover:brightness-95 active:brightness-90 cursor-pointer p-2 border border-gray-400 flex-none flex flex-col items-center " + (selectedScenes.some(selected => selected.name === scene.name) ? "border-sky-500 bg-sky-200":"bg-white")}
               onClick={()=>toggleSceneSelection(scene)}
                key={scene.name}>
                 <div><SceneImage getImage={getImage} scene={scene}></SceneImage></div>
-                <div className="h-12 w-28 overflow-auto break-all">
+                <div className="h-12 w-16 md:w-28 overflow-auto break-all select-none">
                   {scene.name}
                 </div>
               </div>
