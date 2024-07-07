@@ -1,9 +1,6 @@
 [submodule "src/localai/BiRefNet"]
 	path = src/localai/BiRefNet
 	url = https://github.com/sunho/BiRefNet.git
-[submodule "externals/cordova-plugin-background-mode"]
-	path = externals/cordova-plugin-background-mode
-  url = https://github.com/sunho/capacitor-background-mode.git
 [submodule "externals/capacitor-background-mode"]
 	path = externals/capacitor-background-mode
 	url = https://github.com/sunho/capacitor-background-mode.git
