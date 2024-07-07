@@ -150,6 +150,13 @@ jobs:
           npm install
           npm install ./externals/capacitor-background-mode
 
+      - name: Get version and commit hash
+        id: get-version
+        run: |
+          version=$(jq -r '.version' release/app/package.json)
+          echo "version=$version" >> $GITHUB_ENV
+          commit_hash=$(git rev-parse --short HEAD)
+          echo "commit_hash=$commit_hash" >> $GITHUB_ENV
 
       - name: Build Web
         run: npm run build-vite
