@@ -294,7 +294,7 @@ interface ResultDetailViewButton {
 
 interface ResultDetailViewProps {
   scene: GenericScene;
-  paths: string[];
+  getPaths: ()=>string[];
   initialSelectedIndex: number;
   buttons: ResultDetailViewButton[];
   onClose: () => void;
@@ -302,12 +302,13 @@ interface ResultDetailViewProps {
 const ResultDetailView = ({
   scene,
   buttons,
-  paths,
+  getPaths,
   initialSelectedIndex,
   onClose,
 }: ResultDetailViewProps) => {
   const { curSession, selectedPreset, pushDialog } = useContext(AppContext)!;
   const [selectedIndex, setSelectedIndex] = useState<number>(initialSelectedIndex);
+  const [paths, setPaths] = useState<string[]>(getPaths());
   const [filename, setFilename] = useState<string>(paths[selectedIndex].split('/').pop()!);
   const [image, setImage] = useState<string | undefined>(undefined);
   const watchedImages = useRef(new Set<string>());
@@ -367,21 +368,29 @@ const ResultDetailView = ({
           type: 'confirm',
           text: '정말로 파일을 삭제하시겠습니까?',
           callback: async () => {
-            await deleteImageFiles(curSession!, [paths[selectedIndex]]);
-            onClose();
+            await deleteImageFiles(curSession!, [paths[selectedIndex]], scene);
           },
         });
       }
     };
+    const refreshPaths = () => {
+      const newPaths = getPaths();
+      if (newPaths.length === 0)
+        onClose();
+      else
+      setPaths(newPaths);
+    };
     window.addEventListener('keydown', handleKeyDown);
     sessionService.addEventListener('main-image-updated', rerender);
     imageService.addEventListener('image-cache-invalidated', fetchImage);
+    gameService.addEventListener('updated', refreshPaths);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       sessionService.removeEventListener('main-image-updated', rerender);
       imageService.removeEventListener('image-cache-invalidated', fetchImage);
+      gameService.removeEventListener('updated', refreshPaths);
     };
-  }, [selectedIndex]);
+  }, [selectedIndex, paths]);
 
   useEffect(() => {
     return () => {
@@ -419,7 +428,6 @@ const ResultDetailView = ({
                   text: '정말로 파일을 삭제하시겠습니까?',
                   callback: async () => {
                     await deleteImageFiles(curSession!, [paths[selectedIndex]]);
-                    onClose();
                   },
                 })
               }}
@@ -559,6 +567,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
   }, [tournament]);
 
   const paths = gameService.getOutputs(curSession!, scene);
+
   const onSelected = useCallback((index) => {
     setSelectedImageIndex(index);
   },[]);
@@ -620,6 +629,11 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
       }
     })
   };
+
+  const getPaths = () => {
+    const paths = gameService.getOutputs(curSession!, scene);
+    return selectedTab === 2 ? paths.filter((path) => isMainImage && isMainImage(path)) : paths;
+  }
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -726,7 +740,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
                 setSelectedImageIndex(undefined);
               }}
               scene={scene}
-              paths={selectedTab === 2 ? paths.filter((path) => isMainImage && isMainImage(path)) : paths}
+              getPaths={getPaths}
               initialSelectedIndex={selectedImageIndex}
             />
           </FloatView>
