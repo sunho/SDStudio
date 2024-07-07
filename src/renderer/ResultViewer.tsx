@@ -155,6 +155,7 @@ const Cell = memo(({
     () => ({
       type: 'image',
       item: { scene, path, cellSize, imageSize, index },
+      canDrag: () => (index < filePaths.length),
       collect: (monitor) => {
         const diff = monitor.getDifferenceFromInitialOffset();
         if (diff){
