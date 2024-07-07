@@ -28,6 +28,7 @@ jobs:
 
       - name: Install npm dependencies
         run: |
+          cp capacitor.config.deploy.ts capacitor.config.ts
           npm install
           npm install ./externals/capacitor-background-mode
 
@@ -47,4 +48,4 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: app-release.apk
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
