@@ -53,7 +53,7 @@ const SceneSelector: React.FC<SceneSelectorProps> = ({ scenes, text, getImage, o
     <div className="p-2 md:p-4 flex flex-col h-full">
       <div className="flex items-center gap-2 text-gray-700 flex-none">
         <FaObjectGroup className="text-lg md:text-xl"/>
-        <div className="text-lg md:text-xl flex flex-col md:flex-row"> <span>씬을 선택하고 해당 작업을 적용합니다:</span> <span className="font-bold text-black">{text}</span></div>
+        <div className="text-lg md:text-xl flex flex-col md:flex-row md:gap-2"> <span>씬을 선택하고 해당 작업을 적용합니다:</span> <span className="font-bold text-black">{text}</span></div>
       </div>
       <div className="px-1 pt-2 md:pt-3 flex flex-col flex-1 overflow-hidden">
         <div className="gap-2 flex flex-none overflow-hidden">

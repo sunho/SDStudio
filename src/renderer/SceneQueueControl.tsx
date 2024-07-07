@@ -101,6 +101,7 @@ export const SceneCell = ({
         }
       },
       end: (item, monitor) => {
+        // if (!isMobile) return;
         const { scene: droppedScene, curIndex: droppedIndex} = item
         const didDrop = monitor.didDrop()
         if (!didDrop) {
@@ -115,15 +116,32 @@ export const SceneCell = ({
     preview(getEmptyImage(), { captureDraggingState: true });
   }, [preview]);
 
-  const [, drop] = useDrop(
+  const [{ isOver }, drop] = useDrop<any, any, any>(
     () => ({
       accept: 'scene',
+      canDrop: () => true,
+      collect: (monitor) => {
+        if (monitor.isOver()) {
+          return {
+            isOver: true,
+          }
+        }
+        return { isOver: false }
+      },
       hover({ scene: draggedScene, curIndex: draggedIndex } : { scene: GenericScene, curIndex: number }) {
+        if (!isMobile) return;
         if (draggedScene != scene) {
           const overIndex = Object.values(getCollection(curSession, scene.type)).indexOf(scene)
           moveScene!(draggedScene, overIndex)
         }
       },
+      drop: (item: any, monitor) => {
+        if (!isMobile){
+          const { scene: droppedScene, curIndex: droppedIndex} = item
+          const overIndex = Object.values(getCollection(curSession, scene.type)).indexOf(scene)
+          moveScene!(droppedScene, overIndex);
+        }
+      }
     }),
     [moveScene],
   )
@@ -174,7 +192,7 @@ export const SceneCell = ({
 
   return (
     <div
-      className={"relative m-2 p-1 bg-white border border-gray-300 " + (isDragging ? "opacity-0":"")}
+      className={"relative m-2 p-1 bg-white border border-gray-300 " + (isDragging ? "opacity-0":"") + ((!isMobile&&isOver)?" outline outline-sky-500":"")}
       style={style}
       ref={(node) => drag(drop(node))}
       onContextMenu={e => {
@@ -197,6 +215,7 @@ export const SceneCell = ({
       )}
       <div className="-z-10 active:brightness-90 hover:brightness-95 cursor-pointer bg-white"
       onClick={(event) => {
+        if (isDragging) return;
         setDisplayScene?.(scene);
       }}
       >
@@ -349,6 +368,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
                   locked: false,
                   slots: [[{ prompt: '', enabled: true }]],
                   mains: [],
+                  imageMap: [],
                   round: undefined,
                   game: undefined,
                 };
@@ -424,6 +444,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
                 uc,
                 resolution: scene.resolution,
                 sceneRef: scene.name,
+                imageMap: [],
                 round: undefined,
                 game: undefined,
               };
@@ -600,9 +621,9 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
       const scenes = selected ?? Object.values(curSession!.scenes);
       for (const scene of scenes) {
         await gameService.refreshList(curSession!, scene);
-        const cands = imageService.getImages(curSession!, scene);
+        const cands = gameService.getOutputs(curSession!, scene);
         const imageMap: any = {};
-        cands.map((x) => x.split('/').pop()!).forEach((x) => {
+        cands.forEach((x) => {
           imageMap[x] = true;
         });
         const images = [];
@@ -610,7 +631,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
           if (scene.mains.length) {
             for (const main of scene.mains) {
               if (imageMap[main])
-                images.push(imageService.getImageDir(curSession!, scene) + '/' + main);
+                images.push(main);
             }
           } else {
             if (cands.length) {
@@ -625,9 +646,9 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
         for (let i=0;i<images.length;i++) {
           const path = images[i];
           if (images.length === 1) {
-            paths.push({ path, name: prefix + scene.name });
+            paths.push({ path: imageService.getImageDir(curSession!, scene)+'/'+path, name: prefix + scene.name });
           } else {
-            paths.push({ path, name: prefix + scene.name + '.' + (i+1).toString() });
+            paths.push({ path: imageService.getImageDir(curSession!, scene)+'/'+path, name: prefix + scene.name + '.' + (i+1).toString() });
           }
         }
       }
@@ -685,7 +706,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
         const images = gameService.getOutputs(curSession!, scene);
         if (!images.length)
           continue;
-        let image = await imageService.fetchImage(images[0]);
+        let image = await imageService.fetchImage(imageService.getImageDir(curSession!, scene)+'/'+images[0]);
         image = dataUriToBase64(image!);
         queueRemoveBg(curSession!, scene, image);
       } else {
@@ -740,7 +761,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
         text: '정말로 모든 이미지를 삭제하시겠습니까?',
         callback: async () => {
           for (const scene of selected) {
-            const paths = imageService.getImages(curSession, scene);
+            const paths = imageService.getImages(curSession, scene).map(x => (imageService.getImageDir(curSession, scene!)+'/'+x));
             await deleteImageFiles(curSession!, paths);
           }
         }
@@ -752,7 +773,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
         callback: async (value) => {
           if (value) {
             for (const scene of selected) {
-              const paths = imageService.getImages(curSession, scene);
+              const paths = imageService.getImages(curSession, scene).map(x => (imageService.getImageDir(curSession, scene!)+'/'+x));
               const n = parseInt(value);
               await deleteImageFiles(curSession!, paths.slice(n).filter((x) => !isMainImage || !isMainImage(x)));
             }
@@ -811,7 +832,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
           if (value) {
             const n = parseInt(value);
             for (const scene of selected) {
-              const cands = gameService.getOutputs(curSession!, scene).slice(0, n).map(x => x.split('/').pop()!);
+              const cands = gameService.getOutputs(curSession!, scene).slice(0, n);
               scene.mains = scene.mains.concat(cands).filter((x, i, self) => self.indexOf(x) === i);
             }
             updateScenes();
@@ -829,18 +850,23 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
   }
 
   const openMenu = () => {
+    let items = [
+      {'text': '📁 이미지 내보내기', 'value': 'export'},
+      {'text': '🔪 즐겨찾기 이미지 배경 제거', 'value': 'removeBg'},
+      {'text': '🏆 즐겨찾기 제외 n등 이하 이미지 삭제', 'value': 'removeAllExcept'},
+      {'text': '🖥️ 해상도 변경 ', 'value': 'changeResolution'},
+      {'text': '❌ 즐겨찾기 전부 해제', 'value': 'removeAllFav'},
+      {'text': '🗑️ 이미지 전부 삭제', 'value': 'removeAll'},
+      {'text': '⭐ 상위 n등 즐겨찾기 지정', 'value': 'setFav'},
+    ];
+    if (isMobile) {
+      items = items.filter(x => x.value !== 'removeBg');
+    }
     ctx.pushDialog({
       type: 'select',
       text: '선택할 씬들에 적용할 대량 작업을 선택해주세요',
-      items: [
-        {'text': '이미지 내보내기', 'value': 'export'},
-        {'text': '즐겨찾기 이미지 배경 제거', 'value': 'removeBg'},
-        {'text': '즐겨찾기 제외 n등 이하 이미지 삭제', 'value': 'removeAllExcept'},
-        {'text': '해상도 변경 ', 'value': 'changeResolution'},
-        {'text': '즐겨찾기 전부 해제', 'value': 'removeAllFav'},
-        {'text': '이미지 전부 삭제', 'value': 'removeAll'},
-        {'text': '상위 n등 즐겨찾기 지정', 'value': 'setFav'},
-      ],
+      graySelect: true,
+      items: items,
       callback: (value, text) => {
         setSceneSelector({text: text!, callback: (selected) => {
           setSceneSelector(undefined);
@@ -851,6 +877,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
   }
 
   const moveScene = (draggingScene: GenericScene, targetIndex: number) => {
+    console.log(draggingScene, targetIndex)
     const scenes = Object.values(getCollection(curSession, type));
     const reorderedScenes = scenes.filter((scene) => scene !== draggingScene);
     reorderedScenes.splice(targetIndex, 0, draggingScene);

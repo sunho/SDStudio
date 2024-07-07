@@ -9,6 +9,7 @@ export interface Dialog {
   type: 'confirm' | 'yes-only' | 'input-confirm' | 'select' | 'dropdown';
   inputValue?: string;
   green?: boolean;
+  graySelect?: boolean;
   items?: { text: string; value: string }[];
 }
 
@@ -36,7 +37,8 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Enter') {
-        e.preventDefault();
+        if (curDialog)
+          e.preventDefault();
         handleConfirm();
       }
     };
@@ -114,7 +116,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                   {curDialog.items!.map((item, idx) => (
                     <button
                       key={idx}
-                      className="w-full px-4 py-2 rounded bg-sky-500 text-white mr-2"
+                      className={"w-full px-4 py-2 rounded text-white mr-2 " + (curDialog.graySelect?"bg-gray-400":"bg-sky-500")}
                       onClick={() => {
                         setDialogs(dialogs.slice(0, dialogs.length - 1));
                         if (curDialog.callback) {
