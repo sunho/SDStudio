@@ -593,11 +593,12 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
     updateScenes();
     sessionService.mainImageUpdated();
   };
-  const exportPackage = async () => {
+  const exportPackage = async (selected?: Scene[]) => {
     const exportImpl = async (prefix: string, fav: boolean) => {
       const paths = [];
       await imageService.refreshBatch(curSession!);
-      for (const scene of Object.values(curSession!.scenes)) {
+      const scenes = selected ?? Object.values(curSession!.scenes);
+      for (const scene of scenes) {
         await gameService.refreshList(curSession!, scene);
         const cands = imageService.getImages(curSession!, scene);
         const imageMap: any = {};
@@ -820,6 +821,8 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
       });
     } else if (value === 'removeBg') {
       removeBg(selected);
+    }  else if (value === 'export') {
+      exportPackage(selected);
     } else {
       console.log('Not implemented');
     }
@@ -830,6 +833,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
       type: 'select',
       text: '선택할 씬들에 적용할 대량 작업을 선택해주세요',
       items: [
+        {'text': '이미지 내보내기', 'value': 'export'},
         {'text': '즐겨찾기 이미지 배경 제거', 'value': 'removeBg'},
         {'text': '즐겨찾기 제외 n등 이하 이미지 삭제', 'value': 'removeAllExcept'},
         {'text': '해상도 변경 ', 'value': 'changeResolution'},
@@ -889,12 +893,12 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
           {type === 'scene' && (
             <button
               className={`${roundButton} bg-gray-400`}
-              onClick={exportPackage}
+              onClick={()=>exportPackage()}
             >
-              모두 내보내기
+              {isMobile?"":"모두 "}내보내기
             </button>
           )}
-          {!isMobile && type === 'scene' && (
+          {type === 'scene' && (
           <button
             className={`${roundButton} bg-gray-400`}
             onClick={openMenu}
