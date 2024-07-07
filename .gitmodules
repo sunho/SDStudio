@@ -3,7 +3,7 @@
 	url = https://github.com/sunho/BiRefNet.git
 [submodule "externals/cordova-plugin-background-mode"]
 	path = externals/cordova-plugin-background-mode
-	url = git@github.com:sunho/cordova-plugin-background-mode.git
+  url = https://github.com/sunho/capacitor-background-mode.git
 [submodule "externals/capacitor-background-mode"]
 	path = externals/capacitor-background-mode
 	url = https://github.com/sunho/capacitor-background-mode.git
