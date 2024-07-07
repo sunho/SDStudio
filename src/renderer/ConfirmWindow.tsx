@@ -5,7 +5,7 @@ import { DropdownSelect } from './UtilComponents';
 
 export interface Dialog {
   text: string;
-  callback?: ((value?: string) => void) | ((value?: string) => Promise<void>);
+  callback?: ((value?: string, text?: string) => void) | ((value?: string, text?:string) => Promise<void>);
   type: 'confirm' | 'yes-only' | 'input-confirm' | 'select' | 'dropdown';
   inputValue?: string;
   green?: boolean;
@@ -26,6 +26,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
     if (currentDialog && currentDialog.callback) {
       currentDialog.callback(
         (currentDialog.type === 'input-confirm' || currentDialog.type === 'dropdown') ? inputValue : undefined,
+        currentDialog.text
       );
     }
     setInputValue('');
@@ -35,6 +36,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Enter') {
+        e.preventDefault();
         handleConfirm();
       }
     };
@@ -42,7 +44,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [inputValue, dialogs]);
+  }, [inputValue, dialogs, setDialogs]);
 
   return (
     <>
@@ -116,7 +118,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                       onClick={() => {
                         setDialogs(dialogs.slice(0, dialogs.length - 1));
                         if (curDialog.callback) {
-                          curDialog.callback!(item.value);
+                          curDialog.callback!(item.value, item.text);
                         }
                       }}
                     >
