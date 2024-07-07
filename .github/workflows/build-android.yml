@@ -35,9 +35,6 @@ jobs:
       - name: Build Web
         run: npm run build-vite
 
-      - name: Capacitor update
-        run: npx cap update
-
       - name: Build Capacitor Android Project
         run: npx cap sync android
 
