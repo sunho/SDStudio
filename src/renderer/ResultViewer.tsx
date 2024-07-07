@@ -377,8 +377,13 @@ const ResultDetailView = ({
       const newPaths = getPaths();
       if (newPaths.length === 0)
         onClose();
-      else
-      setPaths(newPaths);
+      else {
+        let newIndex = newPaths.indexOf(imageService.getOutputDir(curSession!, scene) + '/' + filename)
+        if (newIndex !== -1) {
+          setSelectedIndex(newIndex);
+        }
+        setPaths(newPaths);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     sessionService.addEventListener('main-image-updated', rerender);
