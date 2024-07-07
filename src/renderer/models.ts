@@ -408,6 +408,25 @@ export class SessionService extends ResourceSyncService<Session> {
   async getHook(rc: Session, name: string) {
     rc.name = name;
     await this.migrateSession(rc);
+    for (const scene of Object.values(rc.scenes)) {
+      this.reconnectRound(rc, scene);
+    }
+    for (const inpaint of Object.values(rc.inpaints)) {
+      this.reconnectRound(rc, inpaint);
+    }
+  }
+
+  reconnectRound(session: Session, scene: GenericScene) {
+    if (scene.game && scene.round) {
+      const players = scene.game;
+      const playersMap: any = {};
+      for (const player of players) {
+        playersMap[player.path] = player;
+      }
+      for (let i = 0; i < scene.round.players.length; i++) {
+        scene.round.players[i] = playersMap[scene.round.players[i].path];
+      }
+    }
   }
 
   createDefault(name: string): Session {
@@ -529,6 +548,12 @@ export class SessionService extends ResourceSyncService<Session> {
             path: x.path.split('/').pop()!
           }))
         }
+        if (scene.round) {
+          scene.round.players = scene.round.players.map((x) => ({
+            rank: x.rank,
+            path: x.path.split('/').pop()!
+          }))
+        }
       }
     }
 
@@ -537,6 +562,12 @@ export class SessionService extends ResourceSyncService<Session> {
         inpaint.imageMap = [];
         if (inpaint.game) {
           inpaint.game = inpaint.game.map((x) => ({
+            rank: x.rank,
+            path: x.path.split('/').pop()!
+          }))
+        }
+        if (inpaint.round) {
+          inpaint.round.players = inpaint.round.players.map((x) => ({
             rank: x.rank,
             path: x.path.split('/').pop()!
           }))
@@ -2187,11 +2218,13 @@ export const renameScene = async (
   oldName: string,
   newName: string,
 ) => {
-  const scene = session.scenes[oldName];
   taskQueueService.removeTasksFromScene('generate', getSceneKey(session, oldName));
   taskQueueService.removeTasksFromScene('generate-fast', getSceneKey(session, oldName));
+  await imageService.onRenameScene(session, oldName, newName);
+  const scene = session.scenes[oldName];
   scene.name = newName;
-  imageService.onRenameScene(session, oldName, newName);
+  delete session.scenes[oldName];
+  session.scenes[newName] = scene;
 };
 
 window.promptService = promptService;

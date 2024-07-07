@@ -489,8 +489,6 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
             }
             const oldName = scene.name;
             await renameScene(curSession!, scene.name, curName);
-            delete curSession!.scenes[oldName];
-            curSession!.scenes[curName] = scene;
             updateScene();
           }}
         >
