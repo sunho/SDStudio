@@ -2174,13 +2174,13 @@ export class GameService extends EventTarget {
 
   cleanGame(game: Game) {
     sortGame(game);
-    let curRank = 0;
+    let curRank = game.length-1;
     let prev = -1;
     let cnt = 0;
-    for (let i=0;i<game.length;i++) {
+    for (let i=game.length-1;i>=0;i--) {
       if (game[i].rank !== prev) {
         prev = game[i].rank;
-        curRank += cnt;
+        curRank -= cnt;
         cnt = 0;
       }
       game[i].rank = curRank;

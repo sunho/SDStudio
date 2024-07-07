@@ -190,7 +190,7 @@ const Cell = memo(({
         draggedPath = draggedPath.split('/').pop()!;
         const dropPath = path.split('/').pop()!;
 
-        if (draggedIndex !== index) {
+        if (draggedPath !== path) {
           const getPlayer = (path: string) => {
             if (mscene.game) {
               for (const player of mscene.game) {
@@ -204,20 +204,29 @@ const Cell = memo(({
           const draggedPlayer = getPlayer(draggedPath);
           const dropPlayer = getPlayer(dropPath);
           if (draggedPlayer) {
-            mscene.game = mscene.game!.filter((player) => player.path !== draggedPath);
+            mscene.game!.splice(mscene.game!.indexOf(draggedPlayer), 1);
           }
           if (dropPlayer) {
             mscene.game!.push({
               path: draggedPath,
               rank: dropPlayer.rank,
             });
+          }
+          if (draggedPlayer || dropPlayer) {
             gameService.cleanGame(mscene.game!);
             mscene.round = undefined;
           }
           const draggedImageIndex = mscene.imageMap.indexOf(draggedPath);
-          const dropImageIndex = mscene.imageMap.indexOf(dropPath);
           mscene.imageMap.splice(draggedImageIndex, 1);
-          mscene.imageMap.splice(dropImageIndex, 0, draggedPath);
+          const dropImageIndex = mscene.imageMap.indexOf(dropPath);
+          if (draggedIndex < index) {
+            mscene.imageMap.splice(dropImageIndex, 0, draggedPath);
+          } else {
+            mscene.imageMap.splice(dropImageIndex+1, 0, draggedPath);
+          }
+          console.log(dropPlayer, draggedPlayer, dropImageIndex, draggedImageIndex);
+          console.log(mscene.game);
+          console.log(mscene.imageMap);
           await imageService.refresh(curSession!, mscene);
         }
       },
@@ -231,12 +240,6 @@ const Cell = memo(({
   return (
     <div
       key={index.toString() + path + imageSize.toString()}
-      title={encodeContextAlt({
-        type: 'image',
-        path,
-        scene: scene.name,
-        starable: true,
-      })}
       style={style}
       className={"image-cell relative hover:brightness-95 active:brightness-90 bg-white cursor-pointer " + (isDragging ? "opacity-0" : "") + (isOver ? " border-2 border-sky-500" : "")}
       draggable
