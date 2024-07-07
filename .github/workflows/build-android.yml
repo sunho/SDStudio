@@ -8,9 +8,6 @@ jobs:
 
     env:
       JDK_VERSION: 11
-      ANDROID_COMPILE_SDK: 34
-      ANDROID_BUILD_TOOLS: 30.0.3
-      ANDROID_SDK_ROOT: ${{ runner.temp }}/android-sdk
 
     steps:
       - name: Checkout repository
