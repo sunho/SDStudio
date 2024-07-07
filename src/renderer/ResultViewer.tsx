@@ -23,7 +23,6 @@ import {
   extractPromptDataFromBase64,
   gameService,
   getResultDirectory,
-  getResultImages,
   getSceneKey,
   imageService,
   isMobile,
@@ -667,7 +666,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
     };
   }, [tournament]);
 
-  const paths = gameService.getOutputs(curSession!, scene);
+  const paths = gameService.getOutputs(curSession!, scene).map((path) => imageService.getOutputDir(curSession!, scene) + '/' + path);
   const onSelected = useCallback((index: any) => {
     setSelectedImageIndex(index);
   },[]);
@@ -731,7 +730,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
   };
 
   const getPaths = () => {
-    const paths = gameService.getOutputs(curSession!, scene);
+    const paths = gameService.getOutputs(curSession!, scene).map((path) => (imageService.getOutputDir(curSession!, scene) + '/' + path));
     return selectedTab === 2 ? paths.filter((path) => isMainImage && isMainImage(path)) : paths;
   }
 

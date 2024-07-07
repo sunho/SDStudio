@@ -97,6 +97,7 @@ export interface Scene {
   slots: PromptPieceSlot[];
   game: Game | undefined;
   round: Round | undefined;
+  imageMap: string[];
   landscape?: boolean;
   mains: string[];
 }
@@ -109,6 +110,7 @@ export interface InPaintScene {
   uc: string;
   game: Game | undefined;
   round: Round | undefined;
+  imageMap: string[];
   landscape?: boolean;
   sceneRef?: string;
   image?: string;
@@ -517,6 +519,30 @@ export class SessionService extends ResourceSyncService<Session> {
         library.multi = {};
       }
     }
+
+    for (const scene of Object.values(session.scenes)) {
+      if (!scene.imageMap) {
+        scene.imageMap = [];
+        if (scene.game) {
+          scene.game = scene.game.map((x) => ({
+            rank: x.rank,
+            path: x.path.split('/').pop()!
+          }))
+        }
+      }
+    }
+
+    for (const inpaint of Object.values(session.inpaints)) {
+      if (!inpaint.imageMap) {
+        inpaint.imageMap = [];
+        if (inpaint.game) {
+          inpaint.game = inpaint.game.map((x) => ({
+            rank: x.rank,
+            path: x.path.split('/').pop()!
+          }))
+        }
+      }
+    }
   }
 
   async saveInpaintImages(seesion: Session, inpaint: InPaintScene, image: string, mask: string) {
@@ -591,7 +617,7 @@ class LRUCache<K, V> {
 }
 
 const naturalSort = (a: string, b: string) => {
-  return b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' });
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 };
 
 export const supportedImageSizes = [200, 400, 500];
@@ -892,16 +918,27 @@ export class ImageService extends EventTarget {
     if (!(session.name in target)) {
       target[session.name] = {};
     }
+    const fileSet: any = {};
     let files = await backend.listFiles(this.getOutputDir(session, scene));
     files = files.filter((x: string) => x.endsWith('.png'));
-    files = files.map(
-      (x: string) => this.getOutputDir(session, scene) + '/' + x,
-    );
     files.sort(naturalSort);
-    target[session.name][scene.name] = files;
+    for (const file of files) {
+      fileSet[file] = true;
+    }
+    const invImageMap: any = {};
+    for (let i=0;i<scene.imageMap.length;i++) {
+      invImageMap[scene.imageMap[i]] = i;
+    }
+    let newImageMap = scene.imageMap.filter((x: string) => x in fileSet);
+    for (const file of files) {
+      if (!(file in invImageMap)) {
+        newImageMap.push(file);
+      }
+    }
+    scene.imageMap = newImageMap;
+    target[session.name][scene.name] = [...scene.imageMap];
     if (scene.type === 'scene') {
-      const names = files.map((x: string) => x.split('/').pop());
-      scene.mains = scene.mains.filter((x) => names.includes(x));
+      scene.mains = scene.mains.filter(x => x in fileSet);
     }
     if (emitEvent)
       this.dispatchEvent(new CustomEvent('updated', { detail: { batch: false, session, scene } }));
@@ -928,8 +965,8 @@ export class ImageService extends EventTarget {
     if (!(scene in this.images[session.name])) {
       this.images[session.name][scene] = [];
     }
-    this.images[session.name][scene] = this.images[session.name][scene].concat([path]);
-    this.images[session.name][scene].sort(naturalSort);
+    this.images[session.name][scene] = this.images[session.name][scene].concat([path.split('/').pop()!]);
+    session.scenes[scene].imageMap.push(path.split('/').pop()!);
     if (isMobile)
       for (const size of supportedImageSizes)
         this.fetchImageSmall(path, size);
@@ -943,8 +980,8 @@ export class ImageService extends EventTarget {
     if (!(scene in this.inpaints[session.name])) {
       this.inpaints[session.name][scene] = [];
     }
-    this.inpaints[session.name][scene] = this.inpaints[session.name][scene].concat([path]);
-    this.inpaints[session.name][scene].sort(naturalSort);
+    this.inpaints[session.name][scene] = this.inpaints[session.name][scene].concat([path.split('/').pop()!]);
+    session.inpaints[scene].imageMap.push(path.split('/').pop()!);
     if (isMobile)
       for (const size of supportedImageSizes)
         this.fetchImageSmall(path, size);
@@ -2057,36 +2094,44 @@ export class GameService extends EventTarget {
     if (!(session.name in list)) {
       list[session.name] = {};
     }
-    list[session.name][scene.name] = imageService.getOutputs(session, scene);
-    const sortByGameAndNatural = (a: [string,number|undefined], b: [string,number|undefined]) => {
+    let images = imageService.getOutputs(session, scene);
+    const invImageMap: any = {};
+    for (let i = 0; i < scene.imageMap.length; i++) {
+      invImageMap[scene.imageMap[i]] = i;
+    }
+    images = images.filter((x: string) => x in invImageMap);
+    const sortByGameAndNatural = (a: [number,number|undefined], b: [number,number|undefined]) => {
       if (a[1] == null && b[1] == null) {
-        return naturalSort(a[0], b[0]);
+        return a[0] - b[0];
       }
       if (a[1] == null) {
-        return -1;
-      }
-      if (b[1] == null) {
         return 1;
       }
-      return a[1] - b[1];
+      if (b[1] == null) {
+        return -1;
+      }
+      return b[1] - a[1] ;
     }
-
     const cvtMap: any = {};
     if (scene.game) {
       for (const player of scene.game) {
         cvtMap[player.path] = player.rank;
       }
-      const files = list[session.name][scene.name].map((x: string) => [x, cvtMap[x]] as [string, number|undefined]);
+      const files = images.map((x: string) => [invImageMap[x], cvtMap[x]] as [number, number|undefined]);
       files.sort(sortByGameAndNatural);
-      list[session.name][scene.name] = files.map((x: [string, number|undefined]) => x[0]);
+      files.reverse();
+      list[session.name][scene.name] = files.map((x: [number, number|undefined]) => scene.imageMap[x[0]]);
+    } else {
+      images.reverse();
+      list[session.name][scene.name] = images;
     }
     if (scene.type === 'scene') {
       const nameToPrior: any = {};
       list[session.name][scene.name].forEach((x: string, i: number) => {
-        nameToPrior[x.split('/').pop()!] = i;
+        nameToPrior[x] = i;
       });
       scene.mains.sort((a: string, b: string) => {
-        return nameToPrior[a] - nameToPrior[b];
+        return nameToPrior[b] - nameToPrior[a];
       });
     }
   }
@@ -2095,7 +2140,7 @@ export class GameService extends EventTarget {
     let files = await backend.listFiles(path);
     files = files.filter((x: string) => x.endsWith('.png'));
     return files.map((x: string) => ({
-      path: path + '/' + x,
+      path: x,
       rank: files.length - 1,
     }));
   };
@@ -2145,13 +2190,6 @@ export const renameScene = async (
   const scene = session.scenes[oldName];
   taskQueueService.removeTasksFromScene('generate', getSceneKey(session, oldName));
   taskQueueService.removeTasksFromScene('generate-fast', getSceneKey(session, oldName));
-  if (scene.game) {
-    const oldDir = 'outs/' + session.name + '/' + oldName;
-    const newDir = 'outs/' + session.name + '/' + newName;
-    for (const player of scene.game) {
-      player.path = player.path.replace(oldDir, newDir);
-    }
-  }
   scene.name = newName;
   imageService.onRenameScene(session, oldName, newName);
 };
@@ -2169,13 +2207,6 @@ export const getResultDirectory = (session: Session, scene: GenericScene) => {
     return imageService.getImageDir(session, scene);
   }
   return imageService.getInPaintDir(session, scene);
-};
-
-export const getResultImages = (session: Session, scene: GenericScene) => {
-  if (scene.type === 'scene') {
-    return imageService.getImages(session, scene as Scene);
-  }
-  return imageService.getInPaints(session, scene as InPaintScene);
 };
 
 export const getCollection = (session: Session, type: 'scene' | 'inpaint') => {
@@ -2294,7 +2325,8 @@ export async function getMainImage(session: Session, scene: Scene, size: number)
   }
   const images = gameService.getOutputs(session, scene);
   if (images.length) {
-    return await imageService.fetchImageSmall(images[0], size);
+    const path = imageService.getImageDir(session, scene) + '/' + images[0];
+    return await imageService.fetchImageSmall(path, size);
   }
   return undefined;
 }

@@ -128,8 +128,8 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
     if (players.length) {
       (async () => {
         try {
-          const p0 = (await imageService.fetchImage(players[0]))!;
-          const p1 = (await imageService.fetchImage(players[1]))!;
+          const p0 = (await imageService.fetchImage(imageService.getOutputDir(curSession!, scene)+'/'+players[0]))!;
+          const p1 = (await imageService.fetchImage(imageService.getOutputDir(curSession!, scene)+'/'+players[1]))!;
           setImages([p0, p1]);
         } catch (e: any) {
           pushMessage('Image load error: ' + e.message);
@@ -141,7 +141,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
       if (first) {
         (async () => {
           try {
-            const p0 = (await imageService.fetchImage(first.path))!;
+            const p0 = (await imageService.fetchImage(imageService.getOutputDir(curSession!, scene)+'/'+first.path))!;
             setImages([p0]);
           } catch (e: any) {
             pushMessage('Image load error: ' + e.message);
