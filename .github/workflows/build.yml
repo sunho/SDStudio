@@ -23,6 +23,7 @@ jobs:
           npm install
           cd ../..
           npm install
+          npm install ./externals/capacitor-background-mode
           npm run postinstall-electron
 
       - name: Build the application
@@ -92,6 +93,7 @@ jobs:
           npm rebuild --platform=darwin --arch=arm64 sharp@0.32.6
           cd ../..
           npm install
+          npm install ./externals/capacitor-background-mode
           npm run postinstall-electron
 
 
