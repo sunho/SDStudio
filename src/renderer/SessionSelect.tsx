@@ -99,11 +99,11 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSelectedPreset }) =>
           text: '메뉴를 선택해주세요',
           items: [
             {
-              text: '불러오기',
+              text: '프로젝트 불러오기',
               value: 'load'
             },
             {
-              text: '내보내기',
+              text: '프로젝트 내보내기',
               value: 'save'
             }
           ],
