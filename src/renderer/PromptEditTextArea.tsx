@@ -1009,6 +1009,7 @@ const PromptEditTextArea = ({
   const selectedTagRef = useLatest(selectedTag);
   const curWordRef = useLatest(curWord);
   const [fullScreen, setFullScreen] = useState(false);
+  const EditTextAreaImpl = isMobile ? NativeEditTextArea : EmulatedEditTextArea;
 
   const closeAutoComplete = () => {
     setTags([]);
@@ -1108,7 +1109,7 @@ const PromptEditTextArea = ({
           {!fullScreen ? <FaExpand></FaExpand> : <FaTimes></FaTimes>}
         </button>
       </div>
-      <NativeEditTextArea ref={editorRef} value={value} disabled={disabled} highlight={highlight} onUpdated={onUpdated} history={historyRef.current} redo={redoRef.current} onUpArrow={onUpArrow} onDownArrow={onDownArrow} onEnter={onEnter} onEsc={onEsc} closeAutoComplete={closeAutoComplete} onFocus={onFoucs} onBlur={onBlur}/>
+      <EditTextAreaImpl ref={editorRef} value={value} disabled={disabled} highlight={highlight} onUpdated={onUpdated} history={historyRef.current} redo={redoRef.current} onUpArrow={onUpArrow} onDownArrow={onDownArrow} onEnter={onEnter} onEsc={onEsc} closeAutoComplete={closeAutoComplete} onFocus={onFoucs} onBlur={onBlur}/>
     </div>
     <PromptAutoComplete key={id} curWord={curWord} tags={tags} clientX={clientX} clientY={clientY} selectedTag={selectedTag} onSelectTag={onSelectTag}/>
      {fullScreen && <div className="fixed bg-black opacity-15 w-screen h-screen top-0 left-0 z-20" onClick={() => {setFullScreen(false);}}></div>}

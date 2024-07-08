@@ -61,17 +61,29 @@ const Tooltip = ({ text, x, y }: Props) => {
 
 const PromptTooltip = () => {
   const [tooltipData, setTooltipData] = useState({ text: '', x: 0, y: 0 });
+  const flagRef = useRef(false);
 
   useEffect(() => {
     const handleTooltipEvent = (event: any) => {
       const { text, x, y } = event.detail;
       setTooltipData({ text, x, y });
+      flagRef.current = true;
+      event.stopPropagation();
+    };
+
+    const closeTooltip = () => {
+      if (flagRef.current) {
+        flagRef.current = false;
+        return;
+      }
+      setTooltipData({ text: '', x: 0, y: 0 });
     };
 
     promptService.addEventListener('prompt-tooltip', handleTooltipEvent);
-
+    window.addEventListener('mousemove', closeTooltip);
     return () => {
       promptService.removeEventListener('prompt-tooltip', handleTooltipEvent);
+      window.removeEventListener('mousemove', closeTooltip);
     };
   }, []);
 
