@@ -88,6 +88,7 @@ jobs:
           npm install
           cd ../..
           cd release/app
+          npm rebuild
           npm uninstall sharp
           npm install --platform=darwin --arch=x64 sharp@0.32.6
           npm rebuild --platform=darwin --arch=arm64 sharp@0.32.6
