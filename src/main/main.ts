@@ -554,6 +554,8 @@ const RESOURCES_PATH = app.isPackaged
   ? path.join(process.resourcesPath, 'assets')
   : path.join(__dirname, '../../assets');
 
+app.commandLine.appendSwitch('remote-allow-origins', 'http://localhost:8315')
+
 const getAssetPath = (...paths: string[]): string => {
   return path.join(RESOURCES_PATH, ...paths);
 };
