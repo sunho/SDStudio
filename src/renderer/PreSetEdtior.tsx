@@ -8,19 +8,40 @@ import {
   DropdownSelect,
 } from './UtilComponents';
 import { Sampling } from './backends/imageGen';
-import { PreSet, getDefaultPreset, sessionService } from './models';
+import { PreSet, backend, getDefaultPreset, imageService, sessionService } from './models';
 import { Context, AppContext } from './App';
 import { base64ToDataUri } from './BrushTool';
 import { grayInput, grayLabel, primaryColor, roundButton } from './styles';
 import PromptEditTextArea from './PromptEditTextArea';
 import { FaImage, FaTrash } from 'react-icons/fa';
 import { FloatView } from './FloatView';
+import { v4 } from 'uuid';
 
 interface Props {
   setSelectedPreset: (preset: PreSet) => void;
   middlePromptMode: boolean;
   getMiddlePrompt?: () => string;
   onMiddlePromptChange?: (txt: string) => void;
+}
+
+const VibeImage = ({ path, onClick, className }: { path: string; onClick?: () => void; className: string}) => {
+  const [image, setImage] = useState<string | null>(null);
+  useEffect(() => {
+    (async ()=>{
+      const data = await imageService.fetchImage(path);
+      setImage(data);
+    })();
+  }, [path]);
+  return (
+    <>
+    {image && <img
+      className={className}
+      src={image}
+      onClick={onClick}
+    />}
+    {!image && <div className={className} onClick={onClick}></div>}
+    </>
+  );
 }
 
 const PreSetEditor: React.FC<Props> = (props: Props) => {
@@ -51,9 +72,11 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
     selectedPreset.uc = txt;
     updatePresets();
   };
-  const vibeChange = (vibe: string) => {
+  const vibeChange = async (vibe: string) => {
     if (!vibe) return;
-    selectedPreset.vibes.push({ image: vibe, info: 1.0, strength: 0.6 });
+    const path = imageService.getVibesDir(curSession!) + '/' + v4() + '.png';
+    await backend.writeDataFile(path, vibe);
+    selectedPreset.vibes.push({ path: path, info: 1.0, strength: 0.6 });
     updatePresets();
   };
 
@@ -216,7 +239,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
         {selectedPreset.vibes.length > 0 &&
         <div className="w-full flex items-center">
           <div className={"flex-none mr-2 " + grayLabel}>바이브 설정:</div>
-          <img src={base64ToDataUri(selectedPreset.vibes[0].image)} className="flex-1 h-14 rounded-xl object-cover cursor-pointer hover:brightness-95 active:brightness-90" onClick={()=>{setVibeSetting(true)}}/>
+          <VibeImage path={selectedPreset.vibes[0].path} className="flex-1 h-14 rounded-xl object-cover cursor-pointer hover:brightness-95 active:brightness-90" onClick={()=>{setVibeSetting(true)}}/>
         </div>
         }
       </div>
@@ -304,7 +327,7 @@ const PreSetEditor: React.FC<Props> = (props: Props) => {
             <div className="h-full overflow-auto">
             {selectedPreset!.vibes.map(vibe => (
               <div className="border border-gray-300 mt-2 p-2 flex gap-2 items-begin">
-                <img src={base64ToDataUri(vibe.image)} className="flex-none w-28 h-28 object-cover"/>
+                <VibeImage path={vibe.path} className="flex-none w-28 h-28 object-cover"/>
                 <div className="flex flex-col gap-2 w-full">
                   <div className="flex w-full items-center md:flex-row flex-col">
                     <div className={"whitespace-nowrap flex-none mr-auto md:mr-0" + grayLabel}>정보 추출률 (IS):</div>

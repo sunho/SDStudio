@@ -50,7 +50,7 @@ export function getDefaultPreset(): PreSet {
 }
 
 export interface VibeItem {
-  image: string;
+  path: string;
   info: number;
   strength: number;
 }
@@ -456,11 +456,22 @@ export class SessionService extends ResourceSyncService<Session> {
   async migrateSession(session: Session) {
     for (const preset of Object.values(session.presets)) {
       if ((preset as any).vibe) {
-        preset.vibes = [{ image: (preset as any).vibe, info: 1, strength: 0.6 }];
+        preset.vibes = [{ image: (preset as any).vibe, info: 1, strength: 0.6 }] as any;
         (preset as any).vibe = undefined;
       }
       if (preset.vibes == null) {
         preset.vibes = [];
+      }
+    }
+
+    for (const preset of Object.values(session.presets)) {
+      for (const vibe of preset.vibes) {
+        if ((vibe as any).image) {
+          const path = imageService.getVibesDir(session) + '/' + uuidv4() + '.png';
+          await backend.writeDataFile(path, (vibe as any).image);
+          vibe.path = path;
+          (vibe as any).image = undefined;
+        }
       }
     }
 
@@ -944,6 +955,10 @@ export class ImageService extends EventTarget {
     return 'inpaints/' + session.name + '/' + scene.name;
   }
 
+  getVibesDir(session: Session) {
+    return 'vibes/' + session.name;
+  }
+
   async refresh(session: Session, scene: GenericScene, emitEvent: boolean = true) {
     const target = scene.type === 'scene' ? this.images : this.inpaints;
     if (!(session.name in target)) {
@@ -1300,6 +1315,11 @@ class GenerateImageTaskHandler implements TaskHandler {
     if (prompt === '') {
       prompt = '1girl';
     }
+    const vibes = await Promise.all(params.preset.vibes.map(async (x: any) => ({
+      image: dataUriToBase64((await imageService.fetchImage(x.path))!),
+      info: x.info,
+      strength: x.strength
+    })))
     const arg: ImageGenInput = {
       prompt: prompt,
       uc: uc,
@@ -1308,7 +1328,7 @@ class GenerateImageTaskHandler implements TaskHandler {
       sampling: params.preset.sampling,
       sm: params.preset.smea,
       dyn: params.preset.dyn,
-      vibes: params.preset.vibes,
+      vibes: vibes,
       steps: params.preset.steps,
       promptGuidance: params.preset.promptGuidance,
       outputFilePath: outputFilePath,
@@ -2158,7 +2178,7 @@ export class GameService extends EventTarget {
         nameToPrior[x] = i;
       });
       scene.mains.sort((a: string, b: string) => {
-        return nameToPrior[b] - nameToPrior[a];
+        return nameToPrior[a] - nameToPrior[b];
       });
     }
   }
