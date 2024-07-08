@@ -83,6 +83,7 @@ const configuration: webpack.Configuration = {
     sharp: 'commonjs sharp',
     sdsnative: 'commonjs sdsnative',
     fsevents: 'commonjs fsevents',
+    chokidar: 'commonjs chokidar',
     'exiftool-vendored': 'commonjs exiftool-vendored',
     'exiftool-vendored.pl': 'commonjs exiftool-vendored.pl',
     'exiftool-vendored.exe': 'commonjs exiftool-vendored.exe',
