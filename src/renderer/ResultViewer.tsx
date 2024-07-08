@@ -714,7 +714,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
           value: 'n'
         },
         {
-          text: '모든 즐겨찾기 지정 해제',
+          text: '즐겨찾기 제외 모든 이미지 삭제',
           value: 'fav'
         }
       ],
@@ -739,21 +739,14 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
             }
           });
         } else {
-          if (scene.type === 'inpaint') {
-            pushDialog({
-              type: 'yes-only',
-              text: '인페인트 씬에서는 즐겨찾기를 지정할 수 없습니다.'
-            });
-            return;
-          }
           pushDialog({
             type: 'confirm',
-            text: '정말로 모든 즐겨찾기 지정을 해제하시겠습니까?',
-            callback: () => {
-              scene.mains = [];
-              sessionService.mainImageUpdated();
+            text: '정말로 즐겨찾기 외 모든 이미지를 삭제하시겠습니까?',
+            callback: async () => {
+              await deleteImageFiles(curSession!, paths.filter((x) => !isMainImage || !isMainImage(x)));
             }
           });
+
         }
       }
     })
