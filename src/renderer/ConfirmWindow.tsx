@@ -116,7 +116,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                   {curDialog.items!.map((item, idx) => (
                     <button
                       key={idx}
-                      className={"w-full px-4 py-2 rounded text-white mr-2 " + (curDialog.graySelect?"bg-gray-400":"bg-sky-500")}
+                      className={"w-full px-4 py-2 rounded mr-2 " + (curDialog.graySelect?"bg-gray-200 text-gray-700":"bg-sky-500 text-white")}
                       onClick={() => {
                         setDialogs(dialogs.slice(0, dialogs.length - 1));
                         if (curDialog.callback) {

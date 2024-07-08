@@ -755,28 +755,66 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
 
   const [sceneSelector, setSceneSelector] = useState<SceneSelectorItem | undefined>(undefined);
   const handleBatchProcess = async (value: string, selected: Scene[]) => {
-    if (value === 'removeAll') {
+    const isMain = (scene: Scene, path: string) => {
+      if (type === 'inpaint') return false;
+      const filename = path.split('/').pop()!;
+      return !!(scene && scene.mains.includes(filename));
+    };
+    if (value === 'removeImage') {
       ctx.pushDialog({
-        type: 'confirm',
-        text: '정말로 모든 이미지를 삭제하시겠습니까?',
-        callback: async () => {
-          for (const scene of selected) {
-            const paths = imageService.getImages(curSession, scene).map(x => (imageService.getImageDir(curSession, scene!)+'/'+x));
-            await deleteImageFiles(curSession!, paths);
-          }
-        }
-      });
-    } else if (value === 'removeAllExcept') {
-      ctx.pushDialog({
-        type: 'input-confirm',
-        text: '몇등 이하 이미지를 삭제할지 입력해주세요.',
-        callback: async (value) => {
-          if (value) {
-            for (const scene of selected) {
-              const paths = imageService.getImages(curSession, scene).map(x => (imageService.getImageDir(curSession, scene!)+'/'+x));
-              const n = parseInt(value);
-              await deleteImageFiles(curSession!, paths.slice(n).filter((x) => !isMainImage || !isMainImage(x)));
-            }
+        type: 'select',
+        text: '이미지를 삭제합니다. 원하시는 작업을 선택해주세요.',
+        items: [
+          {
+            text: '모든 이미지 삭제',
+            value: 'all'
+          },
+          {
+            text: '즐겨찾기 제외 모든 이미지 삭제',
+            value: 'fav'
+          },
+          {
+            text: '즐겨찾기 제외 n등 이하 이미지 삭제',
+            value: 'n'
+          },
+        ],
+        callback: async (menu) => {
+          if (menu === 'all') {
+            ctx.pushDialog({
+              type: 'confirm',
+              text: '정말로 모든 이미지를 삭제하시겠습니까?',
+              callback: async () => {
+                for (const scene of selected) {
+                  const paths = gameService.getOutputs(curSession, scene).map(x => (imageService.getImageDir(curSession, scene!)+'/'+x));
+                  await deleteImageFiles(curSession!, paths);
+                }
+              }
+            });
+          } else if (menu === 'n') {
+            ctx.pushDialog({
+              type: 'input-confirm',
+              text: '몇등 이하 이미지를 삭제할지 입력해주세요.',
+              callback: async (value) => {
+                if (value) {
+                  for (const scene of selected) {
+                    const paths = gameService.getOutputs(curSession, scene).map(x => (imageService.getImageDir(curSession, scene!)+'/'+x));
+                    const n = parseInt(value);
+                    await deleteImageFiles(curSession!, paths.slice(n).filter((x) => !isMain(scene, x)));
+                  }
+                }
+              }
+            });
+          } else if (menu === 'fav') {
+            ctx.pushDialog({
+              type: 'confirm',
+              text: '정말로 즐겨찾기 외 모든 이미지를 삭제하시겠습니까?',
+              callback: async () => {
+                for (const scene of selected) {
+                  const paths = gameService.getOutputs(curSession, scene).map(x => (imageService.getImageDir(curSession, scene!)+'/'+x));
+                  await deleteImageFiles(curSession!, paths.filter((x) => !isMain(scene, x)));
+                }
+              }
+            });
           }
         }
       });
@@ -853,10 +891,9 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
     let items = [
       {'text': '📁 이미지 내보내기', 'value': 'export'},
       {'text': '🔪 즐겨찾기 이미지 배경 제거', 'value': 'removeBg'},
-      {'text': '🏆 즐겨찾기 제외 n등 이하 이미지 삭제', 'value': 'removeAllExcept'},
+      {'text': '🗑️ 이미지 삭제', 'value': 'removeImage'},
       {'text': '🖥️ 해상도 변경 ', 'value': 'changeResolution'},
       {'text': '❌ 즐겨찾기 전부 해제', 'value': 'removeAllFav'},
-      {'text': '🗑️ 이미지 전부 삭제', 'value': 'removeAll'},
       {'text': '⭐ 상위 n등 즐겨찾기 지정', 'value': 'setFav'},
     ];
     if (isMobile) {
