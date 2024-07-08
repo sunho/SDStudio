@@ -82,6 +82,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          npm install -g npm@latest
           python3 -m pip install setuptools --break-system-packages
           cd src/native
           rm package-lock.json
