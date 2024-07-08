@@ -411,6 +411,7 @@ ipcMain.handle('watch-image', async (event, inputPath) => {
     const handle = chokidar.watch(dir, {
       persistent: true,
       ignoreInitial: true,
+      usePolling: false,
     });
 
     handle.on('change', async (changedPath: string) => {
@@ -719,6 +720,7 @@ async function initFolder() {
   const handle = chokidar.watch(APP_DIR, {
     persistent: true,
     ignoreInitial: true,
+    usePolling: false,
   });
   handle.on('change', async (changedPath: string) => {
     let curPath = path.relative(APP_DIR, changedPath);
