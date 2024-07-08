@@ -18,7 +18,6 @@
     "chokidar": "^3.6.0",
     "exiftool-vendored": "^27.0.0",
     "sdsnative": "file:../../src/native",
-    "sharp": "^0.32.6",
-    "fsevents": "2.3.3"
+    "sharp": "^0.32.6"
   }
 }
