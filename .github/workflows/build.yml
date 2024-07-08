@@ -91,7 +91,9 @@ jobs:
           cd release/app
           npm uninstall sharp
           npm install --platform=darwin --arch=x64 sharp@0.32.6
+          npm install --platform=darwin --arch=x64 fsevents@2.3.3
           npm rebuild --platform=darwin --arch=arm64 sharp@0.32.6
+          npm rebuild --platform=darwin --arch=arm64 fsevents@2.3.3
           cd ../..
           npm install
           npm install ./externals/capacitor-background-mode
