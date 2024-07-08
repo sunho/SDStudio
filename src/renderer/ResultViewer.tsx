@@ -415,6 +415,7 @@ const ResultDetailView = ({
   const [selectedIndex, setSelectedIndex] = useState<number>(initialSelectedIndex);
   const [paths, setPaths] = useState<string[]>(getPaths());
   const [filename, setFilename] = useState<string>(paths[selectedIndex].split('/').pop()!);
+  const filenameRef = useRef<string>(filename);
   const [image, setImage] = useState<string | undefined>(undefined);
   const watchedImages = useRef(new Set<string>());
   const [middlePrompt, setMiddlePrompt] = useState<string>('');
@@ -463,6 +464,7 @@ const ResultDetailView = ({
       forceUpdate({});
     };
     fetchImage();
+    filenameRef.current = paths[selectedIndex].split('/').pop()!;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
         setSelectedIndex((selectedIndex - 1 + paths.length) % paths.length);
@@ -483,7 +485,7 @@ const ResultDetailView = ({
       if (newPaths.length === 0)
         onClose();
       else {
-        let newIndex = newPaths.indexOf(imageService.getOutputDir(curSession!, scene) + '/' + filename)
+        let newIndex = newPaths.indexOf(imageService.getOutputDir(curSession!, scene) + '/' + filenameRef.current)
         if (newIndex !== -1) {
           setSelectedIndex(newIndex);
         }
