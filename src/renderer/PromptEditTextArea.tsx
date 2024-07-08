@@ -766,6 +766,7 @@ const EmulatedEditTextArea = forwardRef<EditTextAreaRef, any>(({
     const handleMouseDown = (e: any) => editor.handleMouseDown(e);
     editorRef.current.addEventListener('mousedown', handleMouseDown);
     return () => {
+      window.removeEventListener('mousedown', handleWindowMouseDown);
       if (editorRef.current === null) return;
       editorRef.current.removeEventListener('keydown', handleKeyDown);
       editorRef.current.removeEventListener('beforeinput', handleBeforeInput);
@@ -773,7 +774,6 @@ const EmulatedEditTextArea = forwardRef<EditTextAreaRef, any>(({
         editorRef.current.removeEventListener('compositionupdate', handleCompositionUpdate);
       }
       editorRef.current.removeEventListener('paste', handlePaste);
-      window.removeEventListener('mousedown', handleWindowMouseDown);
       editorRef.current.removeEventListener('mousedown', handleMouseDown);
     };
   }, []);

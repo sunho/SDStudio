@@ -190,7 +190,7 @@ const Cell = memo(({
         draggedPath = draggedPath.split('/').pop()!;
         const dropPath = path.split('/').pop()!;
 
-        if (draggedPath !== path) {
+        if (draggedPath !== dropPath) {
           const getPlayer = (path: string) => {
             if (mscene.game) {
               for (const player of mscene.game) {
