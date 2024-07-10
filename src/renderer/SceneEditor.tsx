@@ -129,6 +129,7 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
     {promptOpen && <FloatView priority={0} onEscape={()=>{setPromptOpen(false)}}>
       <PreSetEditor
         middlePromptMode={true}
+        selectedPreset={selectedPreset!}
         getMiddlePrompt={getMiddlePrompt}
         onMiddlePromptChange={onMiddlePromptChange}
         setSelectedPreset={() => {}} />
@@ -137,6 +138,7 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
       <div className={"hidden md:block h-full "}>
         <PreSetEditor
           middlePromptMode={true}
+          selectedPreset={selectedPreset!}
           getMiddlePrompt={getMiddlePrompt}
           onMiddlePromptChange={onMiddlePromptChange}
           setSelectedPreset={() => {}} />

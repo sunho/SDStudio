@@ -24,6 +24,8 @@ import {
   ImageContextAlt,
   isMobile,
   ContextMenuType,
+  PreSetShared,
+  PreSetMode,
 } from './models';
 import SessionSelect from './SessionSelect';
 import PreSetEditor from './PreSetEdtior';
@@ -523,12 +525,13 @@ export default function App() {
               </div>
               <div className="flex-1 overflow-hidden">
                 <div className="flex w-full h-full overflow-hidden">
-                {curSession && (
+                {curSession && selectedPreset && (
                   <>
                     <div className="flex-1 overflow-hidden hidden md:block">
                       <PreSetEditor
                         key={curSession.name}
                         middlePromptMode={false}
+                        selectedPreset={selectedPreset}
                         setSelectedPreset={setSelectedPreset}
                       />
                     </div>
@@ -536,6 +539,7 @@ export default function App() {
                       <TabComponent key={curSession.name} tabs={tabs}
                       toggleView={<PreSetEditor
                         key={curSession.name}
+                        selectedPreset={selectedPreset}
                         middlePromptMode={false}
                         setSelectedPreset={setSelectedPreset}
                       />}

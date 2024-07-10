@@ -45,7 +45,7 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSelectedPreset }) =>
             await sessionService.add(inputValue);
             const newSession = (await sessionService.get(inputValue))!;
             setCurSession(newSession);
-            setSelectedPreset(Object.values(newSession.presets)[0]);
+            setSelectedPreset(newSession.presets.filter(x => x.type === newSession.presetMode)[0]);
           }
         },
       });
@@ -58,7 +58,7 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSelectedPreset }) =>
       if (session) {
         imageService.refreshBatch(session);
         setCurSession(session);
-        setSelectedPreset(Object.values(session.presets)[0]);
+        setSelectedPreset(session.presets.filter(x => x.type === session.presetMode)[0]);
       }
     })();
   };
