@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import ExifReader from 'exifreader';
 import { ElectornBackend } from './backends/electronBackend';
 import { AndroidBackend } from './backends/androidBackend';
+import { defaultUC, getDefaultPreset } from './PreSetEdtior';
 
 const PROMPT_SERVICE_INTERVAL = 5000;
 const UPDATE_SERVICE_INTERVAL = 240*1000;
@@ -33,40 +34,63 @@ export function assert(condition: any, message?: string): asserts condition {
   }
 }
 
-export const defaultFPrompt = `1girl, {artist:ixy}`;
-export const defaultBPrompt = `{best quality, amazing quality, very aesthetic, highres, incredibly absurdres}`;
-export const defaultUC = `worst quality, bad quality, displeasing, very displeasing, lowres, bad anatomy, bad perspective, bad proportions, bad aspect ratio, bad face, long face, bad teeth, bad neck, long neck, bad arm, bad hands, bad ass, bad leg, bad feet, bad reflection, bad shadow, bad link, bad source, wrong hand, wrong feet, missing limb, missing eye, missing tooth, missing ear, missing finger, extra faces, extra eyes, extra eyebrows, extra mouth, extra tongue, extra teeth, extra ears, extra breasts, extra arms, extra hands, extra legs, extra digits, fewer digits, cropped head, cropped torso, cropped shoulders, cropped arms, cropped legs, mutation, deformed, disfigured, unfinished, chromatic aberration, text, error, jpeg artifacts, watermark, scan, scan artifacts`;
-
-export function getDefaultPreset(): PreSet {
-  return {
-    frontPrompt: defaultFPrompt,
-    backPrompt: defaultBPrompt,
-    uc: defaultUC,
-    vibes: [],
-    sampling: Sampling.KEulerAncestral,
-    promptGuidance: 5.0,
-    steps: 28,
-  };
-}
-
 export interface VibeItem {
   path: string;
   info: number;
   strength: number;
 }
 
-export interface PreSet {
+export interface CommonSetup {
+  type: 'preset' | 'style';
+  preset: PreSet;
+  shared: PreSetShared;
+}
+
+export interface NAIPreSet {
+  type: 'preset';
+  name: string;
   frontPrompt: string;
   backPrompt: string;
   uc: string;
-  vibes: VibeItem[];
   steps?: number;
   promptGuidance?: number;
   smeaOff?: boolean;
   dynOn?: boolean;
   sampling?: Sampling;
+}
+
+export interface NAIStylePreSet {
+  type: 'style';
+  name: string;
+  frontPrompt: string;
+  backPrompt: string;
+  uc: string;
+  steps?: number;
+  promptGuidance?: number;
+  smeaOff?: boolean;
+  dynOn?: boolean;
+  sampling?: Sampling;
+  profile: string;
+}
+
+export interface NAIPreSetShared {
+  type: 'preset';
+  vibes: VibeItem[];
   seed?: number;
 }
+
+export interface NAIStylePreSetShared {
+  type: 'style';
+  vibes: VibeItem[];
+  characterPrompt: string;
+  backgroundPrompt: string;
+  uc: string;
+  seed?: number;
+}
+
+export type PreSet = NAIPreSet | NAIStylePreSet;
+export type PreSetShared = NAIPreSetShared | NAIStylePreSetShared;
+export type PreSetMode = 'preset' | 'style';
 
 export interface PieceLibrary {
   description: string;
@@ -120,10 +144,12 @@ export interface InPaintScene {
 
 export interface Session {
   name: string;
-  presets: { [key: string]: PreSet };
+  presets: PreSet[];
+  presetMode: PreSetMode;
   inpaints: { [key: string]: InPaintScene };
   scenes: { [key: string]: Scene };
   library: { [key: string]: PieceLibrary };
+  presetShareds: { [key: string] : PreSetShared };
 }
 
 export const isValidPreSet = (preset: any) => {
@@ -430,14 +456,30 @@ export class SessionService extends ResourceSyncService<Session> {
   }
 
   createDefault(name: string): Session {
+    const preset = getDefaultPreset();
+    preset.name = 'default';
     return {
       name: name,
-      presets: {
-        default: getDefaultPreset(),
-      },
+      presets: [
+        preset,
+      ],
+      presetMode: 'preset',
       inpaints: {},
       scenes: {},
       library: {},
+      presetShareds: {
+        preset: {
+          type: 'preset',
+          vibes: [],
+        },
+        style: {
+          type: 'style',
+          backgroundPrompt: '',
+          characterPrompt: '',
+          uc: '',
+          vibes: [],
+        }
+      }
     };
   }
 
@@ -454,25 +496,63 @@ export class SessionService extends ResourceSyncService<Session> {
   }
 
   async migrateSession(session: Session) {
-    for (const preset of Object.values(session.presets)) {
-      if ((preset as any).vibe) {
-        preset.vibes = [{ image: (preset as any).vibe, info: 1, strength: 0.6 }] as any;
-        (preset as any).vibe = undefined;
-      }
-      if (preset.vibes == null) {
-        preset.vibes = [];
-      }
-    }
-
-    for (const preset of Object.values(session.presets)) {
-      for (const vibe of preset.vibes) {
-        if ((vibe as any).image) {
-          const path = imageService.getVibesDir(session) + '/' + uuidv4() + '.png';
-          await backend.writeDataFile(path, (vibe as any).image);
-          vibe.path = path;
-          (vibe as any).image = undefined;
+    if (!Array.isArray(session.presets)) {
+      for (const preset of Object.values(session.presets)) {
+        if ((preset as any).vibe) {
+          (preset as any).vibes = [{ image: (preset as any).vibe, info: 1, strength: 0.6 }] as any;
+          (preset as any).vibe = undefined;
+        }
+        if ((preset as any).vibes == null) {
+          (preset as any).vibes = [];
         }
       }
+
+      for (const preset of Object.values(session.presets)) {
+        for (const vibe of (preset as any).vibes) {
+          if ((vibe as any).image) {
+            const path = imageService.getVibesDir(session) + '/' + uuidv4() + '.png';
+            await backend.writeDataFile(path, (vibe as any).image);
+            vibe.path = path;
+            (vibe as any).image = undefined;
+          }
+        }
+      }
+
+      session.presetShareds = {
+        preset: {
+          type: 'preset',
+          vibes: [],
+        },
+        style: {
+          type: 'style',
+          backgroundPrompt: '',
+          characterPrompt: '',
+          uc: '',
+          vibes: [],
+        }
+      }
+
+      session.presetMode = 'preset';
+
+      const newVibes = [];
+      for (const preset of Object.values(session.presets)) {
+        for (const vibe of (preset as any).vibes) {
+          newVibes.push(vibe);
+        }
+      }
+      session.presetShareds['preset'].vibes = newVibes;
+
+      const newPresets = [];
+      for (const [k, v] of Object.entries(session.presets as any)) {
+        (v as any).name = k;
+        (v as any).type = 'preset';
+        newPresets.push(v);
+      }
+      session.presets = newPresets as any;
+    }
+
+    if (!session.presetMode) {
+      session.presetMode = 'preset';
     }
 
     for (const inpaint of Object.values(session.inpaints)) {
@@ -1876,10 +1956,11 @@ export const highlightPrompt = (session: Session, text: string, lineHighlight: b
       let pword = word.substring(leftTrimPos, rightTrimPos + 1);
       if (pword === '|') {
         classNames.push('syntax-split');
-        js =
-          'onmousemove="window.promptService.showPromptTooltip(\'' +
-          pword +
-          '\', event)" onmouseout="window.promptService.clearPromptTooltip()"';
+        if (!isMobile)
+          js =
+            'onmousemove="window.promptService.showPromptTooltip(\'' +
+            pword +
+            '\', event)" onmouseout="window.promptService.clearPromptTooltip()"';
       }
       if (pword.startsWith('[') && pword.endsWith(']')) {
         classNames.push('syntax-weak');
@@ -1928,18 +2009,19 @@ export const queueScenePrompt = (
   nodelay: boolean = false,
   onComplete: ((path: string) => void) | undefined = undefined,
 ) => {
+  const shared = session.presetShareds[session.presetMode];
   const params: GenerateImageTaskParams = {
     preset: {
       prompt,
       uc: preset.uc,
-      vibes: preset.vibes,
+      vibes: shared.vibes,
       resolution: scene.resolution as Resolution,
       smea: preset.smeaOff ? false : true,
       dyn: preset.dynOn ? true : false,
       steps: preset.steps ?? 28,
       promptGuidance: preset.promptGuidance ?? 5,
       sampling: preset.sampling ?? Sampling.KEulerAncestral,
-      seed: preset.seed,
+      seed: shared.seed,
     },
     outPath: imageService.getImageDir(session, scene),
     session,
@@ -2012,7 +2094,7 @@ export const queueInPaint = async (
     preset: {
       prompt,
       uc: scene.uc,
-      vibes: preset.vibes,
+      vibes: session.presetShareds[session.presetMode].vibes,
       resolution: scene.resolution as Resolution,
       smea: false,
       dyn: false,
