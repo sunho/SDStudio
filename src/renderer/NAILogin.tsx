@@ -14,8 +14,6 @@ interface Props {
 const NAILogin = ({ setCurSession, setSelectedPreset } : Props) => {
   const ctx = useContext(AppContext)!;
   const [loggedIn, setLoggedIn] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
 
   useEffect(() => {
     const onChange = () => {
@@ -28,40 +26,14 @@ const NAILogin = ({ setCurSession, setSelectedPreset } : Props) => {
     };
   }, []);
 
-  const login = () => {
-    (async () => {
-      try {
-        await loginService.login(email, password);
-      } catch (err: any) {
-        ctx.pushMessage('로그인 실패:' + err.message);
-      }
-    })();
-  };
-
   const roundTag = 'text-white px-3 py-1 rounded-full';
 
   const [settings, setSettings] = useState(false);
 
   return (
     <div className={"flex border-b border-gray-200 px-2 py-2 items-center"}>
-      <div className="gap-3 hidden md:flex">
-        <input
-          className={`${grayInput}`}
-          type="text"
-          placeholder="이메일"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          className={`${grayInput}`}
-          type="password"
-          placeholder="암호"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button className={`${roundButton} ${primaryColor}`} onClick={login}>
-          로그인
-        </button>
+      <div className="gap-3 hidden md:flex text-sky-500 font-bold">
+        SDStudio
       </div>
       <p className="ml-auto mr-2 hidden md:block">
         <span className="text-black">로그인 상태:</span>{' '}

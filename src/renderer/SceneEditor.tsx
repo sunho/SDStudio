@@ -7,6 +7,8 @@ import {
   useState,
 } from 'react';
 import {
+  PreSet,
+    PreSetMode,
     PromptNode,
   PromptPiece,
   PromptPieceSlot,
@@ -15,6 +17,7 @@ import {
   backend,
   createPrompts,
   getMainImage,
+  getMainImagePath,
   highlightPrompt,
   imageService,
   isMobile,
@@ -72,19 +75,31 @@ interface SlotEditorProps {
   onChanged?: () => void;
 }
 
-const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
-  const { curSession, selectedPreset, pushMessage } = useContext(AppContext)!;
-  const [image, setImage] = useState<string | null>(null);
-  const [path, setPath] = useState<string | null>(null);
+interface BigPromptEditorProps {
+  selectedPreset: PreSet;
+  sceneMode: boolean;
+  presetMode: PreSetMode;
+  getMiddlePrompt: () => string;
+  setMiddlePrompt: (txt: string) => void;
+  queuePrompt: (middle: string, callback: (path: string) => void) => void;
+  setMainImage?: (path: string) => void;
+  initialImagePath?: string;
+}
+
+export const BigPromptEditor = ({ sceneMode, selectedPreset, presetMode, getMiddlePrompt, setMiddlePrompt, initialImagePath, queuePrompt, setMainImage }: BigPromptEditorProps) => {
+  const { curSession, pushMessage, setSelectedPreset } = useContext(AppContext)!;
+  const [image, setImage] = useState<string | undefined>(undefined);
+  const [path, setPath] = useState<string | undefined>(initialImagePath);
   const [_, rerender] = useState<{}>({});
   useEffect(() => {
-    setPath(null);
-    setImage(null);
+    setImage(undefined);
     (async () => {
-      const dataUri = await getMainImage(curSession!, scene, -1);
-      setImage(dataUri!);
+      if (path) {
+        const dataUri = await imageService.fetchImage(path);
+        setImage(dataUri!);
+      }
     })();
-  }, [scene]);
+  }, [path]);
   useEffect(() => {
     const handleProgress = () => {
       rerender({});
@@ -98,20 +113,6 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
       taskQueueService.removeEventListener('progress', handleProgress);
     };
   });
-
-  const getMiddlePrompt = () => {
-    if (scene.slots.length === 0 || scene.slots[0].length === 0) {
-      return '';
-    }
-    return scene.slots[0][0].prompt
-  };
-  const onMiddlePromptChange = (txt: string) => {
-    if (scene.slots.length === 0 || scene.slots[0].length === 0) {
-      return;
-    }
-    scene.slots[0][0].prompt = txt;
-    onChanged && onChanged();
-  }
 
   const [promptOpen, setPromptOpen] = useState(false);
   const [editDisabled, setEditDisabled] = useState(true);
@@ -129,23 +130,27 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
     {promptOpen && <FloatView priority={0} onEscape={()=>{setPromptOpen(false)}}>
       <PreSetEditor
         middlePromptMode={true}
+        type={presetMode}
         selectedPreset={selectedPreset!}
+        styleEditMode={!sceneMode}
         getMiddlePrompt={getMiddlePrompt}
-        onMiddlePromptChange={onMiddlePromptChange}
-        setSelectedPreset={() => {}} />
+        onMiddlePromptChange={setMiddlePrompt}
+        setSelectedPreset={setSelectedPreset} />
     </FloatView>}
     <div className={"overflow-auto flex-none h-1/3 md:h-auto md:w-1/3 md:h-full"}>
       <div className={"hidden md:block h-full "}>
         <PreSetEditor
           middlePromptMode={true}
           selectedPreset={selectedPreset!}
+          type={presetMode}
+          styleEditMode={!sceneMode}
           getMiddlePrompt={getMiddlePrompt}
-          onMiddlePromptChange={onMiddlePromptChange}
-          setSelectedPreset={() => {}} />
+          onMiddlePromptChange={setMiddlePrompt}
+          setSelectedPreset={setSelectedPreset} />
       </div>
       <div className="h-full flex flex-col p-2 overflow-hidden block md:hidden">
         <div className="flex-none font-bold">중위 프롬프트 (이 씬에만 적용됨):</div>
-        <div className="flex-1 p-2 overflow-hidden"><PromptEditTextArea disabled={editDisabled} onChange={onMiddlePromptChange} value={getMiddlePrompt()}/></div>
+        <div className="flex-1 p-2 overflow-hidden"><PromptEditTextArea disabled={editDisabled} onChange={setMiddlePrompt} value={getMiddlePrompt()}/></div>
         <div className="flex-none"><button className={`${roundButton} ${primaryColor}`} onClick={() => setPromptOpen(true)}>상세설정</button></div>
       </div>
     </div>
@@ -158,35 +163,19 @@ const BigPromptEditor = ({ scene, onChanged }: SlotEditorProps) => {
         <div className="ml-auto flex-none flex gap-4 pt-2 mb-2 md:mb-0">
         {path && <button className={`${roundButton} bg-orange-400 h-8 md:w-36 flex items-center justify-center`}
           onClick={()=>{
-            const filename = path.split('/').pop()!;
-            if (!(filename in scene.mains)) {
-              scene.mains.push(filename);
-            }
-            sessionService.mainImageUpdated();
-            onChanged && onChanged();
+            setMainImage && setMainImage(path);
           }}
         >
-          {!isMobile?"즐겨찾기 지정":<FaStar/>}
+          {sceneMode?(!isMobile?"즐겨찾기 지정":<FaStar/>):"프로필 지정"}
         </button>}
         <TaskProgressBar fast/>
         {!taskQueueService.isRunning() ? (
           <button
             className={`${roundButton} bg-green-500 h-8 w-16 md:w-36 flex items-center justify-center`}
-            onClick={() => {
-              (async () => {
-                try {
-                  const prompts = await createPrompts(curSession!, selectedPreset!, scene);
-                  queueScenePrompt(curSession!, selectedPreset!, scene, prompts[0], 1, true, async (path: string) => {
-                    const dataUri = await imageService.fetchImage(path);
-                    setPath(path);
-                    setImage(dataUri);
-                  });
-                  taskQueueService.run();
-                } catch (e: any) {
-                  pushMessage(e.message);
-                  return;
-                }
-              })();
+            onClick={()=>{
+              queuePrompt(getMiddlePrompt(), (path: string) => {
+                setPath(path);
+              });
             }}
           >
             <FaPlay size={15} />
@@ -413,6 +402,41 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
     rerender({});
   };
 
+  const getMiddlePrompt = () => {
+    if (scene.slots.length === 0 || scene.slots[0].length === 0) {
+      return '';
+    }
+    return scene.slots[0][0].prompt
+  };
+
+  const onMiddlePromptChange = (txt: string) => {
+    if (scene.slots.length === 0 || scene.slots[0].length === 0) {
+      return;
+    }
+    scene.slots[0][0].prompt = txt;
+  }
+
+  const queuePrompt = async (middle: string, callback: (path: string) => void) => {
+    try {
+      const prompts = await createPrompts(curSession!, selectedPreset!, scene);
+      queueScenePrompt(curSession!, selectedPreset!, scene, prompts[0], 1, true, async (path: string) => {
+        callback(path);
+      });
+      taskQueueService.run();
+    } catch (e: any) {
+      pushMessage(e.message);
+      return;
+    }
+  };
+
+  const setMainImage = (path: string) => {
+    const filename = path.split('/').pop()!;
+    if (!(filename in scene.mains)) {
+      scene.mains.push(filename);
+    }
+    sessionService.mainImageUpdated();
+  };
+
   const [previews, setPreviews] = useState<PromptNode[]>([]);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const PromptPreview = previewError ? (
@@ -434,7 +458,14 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
   );
 
   const BigEditor = (
-    <BigPromptEditor scene={scene} onChanged={updateScene} />
+    <BigPromptEditor sceneMode={true}
+      presetMode={curSession!.presetMode}
+      selectedPreset={selectedPreset!}
+      getMiddlePrompt={getMiddlePrompt}
+      setMiddlePrompt={onMiddlePromptChange}
+      queuePrompt={queuePrompt}
+      setMainImage={setMainImage}
+      initialImagePath={getMainImagePath(curSession!, scene)} />
   );
 
   const resolutionOptions = Object.entries(resolutionMap).map(([key, value]) => {
