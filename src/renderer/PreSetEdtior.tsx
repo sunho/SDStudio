@@ -7,32 +7,16 @@ import {
   FileUploadBase64,
   DropdownSelect,
 } from './UtilComponents';
-import { Sampling } from './backends/imageGen';
-import { CommonSetup, NAIPreSet, PreSet, backend, imageService, sessionService } from './models';
+import { Resolution, Sampling } from './backends/imageGen';
+import { CommonSetup, NAIPreSet, NAIStylePreSet, NAIStylePreSetShared, PreSet, PreSetMode, PromptNode, backend, getDefaultPreset, getDefaultStylePreset, imageService, promptService, queueDummyPrompt, queueScenePrompt, sessionService, taskQueueService, toPARR } from './models';
 import { Context, AppContext } from './App';
 import { base64ToDataUri } from './BrushTool';
 import { grayInput, grayLabel, primaryColor, roundButton } from './styles';
 import PromptEditTextArea from './PromptEditTextArea';
-import { FaImage, FaTrash } from 'react-icons/fa';
+import { FaImage, FaPlus, FaTrash } from 'react-icons/fa';
 import { FloatView } from './FloatView';
 import { v4 } from 'uuid';
-
-export const defaultFPrompt = `1girl, {artist:ixy}`;
-export const defaultBPrompt = `{best quality, amazing quality, very aesthetic, highres, incredibly absurdres}`;
-export const defaultUC = `worst quality, bad quality, displeasing, very displeasing, lowres, bad anatomy, bad perspective, bad proportions, bad aspect ratio, bad face, long face, bad teeth, bad neck, long neck, bad arm, bad hands, bad ass, bad leg, bad feet, bad reflection, bad shadow, bad link, bad source, wrong hand, wrong feet, missing limb, missing eye, missing tooth, missing ear, missing finger, extra faces, extra eyes, extra eyebrows, extra mouth, extra tongue, extra teeth, extra ears, extra breasts, extra arms, extra hands, extra legs, extra digits, fewer digits, cropped head, cropped torso, cropped shoulders, cropped arms, cropped legs, mutation, deformed, disfigured, unfinished, chromatic aberration, text, error, jpeg artifacts, watermark, scan, scan artifacts`;
-
-export function getDefaultPreset(): NAIPreSet {
-  return {
-    name: '',
-    type: 'preset',
-    frontPrompt: defaultFPrompt,
-    backPrompt: defaultBPrompt,
-    uc: defaultUC,
-    sampling: Sampling.KEulerAncestral,
-    promptGuidance: 5.0,
-    steps: 28,
-  };
-}
+import { BigPromptEditor } from './SceneEditor';
 
 export function useCommonSetup(): CommonSetup {
   const { curSession, selectedPreset } = useContext(AppContext)!;
@@ -47,7 +31,15 @@ const PreSetSelect = ({ selectedPreset, setSelectedPreset, onChange }: { selecte
   const { curSession, pushDialog, pushMessage } = useContext(AppContext)!;
   const presets = curSession!.presets.filter(x=>x.type === 'preset');
   return <div className="w-full h-full">
-    <p className="text-xl font-bold mb-3">이미지 생성 프리셋</p>
+    <div className="flex items-center mb-3">
+      <p className="text-xl font-bold ">이미지 생성 프리셋</p>
+    <button className={`${roundButton} bg-gray-400 ml-auto text-sm h-8 `} onClick={() => {
+      curSession!.presetMode = 'style';
+      setSelectedPreset(curSession!.presets.filter(x=>x.type==='style')[0]);
+      sessionService.markUpdated(curSession!.name);
+      }}>이지모드</button>
+      </div>
+
     <div className="flex gap-2 pr-2">
       <DropdownSelect
         selectedOption={selectedPreset}
@@ -114,7 +106,7 @@ const VibeImage = ({ path, onClick, className }: { path: string; onClick?: () =>
   const [image, setImage] = useState<string | null>(null);
   useEffect(() => {
     (async ()=>{
-      const data = await imageService.fetchImage(path);
+      const data = await imageService.fetchImageSmall(path, 400);
       setImage(data);
     })();
   }, [path]);
@@ -224,19 +216,29 @@ export const VibeButton = ({ onClick }: { onClick: () => void }) => {
   </>
 }
 
-interface Props {
-  selectedPreset: PreSet;
-  setSelectedPreset: (preset: PreSet) => void;
-  middlePromptMode: boolean;
-  getMiddlePrompt?: () => string;
-  onMiddlePromptChange?: (txt: string) => void;
+const EditorField = ({ label, full, children, bold }: { label: string; children: React.ReactNode; full: boolean; bold?: boolean; }) => {
+  return <>
+    <div className={"pt-2 pb-1 " + grayLabel}>
+      {bold ? <b>{label}</b> : label}
+    </div>
+    <div className={full ? "flex-1 min-h-0" : "flex-none mt-3"}>
+      {children}
+    </div>
+  </>
+};
+
+const InlineEditorField = ({ label, children }: { label: string; children: React.ReactNode; }) => {
+  return <div className="flex gap-2 items-center">
+    <span className={"flex-none " + grayLabel}>{label}:</span>
+    {children}
+  </div>
 }
 
-const PreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, middlePromptMode, getMiddlePrompt, onMiddlePromptChange }) => {
+const NAIPreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, middlePromptMode, getMiddlePrompt, onMiddlePromptChange, styleEditMode }) => {
   const ctx = useContext(AppContext)!;
   const curSession = ctx.curSession!;
   const [_, rerender] = useState<{}>({});
-  const [presetEditLock, setPresetEditLock] = useState(true);
+  const [presetEditLock, setPresetEditLock] = useState(!styleEditMode);
   const updatePresets = () => {
     sessionService.markUpdated(curSession.name);
     rerender({});
@@ -272,58 +274,43 @@ const PreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, midd
         setSelectedPreset(preset);
       }} onChange={updatePresets}
       /></div>}
-
-      {middlePromptMode && (
-        <span className="font-bold">프리셋 편집 잠금: {' '}<input type="checkbox" checked={presetEditLock} onChange={() => setPresetEditLock(!presetEditLock)}></input></span>
-      )}
-      <div className={"pt-2 pb-1 " + grayLabel}>
-        상위 프롬프트
-      </div>
-      <div className="flex-1 min-h-0">
+      {!styleEditMode && middlePromptMode &&
+      <InlineEditorField label="프리셋 편집 잠금">
+        <input type="checkbox" checked={presetEditLock} onChange={() => setPresetEditLock(!presetEditLock)}></input>
+      </InlineEditorField>}
+      <EditorField label="상위 프롬프트" full={true}>
         <PromptEditTextArea
           value={selectedPreset.frontPrompt}
           disabled={middlePromptMode && presetEditLock}
           onChange={frontPromptChange}
         ></PromptEditTextArea>
-      </div>
-      {middlePromptMode && ( <>
-        <div className="pt-2 pb-1">
-          <b> 중위 프롬프트 (이 씬에만 적용됨)</b>
-        </div>
-        <div className="flex-1 min-h-0">
+      </EditorField>
+      {middlePromptMode &&
+        <EditorField label="중위 프롬프트 (이 씬에만 적용됨)" full={true} bold>
           <PromptEditTextArea
             value={getMiddlePrompt ? getMiddlePrompt() : ''}
             onChange={(txt) => {
               if (onMiddlePromptChange) onMiddlePromptChange(txt);
             }}
           ></PromptEditTextArea>
-        </div>
-        </>
-      )}
-      <div className={"pt-2 pb-1 " + grayLabel}>
-        하위 프롬프트
-      </div>
-      <div className="flex-1 min-h-0">
+        </EditorField>
+      }
+      <EditorField label="하위 프롬프트" full={true}>
         <PromptEditTextArea
           value={selectedPreset.backPrompt}
           disabled={middlePromptMode && presetEditLock}
           onChange={backPromptChange}
         ></PromptEditTextArea>
-      </div>
-
-      <div className={"pt-2 pb-1 " + grayLabel}>
-        네거티브 프롬프트
-      </div>
-      <div className="flex-1 min-h-0">
+      </EditorField>
+      <EditorField label="네거티브 프롬프트" full={true}>
         <PromptEditTextArea
           value={selectedPreset.uc}
           disabled={middlePromptMode && presetEditLock}
           onChange={ucPromptChange}
         ></PromptEditTextArea>
-      </div>
-      {!samplerSetting && !vibeSetting &&
-        <div className="flex-none mt-3">
-      <div className="mt-auto flex gap-2 items-center">
+      </EditorField>
+      {!samplerSetting && !vibeSetting && <div className="flex-none mt-3">
+      {!styleEditMode && <div className="mt-auto flex gap-2 items-center">
         <span className={"flex-none " + grayLabel}>시드: </span>
         <input
           className={`w-full ${grayInput}`}
@@ -344,10 +331,10 @@ const PreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, midd
             updatePresets();
           }}
         />
-      </div>
-      <div className="flex-none mt-3 flex gap-2 items-center">
+      </div>}
+      {!styleEditMode && <div className="flex-none mt-3 flex gap-2 items-center">
         <VibeButton onClick={()=>setVibeSetting(true)}/>
-      </div>
+      </div>}
       <div className="flex-none mt-3 flex gap-2 items-center">
         <button className={`${roundButton} bg-gray-500 h-8 w-full`} onClick={() => setSamplerSetting(true)}>
           샘플링 설정 열기
@@ -372,17 +359,17 @@ const PreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, midd
       <div className="mt-auto pt-2 flex gap-2 items-center pr-1">
         <span className={"flex-none " + grayLabel}>SMEA: </span>
         <input  type="checkbox" checked={!selectedPreset.smeaOff} onChange={(e) => {
-          selectedPreset.smeaOff = !e.target.checked;
-          updatePresets();
-        }} disabled={middlePromptMode && presetEditLock}
-            />
+            selectedPreset.smeaOff = !e.target.checked;
+            updatePresets();
+          }} disabled={middlePromptMode && presetEditLock}
+        />
         <span className={"flex-none " + grayLabel}>DYN: </span>
         <input type="checkbox" checked={selectedPreset.dynOn} onChange={(e) => {
-          selectedPreset.dynOn = e.target.checked;
-          updatePresets();
-        }}
-              disabled={middlePromptMode && presetEditLock}
-            />
+            selectedPreset.dynOn = e.target.checked;
+            updatePresets();
+          }}
+          disabled={middlePromptMode && presetEditLock}
+        />
       </div>
       <div className="mt-auto pt-2 flex gap-2 items-center pr-1">
         <span className={"flex-none " + grayLabel}>프롬프트 가이던스: </span>
@@ -433,6 +420,256 @@ const PreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, midd
       }
     </div>
   );
+};
+
+interface StyleEditorProps {
+  selectedPreset?: NAIStylePreSet;
+  onClose: () => void;
+}
+
+const StyleEditor: React.FC<StyleEditorProps> = ({ selectedPreset, onClose }) => {
+  const { curSession, pushMessage } = useContext(AppContext)!;
+  const [_,rerender] = useState<{}>({});
+  const prompt = React.useRef<string>('');
+  const presetRef = React.useRef<NAIStylePreSet>(selectedPreset ?? getDefaultStylePreset());
+  const getPrompt = () => prompt.current;
+  const setPrompt = (txt: string) => {
+    prompt.current = txt;
+  }
+  const queueprompt = (middle: string, callback: (path: string) => void) => {
+    try {
+      const cur = toPARR(presetRef.current.frontPrompt).concat(toPARR(middle)).concat(toPARR(presetRef.current.backPrompt));
+      const promptNode: PromptNode = {
+        type: 'group',
+        children: [],
+      }
+      for (const word of cur) {
+        promptNode.children.push(promptService.parseWord(word));
+      }
+      queueDummyPrompt(curSession!, presetRef.current, '/tmp', promptNode, Resolution.Portrait, callback);
+      taskQueueService.run();
+    } catch (e: any) {
+      pushMessage(e.message);
+      return;
+    }
+  }
+  const setMainImage = async (path: string) => {
+    const newPath = imageService.getVibesDir(curSession!) + '/' + v4() + '.png';
+    await backend.copyFile(path, newPath);
+    presetRef.current.profile = newPath;
+  };
+  return <div className="flex flex-col h-full">
+    <div className="grow-0 pt-2 px-3 flex gap-3 items-center text-nowrap flex-wrap mb-2 md:mb-0">
+      <div className="flex items-center gap-2">
+      <label>그림체 이름:</label>
+      <input
+        className={grayInput}
+        type="text"
+        value={presetRef.current.name}
+        onChange={(e) => {
+          presetRef.current.name = e.currentTarget.value;
+          rerender({});
+        }}
+      />
+      </div>
+      {!selectedPreset && <button
+          className={`${roundButton} ${primaryColor}`}
+          onClick={async () => {
+            if (!presetRef.current.name) {
+              pushMessage('이름을 입력하세요');
+              return;
+            }
+            if (curSession!.presets.filter(x=>x.type==='style').find(x=>x.name === presetRef.current.name)) {
+              pushMessage('이미 존재하는 그림체 이름 입니다');
+              return;
+            }
+            if (presetRef.current.profile === '') {
+              pushMessage('프로필 이미지를 선택하세요');
+              return;
+            }
+            curSession!.presets.push(presetRef.current);
+            onClose();
+          }}
+        >
+          저장
+        </button>}
+    </div>
+    <div className="flex-1 overflow-hidden">
+      <BigPromptEditor sceneMode={false}
+        presetMode='preset'
+        selectedPreset={presetRef.current}
+        getMiddlePrompt={getPrompt}
+        setMiddlePrompt={setPrompt}
+        queuePrompt={queueprompt}
+        setMainImage={setMainImage}
+        initialImagePath={undefined} />
+    </div>
+  </div>
+}
+
+const NAIStylePreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, middlePromptMode, getMiddlePrompt, onMiddlePromptChange }) => {
+  const { curSession } = useContext(AppContext)!;
+  const [_, rerender] = useState<{}>({});
+  const [presetEditLock, setPresetEditLock] = useState(true);
+  const updatePresets = () => {
+    sessionService.markUpdated(curSession!.name);
+    rerender({});
+  };
+  const frontPromptChange = (txt: string) => {
+    shared.characterPrompt = txt;
+    updatePresets();
+  };
+  const backPromptChange = (txt: string) => {
+    shared.backgroundPrompt = txt;
+    updatePresets();
+  };
+  const ucPromptChange = (txt: string) => {
+    shared.uc = txt;
+    updatePresets();
+  };
+
+  useEffect(() => {
+    rerender({});
+  }, [selectedPreset])
+
+  const [samplerSetting, setSamplerSetting] = useState(false);
+  const [vibeSetting, setVibeSetting] = useState(false);
+  const commonSetup = useCommonSetup();
+  const shared = commonSetup.shared as NAIStylePreSetShared;
+  const presets = curSession!.presets;
+  const [showStyleEditor, setShowStyleEditor] = useState(false);
+  const stylePreset = selectedPreset as NAIStylePreSet;
+  const [editingPreset, setEditingPreset] = useState<NAIStylePreSet | undefined>(undefined);
+
+  return (
+    <div
+      className="p-3 flex flex-col h-full relative"
+    >
+      {!middlePromptMode&&<div className="flex items-center mb-3">
+        <p className="text-xl font-bold">이미지 생성</p>
+          <button className={`${roundButton} bg-gray-400 ml-auto text-sm h-8`} onClick={() => {
+            curSession!.presetMode = 'preset';
+            setSelectedPreset(curSession!.presets.filter(x=>x.type==='preset')[0]);
+            sessionService.markUpdated(curSession!.name);
+          }}>NAI모드</button>
+      </div>}
+      {showStyleEditor && <FloatView onEscape={() => setShowStyleEditor(false)} priority={0}>
+        <StyleEditor selectedPreset={editingPreset} onClose={()=>setShowStyleEditor(false)}/>
+      </FloatView>}
+      {!vibeSetting && <><span className={"flex-none pb-2 " + grayLabel}>그림체</span>
+      <div className={"overflow-hidden min-h-0 " + (middlePromptMode ? "h-1/5" : "h-1/3")}>
+        <div className="h-full w-full flex overflow-auto gap-2">
+          {presets.filter(x=>x.type === 'style').map((preset) => (
+            <div
+              className={"h-full relative flex-none hover:brightness-95 active:brightness-90 cursor-pointer " + (preset == stylePreset ? "border-2 border-sky-500":"border-2 border-white")}
+              key={preset.name}
+              onClick={() => setSelectedPreset(preset)}
+            >
+              <VibeImage path={preset.profile} className="w-auto h-full" />
+              <div className="absolute bottom-0 right-0 bg-gray-700 opacity-80 text-sm text-white p-1 rounded-xl m-2 truncate select-none" style={{maxWidth: "90%"}}>
+                {preset.name}
+              </div>
+            </div>
+          ))}
+          <div className="h-full relative flex-none flex flex-col">
+            <div
+              className="flex-1 w-10 flex m-4 items-center justify-center rounded-xl bg-gray-300 text-gray-600 cursor-pointer hover:brightness-95 active:brightness-90"
+              onClick={()=>{
+                setEditingPreset(undefined);
+                setShowStyleEditor(true);
+              }}
+            >
+              <FaPlus/>
+            </div>
+          </div>
+        </div>
+      </div></>}
+      <EditorField label="캐릭터 관련 태그" full={true}>
+        <PromptEditTextArea
+          value={shared.characterPrompt}
+          disabled={false}
+          onChange={frontPromptChange}
+        ></PromptEditTextArea>
+      </EditorField>
+      {middlePromptMode &&
+        <EditorField label="씬 프롬프트 (이 씬에만 적용됨)" full={true} bold>
+          <PromptEditTextArea
+            value={getMiddlePrompt ? getMiddlePrompt() : ''}
+            onChange={(txt) => {
+              if (onMiddlePromptChange) onMiddlePromptChange(txt);
+            }}
+          ></PromptEditTextArea>
+        </EditorField>
+      }
+      <EditorField label="배경 관련 태그" full={true}>
+        <PromptEditTextArea
+          value={shared.backgroundPrompt}
+          disabled={false}
+          onChange={backPromptChange}
+        ></PromptEditTextArea>
+      </EditorField>
+      <EditorField label="태그 밴 리스트 (네거티브)" full={true}>
+        <PromptEditTextArea
+          value={shared.uc}
+          disabled={false}
+          onChange={ucPromptChange}
+        ></PromptEditTextArea>
+      </EditorField>
+      {!samplerSetting && !vibeSetting &&
+        <div className="flex-none mt-3">
+      <div className="mt-auto flex gap-2 items-center">
+        <span className={"flex-none " + grayLabel}>시드: </span>
+        <input
+          className={`w-full ${grayInput}`}
+          disabled={middlePromptMode && presetEditLock}
+          value={commonSetup.shared.seed ?? ''}
+          onChange={(e) => {
+            try {
+              const num = parseInt(e.target.value);
+              if (e.target.value === '') throw new Error('No seed');
+              if (isNaN(num)) throw new Error('Invalid seed');
+              if (!Number.isInteger(num))
+                throw new Error('Seed must be an integer');
+              if (num <= 0) throw new Error('Seed must be positive');
+              commonSetup.shared.seed = num;
+            } catch (e) {
+              commonSetup.shared.seed = undefined;
+            }
+            updatePresets();
+          }}
+        />
+      </div>
+      <div className="flex-none mt-3 flex gap-2 items-center">
+        <VibeButton onClick={()=>setVibeSetting(true)}/>
+      </div>
+      </div>
+      }
+      {vibeSetting &&
+       <div className="flex-none h-2/3 flex flex-col overflow-hidden">
+        <VibeEditor closeEditor={() => setVibeSetting(false)} disabled={middlePromptMode && presetEditLock}/>
+      </div>
+      }
+
+    </div>
+  );
+}
+
+interface Props {
+  selectedPreset: PreSet;
+  setSelectedPreset: (preset: PreSet) => void;
+  middlePromptMode: boolean;
+  getMiddlePrompt?: () => string;
+  onMiddlePromptChange?: (txt: string) => void;
+  type?: PreSetMode;
+  styleEditMode?: boolean;
+}
+
+const PreSetEditor = ({type, setSelectedPreset, selectedPreset, middlePromptMode, getMiddlePrompt, onMiddlePromptChange, styleEditMode} : Props) => {
+  if (type === 'preset') {
+    return <NAIPreSetEditor selectedPreset={selectedPreset} setSelectedPreset={setSelectedPreset} middlePromptMode={middlePromptMode} styleEditMode={styleEditMode} getMiddlePrompt={getMiddlePrompt} onMiddlePromptChange={onMiddlePromptChange}/>
+  } else {
+    return <NAIStylePreSetEditor selectedPreset={selectedPreset} setSelectedPreset={setSelectedPreset} middlePromptMode={middlePromptMode} styleEditMode={styleEditMode} getMiddlePrompt={getMiddlePrompt} onMiddlePromptChange={onMiddlePromptChange}/>
+  }
 };
 
 export default PreSetEditor;

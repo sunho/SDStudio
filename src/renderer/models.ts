@@ -5,7 +5,6 @@ import { v4 as uuidv4 } from 'uuid';
 import ExifReader from 'exifreader';
 import { ElectornBackend } from './backends/electronBackend';
 import { AndroidBackend } from './backends/androidBackend';
-import { defaultUC, getDefaultPreset } from './PreSetEdtior';
 
 const PROMPT_SERVICE_INTERVAL = 5000;
 const UPDATE_SERVICE_INTERVAL = 240*1000;
@@ -458,12 +457,16 @@ export class SessionService extends ResourceSyncService<Session> {
   createDefault(name: string): Session {
     const preset = getDefaultPreset();
     preset.name = 'default';
+    const preset2 = getDefaultPreset() as any;
+    preset2.type = 'style';
+    preset2.name = 'default';
     return {
       name: name,
       presets: [
         preset,
+        preset2,
       ],
-      presetMode: 'preset',
+      presetMode: 'style',
       inpaints: {},
       scenes: {},
       library: {},
@@ -553,6 +556,12 @@ export class SessionService extends ResourceSyncService<Session> {
 
     if (!session.presetMode) {
       session.presetMode = 'preset';
+    }
+
+    if (session.presets.filter((x) => x.type === 'style').length === 0) {
+      const preset = getDefaultStylePreset();
+      preset.name = 'default';
+      session.presets.push(preset);
     }
 
     for (const inpaint of Object.values(session.inpaints)) {
@@ -1187,7 +1196,7 @@ export class PromptService extends ResourceSyncService<PieceLibrary> {
 
   parseWord(
     word: string,
-    session: Session,
+    session: Session | undefined = undefined,
     scene: InPaintScene | Scene | undefined = undefined,
     visited: { [key: string]: boolean } | undefined = undefined,
   ): PromptNode {
@@ -1195,6 +1204,9 @@ export class PromptService extends ResourceSyncService<PieceLibrary> {
       visited = {};
     }
     if (word.charAt(0) === '<' && word.charAt(word.length - 1) === '>') {
+      if (!session) {
+        throw new Error('그림체에서는 조각을 사용할 수 없습니다')
+      }
       const res: PromptGroupNode = {
         type: 'group',
         children: [],
@@ -1324,7 +1336,7 @@ export interface GenerateImageTaskParams {
   preset: BakedPreSet;
   outPath: string;
   session: Session;
-  scene: string;
+  scene?: string;
   image?: string;
   mask?: string;
   originalImage?: boolean;
@@ -1433,10 +1445,12 @@ class GenerateImageTaskHandler implements TaskHandler {
       params.onComplete(outputFilePath);
     }
 
-    if (this.inpaint) {
-      imageService.onAddInPaint(params.session, params.scene, outputFilePath);
-    } else {
-      imageService.onAddImage(params.session, params.scene, outputFilePath);
+    if (params.scene != null) {
+      if (this.inpaint) {
+        imageService.onAddInPaint(params.session, params.scene, outputFilePath);
+      } else {
+        imageService.onAddImage(params.session, params.scene, outputFilePath);
+      }
     }
 
     return true;
@@ -1448,6 +1462,8 @@ class GenerateImageTaskHandler implements TaskHandler {
 
   getSceneKey(task: Task) {
     const params: GenerateImageTaskParams = task.params;
+    if (!params.scene)
+      return '';
     return getSceneKey(params.session, params.scene);
   }
 }
@@ -1485,6 +1501,9 @@ class RemoveBgTaskHandler implements TaskHandler {
 
   getSceneKey(task: Task) {
     const params: GenerateImageTaskParams = task.params;
+    if (!params.scene) {
+      return '';
+    }
     return getSceneKey(params.session, params.scene);
   }
 }
@@ -1767,11 +1786,27 @@ export const createPrompts = async (
   preset: PreSet,
   scene: Scene,
 ) => {
+  const shared = session.presetShareds[session.presetMode];
   const promptComb: string[] = [];
   const res: PromptNode[] = [];
   const dfs = async () => {
     if (promptComb.length === scene.slots.length) {
-      const front = toPARR(preset.frontPrompt);
+      let front = toPARR(preset.frontPrompt);
+      if (preset.type === 'style') {
+        const styleShared = shared as NAIStylePreSetShared;
+        front = front.concat(toPARR(styleShared.characterPrompt));
+        const newFront = [];
+        const rest = [];
+        const regex = /^\d+(boy|girl|other)s?$/;
+        for (const word of front) {
+          if (regex.test(word) || word === 'multiple girls' || word === 'multiple boys' || word === 'multiple others') {
+            newFront.push(word);
+          } else {
+            rest.push(word);
+          }
+        }
+        front = newFront.concat(rest);
+      }
       let middle: string[] = [];
       for (const comb of promptComb) {
         middle = middle.concat(toPARR(comb));
@@ -1807,6 +1842,10 @@ export const createPrompts = async (
         if (middle[right] !== '|')
           cur.push(middle[right]);
         right++
+      }
+      if (preset.type === 'style') {
+        const styleShared = shared as NAIStylePreSetShared;
+        cur = cur.concat(toPARR(styleShared.backgroundPrompt));
       }
       cur = cur.concat(toPARR(preset.backPrompt));
       const newNode: PromptNode = {
@@ -2000,6 +2039,34 @@ export const highlightPrompt = (session: Session, text: string, lineHighlight: b
   return `${words}`;
 };
 
+export const queueDummyPrompt = (
+  session: Session,
+  preset: NAIStylePreSet,
+  outPath: string,
+  prompt: PromptNode,
+  resolution: Resolution,
+  onComplete: ((path: string) => void) | undefined = undefined,
+) => {
+  const shared = session.presetShareds[session.presetMode];
+  const params: GenerateImageTaskParams = {
+    preset: {
+      prompt,
+      uc: preset.uc,
+      vibes: [],
+      resolution: resolution,
+      smea: preset.smeaOff ? false : true,
+      dyn: preset.dynOn ? true : false,
+      steps: preset.steps ?? 28,
+      promptGuidance: preset.promptGuidance ?? 5,
+      sampling: preset.sampling ?? Sampling.KEulerAncestral,
+    },
+    outPath: outPath,
+    session,
+    onComplete,
+  };
+  taskQueueService.addTask('generate-fast', 1, params);
+}
+
 export const queueScenePrompt = (
   session: Session,
   preset: PreSet,
@@ -2010,10 +2077,14 @@ export const queueScenePrompt = (
   onComplete: ((path: string) => void) | undefined = undefined,
 ) => {
   const shared = session.presetShareds[session.presetMode];
+  let uc = toPARR(preset.uc);
+  if (session.presetMode === 'style') {
+    uc = uc.concat(toPARR((shared as NAIStylePreSetShared).uc));
+  }
   const params: GenerateImageTaskParams = {
     preset: {
       prompt,
-      uc: preset.uc,
+      uc: uc.join(', '),
       vibes: shared.vibes,
       resolution: scene.resolution as Resolution,
       smea: preset.smeaOff ? false : true,
@@ -2463,6 +2534,17 @@ export function dataUriToBase64(dataUri: string) {
   return dataUri.split(',')[1];
 }
 
+export function getMainImagePath(session: Session, scene: Scene) {
+  if (scene.mains.length) {
+    return imageService.getImageDir(session, scene) + '/' + scene.mains[0];
+  }
+  const images = gameService.getOutputs(session, scene);
+  if (images.length) {
+    return imageService.getImageDir(session, scene) + '/' + images[0];
+  }
+  return undefined;
+}
+
 export async function getMainImage(session: Session, scene: Scene, size: number) {
   if (scene.mains.length) {
     const path =
@@ -2874,4 +2956,35 @@ export async function getFirstFile() {
 export enum ContextMenuType {
   Image = 'image',
   Scene = 'scene',
+}
+
+export const defaultFPrompt = `1girl, {artist:ixy}`;
+export const defaultBPrompt = `{best quality, amazing quality, very aesthetic, highres, incredibly absurdres}`;
+export const defaultUC = `worst quality, bad quality, displeasing, very displeasing, lowres, bad anatomy, bad perspective, bad proportions, bad aspect ratio, bad face, long face, bad teeth, bad neck, long neck, bad arm, bad hands, bad ass, bad leg, bad feet, bad reflection, bad shadow, bad link, bad source, wrong hand, wrong feet, missing limb, missing eye, missing tooth, missing ear, missing finger, extra faces, extra eyes, extra eyebrows, extra mouth, extra tongue, extra teeth, extra ears, extra breasts, extra arms, extra hands, extra legs, extra digits, fewer digits, cropped head, cropped torso, cropped shoulders, cropped arms, cropped legs, mutation, deformed, disfigured, unfinished, chromatic aberration, text, error, jpeg artifacts, watermark, scan, scan artifacts`;
+
+export function getDefaultPreset(): NAIPreSet {
+  return {
+    name: '',
+    type: 'preset',
+    frontPrompt: defaultFPrompt,
+    backPrompt: defaultBPrompt,
+    uc: defaultUC,
+    sampling: Sampling.KEulerAncestral,
+    promptGuidance: 5.0,
+    steps: 28,
+  };
+}
+
+export function getDefaultStylePreset(): NAIStylePreSet {
+  return {
+    name: '',
+    type: 'style',
+    frontPrompt: defaultFPrompt,
+    backPrompt: defaultBPrompt,
+    uc: defaultUC,
+    sampling: Sampling.KEulerAncestral,
+    promptGuidance: 5.0,
+    steps: 28,
+    profile:'',
+  };
 }

@@ -54,6 +54,7 @@ import { SlotPiece } from './SceneEditor';
 export interface Context {
   curSession: Session | undefined;
   selectedPreset: PreSet | undefined;
+  setSelectedPreset: (preset: PreSet) => void;
   messages: string[];
   pushMessage: (msg: string) => void;
   pushDialog: (dialog: Dialog) => void;
@@ -489,6 +490,7 @@ export default function App() {
     samples,
     messages,
     dialogs,
+    setSelectedPreset,
     pushMessage,
     pushDialog,
     handleFile,
@@ -529,7 +531,8 @@ export default function App() {
                   <>
                     <div className="flex-1 overflow-hidden hidden md:block">
                       <PreSetEditor
-                        key={curSession.name}
+                        type={curSession.presetMode}
+                        key={curSession.presetMode}
                         middlePromptMode={false}
                         selectedPreset={selectedPreset}
                         setSelectedPreset={setSelectedPreset}
@@ -538,7 +541,7 @@ export default function App() {
                     <div className="flex-1 overflow-hidden">
                       <TabComponent key={curSession.name} tabs={tabs}
                       toggleView={<PreSetEditor
-                        key={curSession.name}
+                        key={curSession.presetMode+"2"}
                         selectedPreset={selectedPreset}
                         middlePromptMode={false}
                         setSelectedPreset={setSelectedPreset}
