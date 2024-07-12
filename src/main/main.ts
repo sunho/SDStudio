@@ -27,6 +27,7 @@ const StreamZip = require('node-stream-zip');
 
 import contextMenu from 'electron-context-menu';
 import * as electronDL from 'electron-dl';
+import { createGzip } from 'zlib';
 
 interface DataBaseConns {
   tagDBId: number;
@@ -119,6 +120,10 @@ ipcMain.handle('show-file', async (event, arg) => {
 const AdmZip = require('adm-zip');
 
 const fsSync = require('fs');
+const tar = require('tar-fs');
+const tarStream = require('tar-stream');
+const fs = require('fs').promises;
+const gunzip = require('gunzip-maybe');
 
 ipcMain.handle('zip-files', async (event, files, outPath) => {
   const dir = path.dirname(APP_DIR + '/' + outPath);
@@ -127,16 +132,36 @@ ipcMain.handle('zip-files', async (event, files, outPath) => {
     path: APP_DIR + '/' + x.path,
   }));
   await fs.mkdir(dir, { recursive: true });
-  const zip = new AdmZip();
-  files.forEach((x: any) => {
-    const { name, path } = x;
-    const fileContent = fsSync.readFileSync(path);
-    zip.addFile(`${name}.png`, fileContent);
-  });
-  await zip.writeZip(APP_DIR + '/' + outPath);
+  const pack = tarStream.pack();
+
+  pack.pipe(createGzip()).pipe(fsSync.createWriteStream(APP_DIR + "/" +outPath));
+  for (const file of files) {
+    await new Promise((resolve, reject) => {
+      const srcPath = file.path;
+      const destPath = file.name;
+      const size = fsSync.statSync(srcPath).size;
+      const stream = fsSync.createReadStream(srcPath);
+      const entry = pack.entry({ name: destPath, size: size });
+      stream.on('error', reject);
+      entry.on('error', reject);
+      entry.on('finish',resolve);
+      stream.pipe(entry);
+    });
+  }
+  pack.finalize();
 });
 
-const fs = require('fs').promises;
+ipcMain.handle('unzip-files', async (event, zipPath, outPath) => {
+  outPath = APP_DIR + '/' + outPath;
+  await fs.mkdir(outPath, { recursive: true });
+  const stream = fsSync.createReadStream(zipPath)
+    .pipe(gunzip())
+    .pipe(tar.extract(outPath))
+  await new Promise((resolve, reject) => {
+    stream.on('finish', resolve);
+    stream.on('error', reject);
+  });
+});
 
 ipcMain.handle('search-tags', async (event, word) => {
   return native.search(databases.tagDBId, word);
@@ -267,6 +292,17 @@ ipcMain.handle(
 ipcMain.handle('select-dir', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
     properties: ['openDirectory']
+  })
+  if (canceled) {
+    return
+  } else {
+    return filePaths[0]
+  }
+});
+
+ipcMain.handle('select-file', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
+    properties: ['openFile']
   })
   if (canceled) {
     return

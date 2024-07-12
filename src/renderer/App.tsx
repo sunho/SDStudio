@@ -26,6 +26,12 @@ import {
   ContextMenuType,
   PreSetShared,
   PreSetMode,
+  StyleContextAlt,
+  dataUriToBase64,
+  embedJSONInPNG,
+  readJSONFromPNG,
+  NAIStylePreSet,
+  importStyle,
 } from './models';
 import SessionSelect from './SessionSelect';
 import PreSetEditor from './PreSetEdtior';
@@ -50,6 +56,7 @@ import { usePreview } from 'react-dnd-preview'
 import React from 'react';
 import { CellPreview } from './ResultViewer';
 import { SlotPiece } from './SceneEditor';
+import { v4 } from 'uuid';
 
 export interface Context {
   curSession: Session | undefined;
@@ -170,7 +177,7 @@ export default function App() {
     };
   },[curSession]);
 
-  const handleFile = (file: File) => {
+  const handleFile = async (file: File) => {
     if (file.type === 'application/json') {
       const reader = new FileReader();
       reader.onload = (e: any) => {
@@ -182,6 +189,31 @@ export default function App() {
         }
       };
       reader.readAsText(file);
+    } else if (file.type === 'image/png') {
+      if (!curSession) {
+        return;
+      }
+      try {
+        const reader = new FileReader();
+        reader.onload = async (e: any) => {
+          try {
+            const base64 = dataUriToBase64(e.target.result);
+            const preset = await importStyle(curSession!, base64);
+            if (preset) {
+              setSelectedPreset(preset);
+              sessionService.markUpdated(curSession!.name);
+              pushDialog({
+                type: 'yes-only',
+                text: '그림체를 임포트 했습니다',
+              })
+            }
+          } catch(e) {
+          }
+        };
+        reader.readAsDataURL(file);
+      } catch(err) {
+        console.error(err);
+      }
     }
     const handleJSONContent = async (name: string, json: any) => {
       if (name.endsWith('.json')) {
@@ -191,10 +223,10 @@ export default function App() {
         const importCool = async () => {
           const sess = await sessionService.get(json.name);
           if (!sess) {
-            await sessionService.createFrom(json.name, json);
+            await sessionService.importSessionShallow(json, json.name);
             const newSession = (await sessionService.get(json.name))!;
             setCurSession(newSession);
-            setSelectedPreset(Object.values(newSession.presets)[0]);
+            setSelectedPreset(newSession.presets.filter(x => x.type === newSession.presetMode)[0]);
             pushDialog({
               type: 'yes-only',
               text: '프로젝트를 임포트 했습니다',
@@ -208,10 +240,10 @@ export default function App() {
                   return;
                 }
                 try {
-                  await sessionService.createFrom(value, json);
+                  await sessionService.importSessionShallow(json, value);
                   const newSession = (await sessionService.get(value))!;
                   setCurSession(newSession);
-                  setSelectedPreset(Object.values(newSession.presets)[0]);
+                  setSelectedPreset(newSession.presets.filter(x => x.type === newSession.presetMode)[0]);
                 } catch (e) {
                   pushMessage('이미 존재하는 프로젝트 이름입니다.');
                 }
@@ -314,10 +346,10 @@ export default function App() {
 
     const handleDrop = (event: any) => {
       event.preventDefault();
+      event.stopPropagation();
       const file = event.dataTransfer.files[0];
-      if (file && file.type === 'application/json') {
+      if (file) {
         handleFile(file);
-        event.stopPropagation();
       }
     };
     window.addEventListener('dragover', handleDragOver);
@@ -463,6 +495,40 @@ export default function App() {
         copyImage(props.ctx as ImageContextAlt);
       }
     };
+    const exportStyle = async (ctx: StyleContextAlt) => {
+      const pngData = dataUriToBase64(await backend.readDataFile(ctx.preset.profile));
+      const newPngData = embedJSONInPNG(pngData, ctx.preset);
+      const path = 'exports/'+ctx.preset.name+'_'+Date.now().toString()+'.png';
+      await backend.writeDataFile(path, newPngData);
+      await backend.showFile(path);
+    }
+    const deleteStyle = async (ctx: StyleContextAlt) => {
+      pushDialog({
+        type: 'confirm',
+        text: '정말로 삭제하시겠습니까?',
+        callback: async () => {
+          if (ctx.session.presets.filter(p => p.type === 'style').length === 1) {
+            pushMessage('마지막 그림체는 삭제할 수 없습니다');
+            return;
+          }
+          ctx.session.presets = ctx.session.presets.filter(p => p != ctx.preset);
+          setSelectedPreset(ctx.session.presets.filter(p => p.type === 'style')[0]);
+          sessionService.markUpdated(ctx.session.name);
+        },
+      });
+    }
+    const editStyle = async (ctx: StyleContextAlt) => {
+      sessionService.styleEditStart(ctx.preset);
+    };
+    const handleStyleItemClick = ({id, props}: any) => {
+      if (id === 'export') {
+        exportStyle(props.ctx as StyleContextAlt);
+      } else if (id === 'delete') {
+        deleteStyle(props.ctx as StyleContextAlt);
+      } else if (id === 'edit') {
+        editStyle(props.ctx as StyleContextAlt);
+      }
+    };
     return <>
       <Menu id={ContextMenuType.Scene}>
         <Item id="duplicate" onClick={handleSceneItemClick}>해당 씬 복제</Item>
@@ -472,6 +538,11 @@ export default function App() {
       <Menu id={ContextMenuType.Image}>
         <Item id="duplicate" onClick={handleImageItemClick}>해당 이미지 복제</Item>
         <Item id="copy" onClick={handleImageItemClick}>다른 씬으로 이미지 복사</Item>
+      </Menu>
+      <Menu id={ContextMenuType.Style}>
+        <Item id="export" onClick={handleStyleItemClick}>해당 그림체 내보내기</Item>
+        <Item id="edit" onClick={handleStyleItemClick}>해당 그림체 편집</Item>
+        <Item id="delete" onClick={handleStyleItemClick}>해당 그림체 삭제</Item>
       </Menu>
     </>;
   }
@@ -501,6 +572,7 @@ export default function App() {
     { label: '인페인트', content: <QueueControl type="inpaint" showPannel/>, emoji: <FaPenFancy/> },
     { label: '프롬프트조각', content: <PieceEditor />, emoji: <FaPuzzlePiece/> },
   ];
+  const editorKey = curSession?.presetMode === 'preset' ? 'preset_' + curSession.name + '_' + selectedPreset?.name : 'style_' + curSession?.name;
 
   return (
     <AppContext.Provider value={ctx}>
@@ -532,7 +604,7 @@ export default function App() {
                     <div className="flex-1 overflow-hidden hidden md:block">
                       <PreSetEditor
                         type={curSession.presetMode}
-                        key={curSession.presetMode}
+                        key={editorKey}
                         middlePromptMode={false}
                         selectedPreset={selectedPreset}
                         setSelectedPreset={setSelectedPreset}
@@ -541,7 +613,7 @@ export default function App() {
                     <div className="flex-1 overflow-hidden">
                       <TabComponent key={curSession.name} tabs={tabs}
                       toggleView={<PreSetEditor
-                        key={curSession.presetMode+"2"}
+                        key={editorKey+"2"}
                         selectedPreset={selectedPreset}
                         middlePromptMode={false}
                         setSelectedPreset={setSelectedPreset}

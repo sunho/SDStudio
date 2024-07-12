@@ -184,6 +184,13 @@ export class AndroidBackend extends Backend {
     });
   }
 
+  async unzipFiles(zipPath: string, outPath: string): Promise<void> {
+  }
+
+  async selectFile(): Promise<string | undefined> {
+    return undefined
+  }
+
   async searchTags(word: string): Promise<any> {
     const args = {id: this.tagDBId!, query: word};
     return (await TagDB.search(args)).results;

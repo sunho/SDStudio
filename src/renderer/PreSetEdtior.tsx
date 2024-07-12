@@ -8,7 +8,7 @@ import {
   DropdownSelect,
 } from './UtilComponents';
 import { Resolution, Sampling } from './backends/imageGen';
-import { CommonSetup, NAIPreSet, NAIStylePreSet, NAIStylePreSetShared, PreSet, PreSetMode, PromptNode, backend, getDefaultPreset, getDefaultStylePreset, imageService, promptService, queueDummyPrompt, queueScenePrompt, sessionService, taskQueueService, toPARR } from './models';
+import { CommonSetup, ContextMenuType, NAIPreSet, NAIStylePreSet, NAIStylePreSetShared, PreSet, PreSetMode, PromptNode, backend, getDefaultPreset, getDefaultStylePreset, imageService, promptService, queueDummyPrompt, queueScenePrompt, sessionService, taskQueueService, toPARR } from './models';
 import { Context, AppContext } from './App';
 import { base64ToDataUri } from './BrushTool';
 import { grayInput, grayLabel, primaryColor, roundButton } from './styles';
@@ -17,6 +17,7 @@ import { FaImage, FaPlus, FaTrash } from 'react-icons/fa';
 import { FloatView } from './FloatView';
 import { v4 } from 'uuid';
 import { BigPromptEditor } from './SceneEditor';
+import { useContextMenu } from 'react-contexify';
 
 export function useCommonSetup(): CommonSetup {
   const { curSession, selectedPreset } = useContext(AppContext)!;
@@ -456,7 +457,7 @@ const StyleEditor: React.FC<StyleEditorProps> = ({ selectedPreset, onClose }) =>
   const setMainImage = async (path: string) => {
     const newPath = imageService.getVibesDir(curSession!) + '/' + v4() + '.png';
     await backend.copyFile(path, newPath);
-    presetRef.current.profile = newPath;
+    presetRef.current.profile = newPath.split('/').pop()!;
   };
   return <div className="flex flex-col h-full">
     <div className="grow-0 pt-2 px-3 flex gap-3 items-center text-nowrap flex-wrap mb-2 md:mb-0">
@@ -465,6 +466,7 @@ const StyleEditor: React.FC<StyleEditorProps> = ({ selectedPreset, onClose }) =>
       <input
         className={grayInput}
         type="text"
+        disabled={selectedPreset != undefined}
         value={presetRef.current.name}
         onChange={(e) => {
           presetRef.current.name = e.currentTarget.value;
@@ -532,6 +534,21 @@ const NAIStylePreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPres
     rerender({});
   }, [selectedPreset])
 
+  useEffect(() => {
+    const handleEditStart = (e: any) => {
+      setEditingPreset(e.detail.preset);
+      setShowStyleEditor(true);
+    };
+    if (!middlePromptMode) {
+      sessionService.addEventListener('style-edit-start', handleEditStart);
+    }
+    return () => {
+      if (!middlePromptMode) {
+        sessionService.removeEventListener('style-edit-start', handleEditStart);
+      }
+    }
+  },[]);
+
   const [samplerSetting, setSamplerSetting] = useState(false);
   const [vibeSetting, setVibeSetting] = useState(false);
   const commonSetup = useCommonSetup();
@@ -540,6 +557,9 @@ const NAIStylePreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPres
   const [showStyleEditor, setShowStyleEditor] = useState(false);
   const stylePreset = selectedPreset as NAIStylePreSet;
   const [editingPreset, setEditingPreset] = useState<NAIStylePreSet | undefined>(undefined);
+  const { show, hideAll } = useContextMenu({
+    id: ContextMenuType.Style,
+  });
 
   return (
     <div
@@ -563,9 +583,21 @@ const NAIStylePreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPres
             <div
               className={"h-full relative flex-none hover:brightness-95 active:brightness-90 cursor-pointer " + (preset == stylePreset ? "border-2 border-sky-500":"border-2 border-white")}
               key={preset.name}
+              onContextMenu={e => {
+                show({
+                  event: e,
+                  props: {
+                    ctx: {
+                      type: 'style',
+                      preset: preset,
+                      session: curSession!
+                    }
+                  }
+                });
+              }}
               onClick={() => setSelectedPreset(preset)}
             >
-              <VibeImage path={preset.profile} className="w-auto h-full" />
+              <VibeImage path={imageService.getVibesDir(curSession!) + '/' + preset.profile.split('/').pop()!} className="w-auto h-full" />
               <div className="absolute bottom-0 right-0 bg-gray-700 opacity-80 text-sm text-white p-1 rounded-xl m-2 truncate select-none" style={{maxWidth: "90%"}}>
                 {preset.name}
               </div>

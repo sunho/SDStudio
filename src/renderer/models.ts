@@ -1,10 +1,14 @@
 import { ImageGenInput, Model, Resolution, Sampling } from './backends/imageGen';
 import { CircularQueue } from './circularQueue';
 
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4, v4 } from 'uuid';
 import ExifReader from 'exifreader';
 import { ElectornBackend } from './backends/electronBackend';
 import { AndroidBackend } from './backends/androidBackend';
+import extractChunks from 'png-chunks-extract';
+import encodeChunks from 'png-chunks-encode';
+import * as PngChunk from 'png-chunk-text';
+import { Buffer } from 'buffer';
 
 const PROMPT_SERVICE_INTERVAL = 5000;
 const UPDATE_SERVICE_INTERVAL = 240*1000;
@@ -310,14 +314,14 @@ abstract class ResourceSyncService<T> extends EventTarget {
     this.running = true;
   }
 
-  abstract createDefault(name: string): T;
+  abstract createDefault(name: string): T | Promise<T>;
   abstract getHook(rc: T, name: string): Promise<void>;
 
   async add(name: string) {
     if (name in this.resources) {
       throw new Error('Resource already exists');
     }
-    this.resources[name] = this.createDefault(name);
+    this.resources[name] = await this.createDefault(name);
     await this.getHook(this.resources[name], name);
     this.markUpdated(name);
     await this.update();
@@ -425,6 +429,22 @@ abstract class ResourceSyncService<T> extends EventTarget {
   }
 }
 
+export class ZipService extends EventTarget {
+  isZipping: boolean;
+  constructor() {
+    super();
+    this.isZipping = false;
+  }
+
+  async zipFiles(files: FileEntry[], outPath: string) {
+    this.isZipping = true;
+    await backend.zipFiles(files, outPath);
+    this.isZipping = false;
+  }
+}
+
+export const zipService = new ZipService();
+
 export class SessionService extends ResourceSyncService<Session> {
   constructor() {
     super('projects', SESSION_SERVICE_INTERVAL);
@@ -454,21 +474,31 @@ export class SessionService extends ResourceSyncService<Session> {
     }
   }
 
-  createDefault(name: string): Session {
+  async createDefault(name: string) {
     const preset = getDefaultPreset();
     preset.name = 'default';
-    const preset2 = getDefaultPreset() as any;
-    preset2.type = 'style';
-    preset2.name = 'default';
-    return {
+    const newSession: Session = {
       name: name,
       presets: [
         preset,
-        preset2,
       ],
       presetMode: 'style',
       inpaints: {},
-      scenes: {},
+      scenes: {
+        'default': {
+          type: 'scene',
+          name: 'default',
+          resolution: 'portrait',
+          locked: false,
+          slots: [
+            [{ prompt: 'smile', enabled: true }],
+          ],
+          game: undefined,
+          round: undefined,
+          imageMap: [],
+          mains: [],
+        },
+      },
       library: {},
       presetShareds: {
         preset: {
@@ -477,13 +507,15 @@ export class SessionService extends ResourceSyncService<Session> {
         },
         style: {
           type: 'style',
-          backgroundPrompt: '',
-          characterPrompt: '',
+          backgroundPrompt: 'bed',
+          characterPrompt: '1girl, maid, black hair, medium hair, large breasts, lying',
           uc: '',
           vibes: [],
         }
       }
     };
+    await importDefaultPresets(newSession);
+    return newSession;
   }
 
   getInpaintOrgPath(session: Session, inpaint: InPaintScene) {
@@ -496,6 +528,140 @@ export class SessionService extends ResourceSyncService<Session> {
     return (
       'inpaint_masks/' + session.name + '/' + inpaint.name + '.png'
     );
+  }
+
+  async exportSessionShallow(session: Session) {
+    const sess: Session = JSON.parse(JSON.stringify(session));
+    sess.presetShareds['preset'].vibes = [];
+    sess.presetShareds['style'].vibes = [];
+    for (const scene of Object.values(sess.scenes)) {
+      scene.game = undefined;
+      scene.round = undefined;
+      scene.imageMap = [];
+      scene.mains = [];
+    }
+
+    for (const scene of Object.values(sess.inpaints)) {
+      scene.game = undefined;
+      scene.round = undefined;
+      scene.imageMap = [];
+    }
+
+    const newPresets = [];
+    for (const preset of sess.presets) {
+      if (preset.type === 'style') {
+        try {
+          const data = await backend.readDataFile(preset.profile)
+          const base64 = dataUriToBase64(data);
+          preset.profile = base64;
+          newPresets.push(preset);
+        } catch (e) {
+        }
+      } else {
+        newPresets.push(preset);
+      }
+    }
+    return sess;
+  }
+
+  async exportSessionDeep(session: Session, outPath: string) {
+    const ignoreError = async (f: Promise<any>) => {
+      try {
+        return await f;
+      } catch (e) {
+        return [];
+      }
+    }
+
+    const projFile = 'projects/'+session.name + '.json';
+    const entries: FileEntry[] = [];
+    for (const scene of Object.values(session.scenes)) {
+      const images = await ignoreError(backend.listFiles('outs/' + session.name + '/' + scene.name));
+      for (const image of images) {
+        if (!image.endsWith('.png')) continue;
+        entries.push({ path: 'outs/' + session.name + '/' + scene.name + '/' + image, name: 'outs/' + scene.name + '/' + image });
+      }
+    }
+    const inpaintOrgs = await ignoreError(backend.listFiles('inpaint_orgs/' + session.name));
+    const inpaintMasks = await ignoreError(backend.listFiles('inpaint_masks/' + session.name));
+    for (const image of inpaintOrgs) {
+      if (!image.endsWith('.png')) continue;
+      entries.push({ path: 'inpaint_orgs/' + session.name + '/' + image, name: 'inpaint_orgs/'+image });
+    }
+    for (const image of inpaintMasks) {
+      if (!image.endsWith('.png')) continue;
+      entries.push({ path: 'inpaint_masks/' + session.name + '/' + image, name: 'inpaint_masks/'+image });
+    }
+    for (const inpaint of Object.values(session.inpaints)) {
+      const inpaints = await ignoreError(backend.listFiles('inpaints/' + session.name + '/' + inpaint.name));
+      for (const image of inpaints) {
+        if (!image.endsWith('.png')) continue;
+        entries.push({ path: 'inpaints/' + session.name + '/' + inpaint.name + '/' + image, name: 'inpaints/'+inpaint.name+'/'+image });
+      }
+    }
+    const vibes = await ignoreError(backend.listFiles('vibes/' + session.name));
+    for (const vibe of vibes) {
+      if (!vibe.endsWith('.png')) continue;
+      entries.push({ path: 'vibes/' + session.name + '/' + vibe, name: 'vibes/'+vibe });
+    }
+    entries.push({path: projFile, name: 'project.json'});
+    if (zipService.isZipping) {
+      throw new Error('Already zipping');
+    }
+    await zipService.zipFiles(entries, outPath);
+  }
+
+  async importSessionShallow(session: Session, name: string) {
+    if (name in this.resources) {
+      throw new Error('Resource already exists');
+    }
+    session.name = name;
+    if (Array.isArray(session.presets)) {
+      for (const preset of session.presets) {
+        if (preset.type === 'style') {
+          const path = imageService.getVibesDir(session) + '/' + uuidv4() + '.png';
+          await backend.writeDataFile(path, preset.profile);
+          preset.profile = path.split('/').pop()!;
+        }
+      }
+    }
+    await this.createFrom(name, session);
+  }
+
+  async importSessionDeep(tarpath: string, name: string) {
+    if (name in this.resources) {
+      throw new Error('Resource already exists');
+    }
+    const path = 'tmp/' + uuidv4();
+    await backend.unzipFiles(tarpath, path);
+    const session: Session = JSON.parse(await backend.readFile(path + '/project.json'));
+    session.name = name;
+    try {
+      await backend.renameDir(path + '/outs', 'outs/' + session.name);
+    } catch(e) {
+      console.error(e);
+    }
+    try {
+      await backend.renameDir(path + '/inpaints', 'inpaints/' + session.name);
+    } catch(e) {
+      console.error(e);
+    }
+    try {
+      await backend.renameDir(path + '/inpaint_orgs', 'inpaint_orgs/' + session.name);
+    } catch(e) {
+      console.error(e);
+    }
+    try {
+      await backend.renameDir(path + '/inpaint_masks', 'inpaint_masks/' + session.name);
+    } catch(e) {
+      console.error(e);
+    }
+    try {
+      await backend.renameDir(path + '/vibes', 'vibes/' + session.name);
+    } catch(e) {
+      console.error(e);
+    }
+    await this.createFrom(name, session);
   }
 
   async migrateSession(session: Session) {
@@ -559,10 +725,9 @@ export class SessionService extends ResourceSyncService<Session> {
     }
 
     if (session.presets.filter((x) => x.type === 'style').length === 0) {
-      const preset = getDefaultStylePreset();
-      preset.name = 'default';
-      session.presets.push(preset);
+      await importDefaultPresets(session);
     }
+
 
     for (const inpaint of Object.values(session.inpaints)) {
       if (inpaint.image) {
@@ -697,6 +862,10 @@ export class SessionService extends ResourceSyncService<Session> {
 
   sceneOrderChanged(): void {
     this.dispatchEvent(new CustomEvent('scene-order-changed', {}));
+  }
+
+  styleEditStart(preset: PreSet): void {
+    this.dispatchEvent(new CustomEvent('style-edit-start', { detail: { preset } }));
   }
 
   async reloadPieceLibraryDB(session: Session) {
@@ -2653,7 +2822,13 @@ export interface SceneContextAlt {
   name: string;
 }
 
-export type ContextAlt = ImageContextAlt | SceneContextAlt;
+export interface StyleContextAlt {
+  type: 'style';
+  preset: NAIStylePreSet;
+  session: Session;
+}
+
+export type ContextAlt = ImageContextAlt | SceneContextAlt | StyleContextAlt;
 
 export const encodeContextAlt = (x: ContextAlt) => JSON.stringify(x)!;
 export const decodeContextAlt = JSON.parse as (x: string) => ContextAlt;
@@ -2956,6 +3131,7 @@ export async function getFirstFile() {
 export enum ContextMenuType {
   Image = 'image',
   Scene = 'scene',
+  Style = 'style',
 }
 
 export const defaultFPrompt = `1girl, {artist:ixy}`;
@@ -2987,4 +3163,69 @@ export function getDefaultStylePreset(): NAIStylePreSet {
     steps: 28,
     profile:'',
   };
+}
+
+import defaultassets from './defaultassets';
+import { FileEntry } from './backend';
+function blobToDataUri(blob: Blob) : Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = (e) => reject(e);
+    reader.readAsDataURL(blob);
+  });
+}
+
+export async function importDefaultPresets(session: Session) {
+  const images = await Promise.all(defaultassets.map(x=>fetch(x).then(res=>res.blob())));
+  for (const image of images) {
+    const datauri = await blobToDataUri(image);
+    await importStyle(session, dataUriToBase64(datauri));
+  }
+}
+
+export function embedJSONInPNG(inputBase64: string, jsonData: any) {
+  const inputBuffer = Buffer.from(inputBase64, 'base64');
+  const chunks = extractChunks(inputBuffer);
+
+  const jsonTextChunk = PngChunk.encode('tEXt', 'json:'+Buffer.from(JSON.stringify(jsonData)).toString('base64'));
+  chunks.splice(1, 0, jsonTextChunk);
+  const outputBuffer = Buffer.from(encodeChunks(chunks));
+  const outputBase64 = outputBuffer.toString('base64');
+  return outputBase64;
+}
+
+export function readJSONFromPNG(base64PNG: string) {
+  const buffer = Buffer.from(base64PNG, 'base64');
+  const chunks = extractChunks(buffer);
+  const jsonChunk = chunks.find(chunk => chunk.name === 'tEXt');
+  if (jsonChunk) {
+      let base64JsonData = Buffer.from(jsonChunk.data).toString();
+      const startIndex = base64JsonData.indexOf('json:') + 5
+      base64JsonData = base64JsonData.slice(startIndex);
+      const jsonData = JSON.parse(Buffer.from(base64JsonData, 'base64').toString());
+      return jsonData;
+  } else {
+      throw new Error('No JSON data found in the PNG.');
+  }
+}
+
+export async function importStyle(session: Session, base64: string) {
+  const json = readJSONFromPNG(base64);
+  if (!json.profile) {
+    return undefined;
+  }
+  const preset: NAIStylePreSet = json;
+  const path = imageService.getVibesDir(session!) + '/' + v4() + '.png';
+  await backend.writeDataFile(path, base64);
+  preset.profile = path.split('/').pop()!;
+  const presets = session.presets.filter(p => p.type === 'style');
+  let cnt = '';
+  while (presets.find(p => p.name === preset.name + cnt)) {
+    cnt = cnt === '' ? '1' : (parseInt(cnt) + 1).toString();
+  }
+  preset.name = preset.name + cnt;
+  session.presets.push(preset);
+  session.presetMode = 'style';
+  return preset;
 }

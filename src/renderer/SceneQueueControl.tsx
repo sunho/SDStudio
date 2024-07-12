@@ -27,6 +27,7 @@ import {
   isMobile,
   deleteImageFiles,
   ContextMenuType,
+  zipService,
 } from './models';
 import { AppContext } from './App';
 import { FloatView } from './FloatView';
@@ -646,9 +647,9 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
         for (let i=0;i<images.length;i++) {
           const path = images[i];
           if (images.length === 1) {
-            paths.push({ path: imageService.getImageDir(curSession!, scene)+'/'+path, name: prefix + scene.name });
+            paths.push({ path: imageService.getImageDir(curSession!, scene)+'/'+path, name: prefix + scene.name+'.png' });
           } else {
-            paths.push({ path: imageService.getImageDir(curSession!, scene)+'/'+path, name: prefix + scene.name + '.' + (i+1).toString() });
+            paths.push({ path: imageService.getImageDir(curSession!, scene)+'/'+path, name: prefix + scene.name + '.' + (i+1).toString()+'.png' });
           }
         }
       }
@@ -657,8 +658,23 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
         curSession!.name +
         '_main_images_' +
         Date.now().toString() +
-        '.zip';
-      await backend.zipFiles(paths, outFilePath);
+        '.tar';
+      if (zipService.isZipping) {
+        ctx.pushDialog({
+          type: 'yes-only',
+          text: '이미 다른 이미지 내보내기가 진행중입니다',
+        });
+        return;
+      }
+      ctx.pushDialog({
+        type: 'yes-only',
+        text: '이미지 내보냅니다. 잠시 기다려주세요.'
+      });
+      await zipService.zipFiles(paths, outFilePath);
+      ctx.pushDialog({
+        type: 'yes-only',
+        text: '이미지 내보내기가 완료되었습니다'
+      });
       await backend.showFile(outFilePath);
     }
     ctx.pushDialog({

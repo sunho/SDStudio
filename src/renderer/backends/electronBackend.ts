@@ -68,6 +68,10 @@ export class ElectornBackend extends Backend {
     await invoke('zip-files', files, outPath);
   }
 
+  async unzipFiles(zipPath: string, outPath: string): Promise<void> {
+    await invoke('unzip-files', zipPath, outPath);
+  }
+
   async searchTags(word: string): Promise<any> {
     return await invoke('search-tags', word);
   }
@@ -170,6 +174,10 @@ export class ElectornBackend extends Backend {
 
   async selectDir() {
     return await invoke('select-dir');
+  }
+
+  async selectFile() {
+    return await invoke('select-file');
   }
 
   async removeBackground(inputImageBase64: string, outputPath: string): Promise<void> {
