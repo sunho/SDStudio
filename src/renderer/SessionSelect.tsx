@@ -99,24 +99,56 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSelectedPreset }) =>
           text: '메뉴를 선택해주세요',
           items: [
             {
-              text: '프로젝트 불러오기',
+              text: '파일 불러오기',
               value: 'load'
             },
             {
-              text: '프로젝트 내보내기',
+              text: '프로젝트 백업 불러오기',
+              value: 'loadDeep'
+            },
+            {
+              text: '프로젝트 파일 내보내기 (이미지 미포함)',
               value: 'save'
+            },
+            {
+              text: '프로젝트 백업 내보내기 (이미지 포함)',
+              value: 'saveDeep'
             }
           ],
 
           callback: async (value) => {
             if (value === 'save')  {
-              if (ctx.curSession)
-                await backend.showFile(
-                  sessionService.getPath(ctx.curSession.name),
-                );
-            } else {
+              if (ctx.curSession) {
+                const proj = await sessionService.exportSessionShallow(ctx.curSession);
+                const path = 'exports/' + ctx.curSession.name + '.json';
+                await backend.writeFile(path, JSON.stringify(proj));
+                await backend.showFile(path);
+              }
+            } else if (value === 'saveDeep') {
+              if (ctx.curSession) {
+                const path = 'exports/' + ctx.curSession.name + '.tar';
+                await sessionService.exportSessionDeep(ctx.curSession, path);
+                await backend.showFile(path);
+              }
+            } else if (value === 'load') {
               const file = await getFirstFile();
               ctx.handleFile(file as any);
+            } else {
+              ctx.pushDialog({
+                type: 'input-confirm',
+                text: '프로젝트 이름을 입력해주세요',
+                callback: async (inputValue) => {
+                  if (inputValue) {
+                    if (inputValue in sessionNames) {
+                      ctx.pushMessage('이미 존재하는 프로젝트 이름입니다.');
+                      return;
+                    }
+                    const tarPath = await backend.selectFile();
+                    if (tarPath)
+                      await sessionService.importSessionDeep(tarPath, inputValue);
+                  }
+                },
+              });
             }
 
           }

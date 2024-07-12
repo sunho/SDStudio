@@ -17,7 +17,9 @@
   "dependencies": {
     "chokidar": "^3.6.0",
     "exiftool-vendored": "^27.0.0",
+    "gunzip-maybe": "^1.4.2",
     "sdsnative": "file:../../src/native",
-    "sharp": "^0.32.6"
+    "sharp": "^0.32.6",
+    "tar-fs": "^3.0.6"
   }
 }

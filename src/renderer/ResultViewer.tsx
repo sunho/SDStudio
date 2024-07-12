@@ -813,14 +813,14 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
               }}>
               {!isMobile?"씬 편집":<FaEdit/>}
             </button>
-            <button
+            {!isMobile && <button
               className={`${roundButton} bg-sky-500`}
               onClick={async () => {
                 await backend.showFile(getResultDirectory(curSession!, scene));
               }}
             >
               <FaFolder/>
-            </button>
+            </button>}
             <button
               className={`${roundButton} bg-red-500`}
               onClick={() => {

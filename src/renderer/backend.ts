@@ -23,6 +23,7 @@ export abstract class Backend {
   abstract login(email: string, password: string): Promise<void>;
   abstract showFile(arg: string): Promise<void>;
   abstract zipFiles(files: FileEntry[], outPath: string): Promise<void>;
+  abstract unzipFiles(tarPath: string, outPath: string): Promise<void>;
   abstract searchTags(word: string): Promise<any>;
   abstract loadPiecesDB(pieces: string[]): Promise<void>;
   abstract searchPieces(word: string): Promise<any>;
@@ -38,6 +39,7 @@ export abstract class Backend {
   abstract deleteDir(filename: string): Promise<void>;
   abstract trashFile(filename: string): Promise<void>;
   abstract selectDir(): Promise<string|undefined>;
+  abstract selectFile(): Promise<string|undefined>;
   abstract close(): Promise<void>;
   abstract existFile(filename: string): Promise<boolean>;
   abstract download(url: string, dest: string, filename: string): Promise<void>;
