@@ -18,6 +18,7 @@ public class MainActivity extends BridgeActivity {
   public void onCreate(Bundle savedInstanceState) {
     registerPlugin(FetchService.class);
     registerPlugin(ImageResizer.class);
+    registerPlugin(ZipService.class);
     registerPlugin(TagDB.class);
     if (Build.VERSION.SDK_INT >= 30) {
       if (!Environment.isExternalStorageManager()) {

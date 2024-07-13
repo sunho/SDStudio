@@ -1,7 +1,7 @@
 import { Config } from "../../main/config";
 import { ImageGenInput, ImageGenService } from "./imageGen";
 import { Backend, FileEntry, ResizeImageInput } from "../backend";
-import { SceneContextAlt, ContextAlt, ImageContextAlt, dataUriToBase64 } from "../models";
+import { SceneContextAlt, ContextAlt, ImageContextAlt, dataUriToBase64, zipService } from "../models";
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { FileOpener, FileOpenerOptions } from '@capacitor-community/file-opener';
 import { Buffer } from 'buffer';
@@ -15,6 +15,8 @@ import { TagDB } from "./tagDB";
 // @ts-ignore
 import DBCSV from '../../../assets/db.txt';
 import packageInfo from "../../../package.json"
+import ZipService from "./zipService";
+import { FilePicker } from '@capawesome/capacitor-file-picker';
 
 const APP_DIR = ".SDStudio";
 let config: Config = {};
@@ -161,34 +163,44 @@ export class AndroidBackend extends Backend {
   }
 
   async zipFiles(files: FileEntry[], outPath: string): Promise<void> {
-    const zip = new JSZip();
-
-    for (const file of files) {
-      const content = await this.readDataFile(file.path);
-      zip.file(file.name + '.png', dataUriToBase64(content), {
-        base64: true
+    const dir = getDirName(`${APP_DIR}/${outPath}`);
+    try {
+      await Filesystem.mkdir({
+        path: dir,
+        directory: Directory.Documents,
+        recursive: true,
       });
+    } catch (e) {
     }
-
-    const zipContent = await zip.generateAsync({ type: 'blob' });
-
-    const reader = new FileReader();
-    reader.readAsDataURL(zipContent);
-    await new Promise<void>((resolve, reject) => {
-      reader.onloadend = () => {
-        const base64data = reader.result as string;
-        const base64Content = base64data.split(',')[1];
-        this.writeDataFile(outPath, base64Content).then(resolve).catch(reject);
-      };
-      reader.onerror = reject;
+    const urlRes = await Filesystem.getUri({
+      path: `${APP_DIR}`,
+      directory: Directory.Documents,
     });
+    const fullDir = urlRes.uri.slice(7)
+    console.log(fullDir)
+    files = files.map(x => ({
+      name: x.name,
+      path: fullDir +'/'+ x.path,
+    }));
+    outPath = fullDir + '/' + outPath;
+
+    await ZipService.zipFiles({files, outPath});
   }
 
   async unzipFiles(zipPath: string, outPath: string): Promise<void> {
+    const urlRes = await Filesystem.getUri({
+      path: `${APP_DIR}`,
+      directory: Directory.Documents,
+    });
+    const fullDir = urlRes.uri.slice(7);
+    await ZipService.unzipFiles({zipPath: zipPath, outPath: fullDir + '/' + outPath});
   }
 
   async selectFile(): Promise<string | undefined> {
-    return undefined
+    const result = await FilePicker.pickFiles({
+      types: ['application/x-tar'],
+    });
+    return result.files[0].path;
   }
 
   async searchTags(word: string): Promise<any> {
