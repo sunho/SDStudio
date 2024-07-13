@@ -148,7 +148,6 @@
     "react-window": "^1.8.10",
     "react-window-infinite-loader": "^1.0.9",
     "resize-observer-polyfill": "^1.5.1",
-    "tar": "^7.4.0",
     "textarea-caret": "^3.1.0",
     "uuid": "^9.0.1"
   },
@@ -249,8 +248,6 @@
       "**/node_modules/exiftool-vendored/**/*",
       "**/node_modules/exiftool-vendored.*/**/*",
       "**/node_modules/fsevents/**/*",
-      "**/node_modules/tar-fs/**/*",
-      "**/node_modules/tar-stream/**/*",
       "**/localai/**/*"
     ],
     "files": [
