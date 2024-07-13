@@ -551,7 +551,7 @@ export class SessionService extends ResourceSyncService<Session> {
     for (const preset of sess.presets) {
       if (preset.type === 'style') {
         try {
-          const data = await backend.readDataFile(preset.profile)
+          const data = await backend.readDataFile(imageService.getVibesDir(session) + '/' + preset.profile)
           const base64 = dataUriToBase64(data);
           preset.profile = base64;
           newPresets.push(preset);
@@ -701,8 +701,6 @@ export class SessionService extends ResourceSyncService<Session> {
         }
       }
 
-      session.presetMode = 'preset';
-
       const newVibes = [];
       for (const preset of Object.values(session.presets)) {
         for (const vibe of (preset as any).vibes) {
@@ -718,16 +716,9 @@ export class SessionService extends ResourceSyncService<Session> {
         newPresets.push(v);
       }
       session.presets = newPresets as any;
-    }
-
-    if (!session.presetMode) {
+      await importDefaultPresets(session);
       session.presetMode = 'preset';
     }
-
-    if (session.presets.filter((x) => x.type === 'style').length === 0) {
-      await importDefaultPresets(session);
-    }
-
 
     for (const inpaint of Object.values(session.inpaints)) {
       if (inpaint.image) {
