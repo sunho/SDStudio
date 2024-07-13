@@ -496,7 +496,7 @@ export default function App() {
       }
     };
     const exportStyle = async (ctx: StyleContextAlt) => {
-      const pngData = dataUriToBase64(await backend.readDataFile(ctx.preset.profile));
+      const pngData = dataUriToBase64(await backend.readDataFile(imageService.getVibesDir(curSession!) + '/' + ctx.preset.profile));
       const newPngData = embedJSONInPNG(pngData, ctx.preset);
       const path = 'exports/'+ctx.preset.name+'_'+Date.now().toString()+'.png';
       await backend.writeDataFile(path, newPngData);
@@ -613,7 +613,9 @@ export default function App() {
                     <div className="flex-1 overflow-hidden">
                       <TabComponent key={curSession.name} tabs={tabs}
                       toggleView={<PreSetEditor
+                        type={curSession.presetMode}
                         key={editorKey+"2"}
+                        globalMode
                         selectedPreset={selectedPreset}
                         middlePromptMode={false}
                         setSelectedPreset={setSelectedPreset}

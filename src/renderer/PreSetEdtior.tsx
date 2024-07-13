@@ -497,7 +497,9 @@ const StyleEditor: React.FC<StyleEditorProps> = ({ selectedPreset, onClose }) =>
         </button>}
     </div>
     <div className="flex-1 overflow-hidden">
-      <BigPromptEditor sceneMode={false}
+      <BigPromptEditor
+        key="bigprompt"
+        sceneMode={false}
         presetMode='preset'
         selectedPreset={presetRef.current}
         getMiddlePrompt={getPrompt}
@@ -509,7 +511,7 @@ const StyleEditor: React.FC<StyleEditorProps> = ({ selectedPreset, onClose }) =>
   </div>
 }
 
-const NAIStylePreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, middlePromptMode, getMiddlePrompt, onMiddlePromptChange }) => {
+const NAIStylePreSetEditor: React.FC<Props> = ({ globalMode, selectedPreset, setSelectedPreset, middlePromptMode, getMiddlePrompt, onMiddlePromptChange }) => {
   const { curSession } = useContext(AppContext)!;
   const [_, rerender] = useState<{}>({});
   const [presetEditLock, setPresetEditLock] = useState(true);
@@ -536,6 +538,9 @@ const NAIStylePreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPres
 
   useEffect(() => {
     const handleEditStart = (e: any) => {
+      if (globalMode) {
+        return;
+      }
       setEditingPreset(e.detail.preset);
       setShowStyleEditor(true);
     };
@@ -690,17 +695,21 @@ interface Props {
   selectedPreset: PreSet;
   setSelectedPreset: (preset: PreSet) => void;
   middlePromptMode: boolean;
+  globalMode?: boolean;
   getMiddlePrompt?: () => string;
   onMiddlePromptChange?: (txt: string) => void;
   type?: PreSetMode;
   styleEditMode?: boolean;
 }
 
-const PreSetEditor = ({type, setSelectedPreset, selectedPreset, middlePromptMode, getMiddlePrompt, onMiddlePromptChange, styleEditMode} : Props) => {
-  if (type === 'preset') {
-    return <NAIPreSetEditor selectedPreset={selectedPreset} setSelectedPreset={setSelectedPreset} middlePromptMode={middlePromptMode} styleEditMode={styleEditMode} getMiddlePrompt={getMiddlePrompt} onMiddlePromptChange={onMiddlePromptChange}/>
+const PreSetEditor = ({type, globalMode, setSelectedPreset, selectedPreset, middlePromptMode, getMiddlePrompt, onMiddlePromptChange, styleEditMode} : Props) => {
+  const ctx = useContext(AppContext)!;
+  const selPreset = globalMode ? ctx.selectedPreset! : selectedPreset;
+  const type2 = globalMode ? ctx.curSession!.presetMode : type;
+  if (type2 === 'preset') {
+    return <NAIPreSetEditor globalMode={globalMode} selectedPreset={selPreset} setSelectedPreset={setSelectedPreset} middlePromptMode={middlePromptMode} styleEditMode={styleEditMode} getMiddlePrompt={getMiddlePrompt} onMiddlePromptChange={onMiddlePromptChange}/>
   } else {
-    return <NAIStylePreSetEditor selectedPreset={selectedPreset} setSelectedPreset={setSelectedPreset} middlePromptMode={middlePromptMode} styleEditMode={styleEditMode} getMiddlePrompt={getMiddlePrompt} onMiddlePromptChange={onMiddlePromptChange}/>
+    return <NAIStylePreSetEditor globalMode={globalMode} selectedPreset={selPreset} setSelectedPreset={setSelectedPreset} middlePromptMode={middlePromptMode} styleEditMode={styleEditMode} getMiddlePrompt={getMiddlePrompt} onMiddlePromptChange={onMiddlePromptChange}/>
   }
 };
 

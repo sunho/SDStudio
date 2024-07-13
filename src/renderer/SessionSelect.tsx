@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useContext, useEffect, useState } from 'react';
-import { PreSet, Session, backend, getFirstFile, imageService, sessionService, taskQueueService } from './models';
+import { PreSet, Session, backend, getFirstFile, imageService, sessionService, taskQueueService, zipService } from './models';
 import { AppContext } from './App';
 import { primaryColor, roundButton } from './styles';
 import { DropdownSelect, Option } from './UtilComponents';
@@ -127,7 +127,19 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSelectedPreset }) =>
             } else if (value === 'saveDeep') {
               if (ctx.curSession) {
                 const path = 'exports/' + ctx.curSession.name + '.tar';
+                if (zipService.isZipping) {
+                  ctx.pushMessage('이미 내보내기 작업이 진행중입니다.');
+                  return;
+                }
+                ctx.pushDialog({
+                  type: 'yes-only',
+                  text: '백업을 내보내는 중입니다. 잠시 기다려주세요.',
+                })
                 await sessionService.exportSessionDeep(ctx.curSession, path);
+                ctx.pushDialog({
+                  type: 'yes-only',
+                  text: '백업이 완료되었습니다.',
+                })
                 await backend.showFile(path);
               }
             } else if (value === 'load') {
@@ -136,7 +148,7 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSelectedPreset }) =>
             } else {
               ctx.pushDialog({
                 type: 'input-confirm',
-                text: '프로젝트 이름을 입력해주세요',
+                text: '새로운 프로젝트 이름을 입력해주세요',
                 callback: async (inputValue) => {
                   if (inputValue) {
                     if (inputValue in sessionNames) {
@@ -144,8 +156,20 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSelectedPreset }) =>
                       return;
                     }
                     const tarPath = await backend.selectFile();
-                    if (tarPath)
+                    if (tarPath) {
+                      ctx.pushDialog({
+                        type: 'yes-only',
+                        text: '백업을 불러오는 중입니다. 잠시 기다려주세요.',
+                      })
                       await sessionService.importSessionDeep(tarPath, inputValue);
+                      ctx.pushDialog({
+                        type: 'yes-only',
+                        text: '프로젝트 백업을 불러왔습니다.',
+                      })
+                      const sess = await sessionService.get(inputValue);
+                      setCurSession(sess);
+                      ctx.setSelectedPreset(sess!.presets.filter(x => x.type === sess!.presetMode)[0]);
+                    }
                   }
                 },
               });

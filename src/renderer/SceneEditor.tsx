@@ -127,10 +127,11 @@ export const BigPromptEditor = ({ sceneMode, selectedPreset, presetMode, getMidd
   },[]);
 
   return <div className="flex h-full flex-col md:flex-row">
-    {promptOpen && <FloatView priority={0} onEscape={()=>{setPromptOpen(false)}}>
+    {promptOpen && <FloatView key="float" priority={0} onEscape={()=>{setPromptOpen(false)}}>
       <PreSetEditor
         middlePromptMode={true}
         type={presetMode}
+        globalMode={sceneMode}
         selectedPreset={selectedPreset!}
         styleEditMode={!sceneMode}
         getMiddlePrompt={getMiddlePrompt}

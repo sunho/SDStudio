@@ -975,7 +975,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
               className={`${roundButton} bg-gray-400`}
               onClick={()=>exportPackage()}
             >
-              {isMobile?"":"모두 "}내보내기
+              {isMobile?"":"이미지 "}내보내기
             </button>
           )}
           {type === 'scene' && (
