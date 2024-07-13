@@ -134,7 +134,7 @@ ipcMain.handle('zip-files', async (event, files, outPath) => {
   await fs.mkdir(dir, { recursive: true });
   const pack = tarStream.pack();
 
-  pack.pipe(createGzip()).pipe(fsSync.createWriteStream(APP_DIR + "/" +outPath));
+  pack.pipe(fsSync.createWriteStream(APP_DIR + "/" +outPath));
   for (const file of files) {
     await new Promise((resolve, reject) => {
       const srcPath = file.path;
@@ -155,7 +155,6 @@ ipcMain.handle('unzip-files', async (event, zipPath, outPath) => {
   outPath = APP_DIR + '/' + outPath;
   await fs.mkdir(outPath, { recursive: true });
   const stream = fsSync.createReadStream(zipPath)
-    .pipe(gunzip())
     .pipe(tar.extract(outPath))
   await new Promise((resolve, reject) => {
     stream.on('finish', resolve);
