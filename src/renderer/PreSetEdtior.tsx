@@ -496,7 +496,7 @@ const StyleEditor: React.FC<StyleEditorProps> = ({ selectedPreset, onClose }) =>
           저장
         </button>}
     </div>
-    <div className="flex-1 overflow-hidden">
+    <div className="flex-1 overflow-hidden p-2">
       <BigPromptEditor
         key="bigprompt"
         sceneMode={false}
