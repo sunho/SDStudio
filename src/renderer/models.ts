@@ -1626,7 +1626,7 @@ class GenerateImageTaskHandler implements TaskHandler {
   }
 
   getNumTries(task: Task) {
-    return 512;
+    return 20;
   }
 
   getSceneKey(task: Task) {

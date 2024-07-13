@@ -88,5 +88,5 @@ export function convertDenDenData(
     scenes,
     library: {},
     inpaints: {},
-  };
+  } as any;
 }
