@@ -10,4 +10,5 @@ export interface Config {
   removeBgQuality?: RemoveBgQuality;
   useCUDA?: boolean;
   saveLocation?: string;
+  noIpCheck?: boolean;
 }

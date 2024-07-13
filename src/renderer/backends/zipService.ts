@@ -8,6 +8,7 @@ export interface FileEntry {
 export interface ZipPlugin {
   zipFiles(options: { files: FileEntry[]; outPath: string }): Promise<void>;
   unzipFiles(options: { zipPath: string; outPath: string }): Promise<void>;
+  showFileInFolder(options: { filePath: string }): Promise<void>;
 }
 
 const ZipService = registerPlugin<ZipPlugin>('ZipService');

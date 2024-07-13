@@ -171,9 +171,17 @@ export default function App() {
       console.log('image-changed', path);
       imageService.invalidateCache(path);
     });
+    const handleIPCheckFail = () => {
+      pushDialog({
+        type: 'yes-only',
+        text: '네트워크 변경을 감지하고 작업을 중단했습니다. 잦은 네트워크 변경은 계정 공유로 취급되어 밴의 위험이 있습니다. 이를 무시하고 싶으면 환경설정에서 "IP 체크 끄기"를 켜주세요.',
+      });
+    };
+    taskQueueService.addEventListener('ip-check-fail', handleIPCheckFail);
     return () => {
       removeDonwloadProgressListener();
       removeImageChangedListener();
+      taskQueueService.removeEventListener('ip-check-fail', handleIPCheckFail);
     };
   },[curSession]);
 

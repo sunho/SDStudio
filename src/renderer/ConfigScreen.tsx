@@ -12,6 +12,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
   const { curSession, pushDialog, pushMessage } = useContext(AppContext)!;
   const [imageEditor, setImageEditor] = useState('');
   const [useGPU, setUseGPU] = useState(false);
+  const [noIpCheck, setNoIpCheck] = useState(false);
   const [ready, setReady] = useState(false);
   const [quality, setQuality] = useState('');
   const [progress, setProgress] = useState(0);
@@ -25,6 +26,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
       setImageEditor(config.imageEditor ?? 'photoshop');
       setUseGPU(config.useCUDA ?? false);
       setQuality(config.removeBgQuality ?? 'normal');
+      setNoIpCheck(config.noIpCheck ?? false);
     })();
     const checkReady = () => {
       setReady(localAIService.ready);
@@ -136,8 +138,13 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
             </button>
             </div>
           </div>
-
         </div>
+        {isMobile && <div className="mb-4 flex items-center gap-2">
+          <label htmlFor="noIpCheck" className="text-sm font-medium text-gray-700">
+            IP 체크 끄기
+          </label>
+          <input type="checkbox" checked={noIpCheck} onChange={(e) => setNoIpCheck(e.target.checked)} />
+        </div>}
         {!isMobile && <> <div className="mb-4">
           <label htmlFor="imageEditor" className="block text-sm font-medium text-gray-700">
             선호 이미지 편집기
@@ -216,7 +223,8 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
               imageEditor: imageEditor as ImageEditor,
               useCUDA: useGPU,
               modelType: 'quality',
-              removeBgQuality: quality as RemoveBgQuality
+              removeBgQuality: quality as RemoveBgQuality,
+              noIpCheck: noIpCheck,
             };
             await backend.setConfig(config);
             if (old.useCUDA !== useGPU)
