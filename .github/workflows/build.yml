@@ -93,6 +93,7 @@ jobs:
           npm install --platform=darwin --arch=x64 sharp@0.32.6
           npm rebuild --platform=darwin --arch=arm64 sharp@0.32.6
           npm rebuild --platform=darwin --arch=x64 fsevents
+          npm rebuild --platform=darwin --arch=x64 tar-fs
           cd ../..
           npm install
           npm install ./externals/capacitor-background-mode
