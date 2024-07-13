@@ -44,7 +44,7 @@ class FetchService : Plugin() {
 
       override fun onResponse(httpcall: Call, response: Response) {
         if (!response.isSuccessful) {
-          call.reject("Network request failed: ${response.message}")
+          call.reject("Network request failed: ${response.code}")
         } else {
           val responseData = response.body?.bytes()
           val blobData = responseData?.let { Base64.encodeToString(it, Base64.DEFAULT) }

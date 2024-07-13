@@ -130,14 +130,14 @@ export const SceneCell = ({
         return { isOver: false }
       },
       hover({ scene: draggedScene, curIndex: draggedIndex } : { scene: GenericScene, curIndex: number }) {
-        if (!isMobile) return;
+        if (!isMobile || true) return;
         if (draggedScene != scene) {
           const overIndex = Object.values(getCollection(curSession, scene.type)).indexOf(scene)
           moveScene!(draggedScene, overIndex)
         }
       },
       drop: (item: any, monitor) => {
-        if (!isMobile){
+        if (!isMobile || true){
           const { scene: droppedScene, curIndex: droppedIndex} = item
           const overIndex = Object.values(getCollection(curSession, scene.type)).indexOf(scene)
           moveScene!(droppedScene, overIndex);
@@ -193,7 +193,7 @@ export const SceneCell = ({
 
   return (
     <div
-      className={"relative m-2 p-1 bg-white border border-gray-300 " + (isDragging ? "opacity-0":"") + ((!isMobile&&isOver)?" outline outline-sky-500":"")}
+      className={"relative m-2 p-1 bg-white border border-gray-300 " + (isDragging ? "opacity-0":"") + ((isOver)?" outline outline-sky-500":"")}
       style={style}
       ref={(node) => drag(drop(node))}
       onContextMenu={e => {

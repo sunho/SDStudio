@@ -4,7 +4,7 @@ import { DOMElement, createRef, forwardRef, useCallback, useContext, useEffect, 
 import { AppContext } from './App';
 import Denque from 'denque';
 import { WordTag, backend, calcGapMatch, highlightPrompt, isMobile, promptService } from './models';
-import { FaBook, FaBox, FaBrush, FaDatabase, FaExpand, FaPaintBrush, FaTag, FaTimes, FaTimesCircle } from 'react-icons/fa';
+import { FaBook, FaBox, FaBrush, FaDatabase, FaExpand, FaPaintBrush, FaTag, FaTimes, FaTimesCircle, FaUndo } from 'react-icons/fa';
 import { FaPerson, FaStar } from "react-icons/fa6";
 import { FixedSizeList as List } from 'react-window';
 import getCaretCoordinates from 'textarea-caret';
@@ -729,6 +729,7 @@ interface EditTextAreaRef {
   onOpenAutoComplete: () => void;
   setCurWord: (word: string) => void;
   getCaretCoords(): Promise<number[]>;
+  undo(): void;
 }
 
 const EmulatedEditTextArea = forwardRef<EditTextAreaRef, any>(({
@@ -800,6 +801,9 @@ const EmulatedEditTextArea = forwardRef<EditTextAreaRef, any>(({
         rect = range.getBoundingClientRect();
       }
       return [rect.right, rect.top];
+    },
+    undo() {
+      editorModelRef.current.handleKeyDown({ key: 'z', metaKey: true });
     }
   }));
 
@@ -861,9 +865,12 @@ const NativeEditTextArea = forwardRef(({
       const entry = history.peekBack()!;
       textareaRef.current.value = entry.text;
       onUpdated(entry.text);
-      textareaRef.current.selectionStart = entry.cursorPos[0];
-      textareaRef.current.selectionEnd = entry.cursorPos[1];
-      renderText();
+      if (!isMobile) {
+        textareaRef.current.selectionStart = entry.cursorPos[0];
+        textareaRef.current.selectionEnd = entry.cursorPos[1];
+      }
+      const text = textareaRef.current.value;
+      highlightRef.current.innerHTML = highlight(text, getCurWord(), false) + '<span></span><br>';
     }
   };
 
@@ -934,6 +941,9 @@ const NativeEditTextArea = forwardRef(({
       const caret = getCaretCoordinates(textareaRef.current!, textareaRef.current!.selectionEnd);
       const rect = textareaRef.current!.getBoundingClientRect();
       return [caret.left + rect.left, caret.top + rect.top];
+    },
+    undo() {
+      doUndo();
     }
   }));
 
@@ -1077,14 +1087,35 @@ const PromptEditTextArea = ({
   };
 
   const onFoucs = () => {
-    if (isMobile)
+    if (isMobile) {
       setFullScreen(true);
+    }
   }
 
   const onBlur = () => {
-    if (isMobile)
-      setFullScreen(false);
   }
+
+  const flagRef = useRef(false);
+  const handleClick = (event: any) => {
+    flagRef.current = true;
+  };
+
+  useEffect(() => {
+    const handleWindowClick = () => {
+      if (flagRef.current) {
+        flagRef.current = false;
+        return;
+      }
+      if (isMobile) {
+        setFullScreen(false);
+      }
+    };
+
+    window.addEventListener('click', handleWindowClick);
+    return () => {
+      window.removeEventListener('click', handleWindowClick);
+    }
+  }, []);
 
   let bgColor = whiteBg ? 'bg-gray-100' : 'bg-gray-200';
   if (fullScreen)
@@ -1094,6 +1125,7 @@ const PromptEditTextArea = ({
     <>
     <div
       ref={innerRef}
+      onClick={handleClick}
       spellCheck={false}
       draggable={true} onDragStart={event => event.preventDefault()}
       className={bgColor + (!fullScreen ? ' overflow-hidden h-full relative' : ' left-0 m-4 p-2 overflow-hidden fixed z-30 h-96 prompt-full')}
@@ -1110,6 +1142,9 @@ const PromptEditTextArea = ({
         </button>
       </div>
       <EditTextAreaImpl ref={editorRef} value={value} disabled={disabled} highlight={highlight} onUpdated={onUpdated} history={historyRef.current} redo={redoRef.current} onUpArrow={onUpArrow} onDownArrow={onDownArrow} onEnter={onEnter} onEsc={onEsc} closeAutoComplete={closeAutoComplete} onFocus={onFoucs} onBlur={onBlur}/>
+      {isMobile && fullScreen && <div className="absolute right-0 bottom-0 z-10 p-1 active:brightness-90">
+        <FaUndo size={20} className="opacity-50 mr-1 mb-1" onClick={() => {editorRef.current!.undo();}}/>
+      </div>}
     </div>
     <PromptAutoComplete key={id} curWord={curWord} tags={tags} clientX={clientX} clientY={clientY} selectedTag={selectedTag} onSelectTag={onSelectTag}/>
      {fullScreen && <div className="fixed bg-black opacity-15 w-screen h-screen top-0 left-0 z-20" onClick={() => {setFullScreen(false);}}></div>}

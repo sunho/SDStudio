@@ -3,6 +3,7 @@ package io.sunho.SDStudio;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
+import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 
 import com.getcapacitor.Plugin;
@@ -17,6 +18,16 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Environment;
+import android.provider.Settings;
+
+import androidx.core.content.FileProvider;
 
 import java.io.*;
 import java.util.List;
@@ -104,6 +115,47 @@ public class ZipService extends Plugin {
       call.resolve();
     } catch (IOException e) {
       call.reject("Failed to unzip files", e);
+    }
+  }
+
+  @PluginMethod
+  public void showFileInFolder(PluginCall call) {
+    String filePath = call.getString("filePath");
+    if (filePath == null) {
+      call.reject("File path must be provided");
+      return;
+    }
+
+    File file = new File(filePath);
+    if (!file.exists()) {
+      call.reject("File does not exist");
+      return;
+    }
+
+    Uri fileUri;
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+      String authority = getContext().getPackageName() + ".fileprovider";
+      fileUri = FileProvider.getUriForFile(getContext(), authority, file);
+    } else {
+      fileUri = Uri.fromFile(file);
+    }
+
+    Intent intent = new Intent(Intent.ACTION_VIEW);
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+      intent.setDataAndType(fileUri, DocumentsContract.Document.MIME_TYPE_DIR);
+    } else {
+      intent.setDataAndType(fileUri, "resource/folder");
+    }
+    intent.putExtra("org.openintents.extra.ABSOLUTE_PATH", filePath);
+    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+
+    try {
+      getContext().startActivity(intent);
+      call.resolve();
+    } catch (Exception e) {
+      call.reject("Failed to show file in folder", e);
     }
   }
 }

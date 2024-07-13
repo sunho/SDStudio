@@ -17,6 +17,7 @@ import DBCSV from '../../../assets/db.txt';
 import packageInfo from "../../../package.json"
 import ZipService from "./zipService";
 import { FilePicker } from '@capawesome/capacitor-file-picker';
+import { Share } from '@capacitor/share';
 
 const APP_DIR = ".SDStudio";
 let config: Config = {};
@@ -46,6 +47,8 @@ function getMimeType(filePath: any) {
       return 'text/html';
     case 'zip':
       return 'application/zip';
+    case 'tar':
+      return 'application/x-tar';
     default:
       return 'vnd.android.document/directory';
   }
@@ -151,15 +154,9 @@ export class AndroidBackend extends Backend {
       path: `${APP_DIR}/${arg}`,
       directory: Directory.Documents,
     });
-    let mime = getMimeType(arg);
-    if (mime.startsWith('image')) {
-      mime = "image/*";
-    }
-    const fileOpenerOptions: FileOpenerOptions = {
-      filePath: urlRes.uri,
-      openWithDefault: false
-    };
-    await FileOpener.open(fileOpenerOptions);
+    await Share.share({
+      url: urlRes.uri,
+    });
   }
 
   async zipFiles(files: FileEntry[], outPath: string): Promise<void> {

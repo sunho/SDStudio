@@ -1491,11 +1491,12 @@ class TaskTimeEstimator {
 interface TaskQueueRun {
   stopped: boolean;
   delayCnt: number;
+  lastIp?: string;
 }
 
 interface TaskHandler {
   createTimeEstimator(): TaskTimeEstimator;
-  handleTask(task: Task): Promise<boolean>;
+  handleTask(task: Task, run: TaskQueueRun): Promise<boolean>;
   getNumTries(task: Task): number;
   handleDelay(task: Task, numTry: number): Promise<void>;
   getSceneKey(task: Task): string;
@@ -1566,7 +1567,7 @@ class GenerateImageTaskHandler implements TaskHandler {
     await handleNAIDelay(numTry, this.fast);
   }
 
-  async handleTask(task: Task) {
+  async handleTask(task: Task, run: TaskQueueRun) {
     const params: GenerateImageTaskParams = task.params;
     let prompt = lowerPromptNode(params.preset.prompt);
     prompt = prompt.replace(String.fromCharCode(160), ' ');
@@ -1604,6 +1605,20 @@ class GenerateImageTaskHandler implements TaskHandler {
       arg.vibes = [];
     }
     console.log(arg);
+    const ip = await fetchIPAddress();
+    if (isMobile) {
+      if (run.lastIp == undefined) {
+        run.lastIp = ip;
+      } else {
+        if (run.lastIp !== ip) {
+          run.lastIp = ip;
+          const config = await backend.getConfig();
+          if (!config.noIpCheck) {
+            throw new Error('IP');
+          }
+        }
+      }
+    }
     await backend.generateImage(arg);
 
     if (params.preset.seed) {
@@ -1626,7 +1641,7 @@ class GenerateImageTaskHandler implements TaskHandler {
   }
 
   getNumTries(task: Task) {
-    return 20;
+    return 40;
   }
 
   getSceneKey(task: Task) {
@@ -1654,7 +1669,7 @@ class RemoveBgTaskHandler implements TaskHandler {
     return;
   }
 
-  async handleTask(task: Task) {
+  async handleTask(task: Task, run: TaskQueueRun) {
     const params: RemoveBgTaskParams = task.params;
     const outputFilePath = params.ouputPath + '/' + Date.now().toString() + '.png';
     await localAIService.removeBg(params.image, outputFilePath);
@@ -1859,7 +1874,7 @@ export class TaskQueueService extends EventTarget {
         }
         try {
           await handler.handleDelay(task, i);
-          await handler.handleTask(task);
+          await handler.handleTask(task, cur);
           const after = Date.now();
           this.timeEstimators[task.type].addSample(after - before);
           done = true;
@@ -1879,6 +1894,11 @@ export class TaskQueueService extends EventTarget {
           this.dispatchEvent(new CustomEvent('complete', {}));
           this.dispatchProgress();
         } catch (e: any) {
+          if (e.message === 'IP') {
+            this.dispatchEvent(new CustomEvent('ip-check-fail', {}));
+            this.stop();
+            return;
+          }
           this.dispatchEvent(
             new CustomEvent('error', { detail: { error: e.message, task: task } }),
           );
@@ -3228,4 +3248,26 @@ export async function importStyle(session: Session, base64: string) {
   session.presets.push(preset);
   session.presetMode = 'style';
   return preset;
+}
+
+async function fetchIPAddress() {
+  const url = 'https://ip.sunho.kim';
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': 'yuzu'
+      }
+    });
+
+    if (!response.ok) {
+      console.error("Failed to fetch IP address:", response.statusText);
+      return undefined;
+    }
+
+    const ipAddress = await response.text();
+    return ipAddress;
+  } catch (error) {
+    return undefined;
+  }
 }
