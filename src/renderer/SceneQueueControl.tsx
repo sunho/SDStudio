@@ -193,7 +193,7 @@ export const SceneCell = ({
 
   return (
     <div
-      className={"relative m-2 p-1 bg-white border border-gray-300 " + (isDragging ? "opacity-0":"") + ((isOver)?" outline outline-sky-500":"")}
+      className={"relative m-2 p-1 bg-white border border-gray-300 " + (isDragging ? "opacity-0 no-touch ":"") + ((isOver)?" outline outline-sky-500":"")}
       style={style}
       ref={(node) => drag(drop(node))}
       onContextMenu={e => {
