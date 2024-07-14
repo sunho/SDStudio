@@ -527,8 +527,41 @@ ipcMain.handle('extract-zip', async (event, zipPath, outPath) => {
 
 let localAIRunning = false;
 
+const net = require('net');
+
+function checkPort(port) {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+
+    server.once('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        resolve(false); // Port is in use
+      } else {
+        reject(err); // Other errors
+      }
+    });
+
+    server.once('listening', () => {
+      server.close(() => {
+        resolve(true); // Port is available
+      });
+    });
+
+    server.listen(port);
+  });
+}
+
+async function findAvailablePort(startPort) {
+  let port = startPort;
+  while (!(await checkPort(port))) {
+    port++;
+  }
+  return port;
+}
+
 async function spawnLocalAI() {
-  const localaiProcess = spawn(path.join(APP_DIR, 'localai', 'localai'), ['--port', '5353'], {
+  localAI.port = await findAvailablePort(5353);
+  const localaiProcess = spawn(path.join(APP_DIR, 'localai', 'localai'), ['--port', localAI.port.toString()], {
     stdio: 'inherit',
     windowsHide: true,
   });
@@ -536,6 +569,14 @@ async function spawnLocalAI() {
   localaiProcess.on('close', (code) => {
     localAIRunning = false;
   });
+
+  const killIt = () => {
+    localaiProcess.kill();
+  }
+  process.on("uncaughtException", killIt);
+  process.on("SIGINT", killIt);
+  process.on("SIGTERM", killIt);
+  mainWindow!.on('close', killIt);
 }
 
 ipcMain.handle('spawn-local-ai', async (event) => {
@@ -729,11 +770,7 @@ const dataDir = isDebug
   ? path.join(webpackPaths.appPath, 'data')
   : path.join(__dirname, '../../data');
 
-const localAIDir = isDebug
-  ? path.join(webpackPaths.appPath, 'localai')
-  : path.join(__dirname, '../../localai');
-
-const localAI = new LocalAIService('http://127.0.0.1:5353');
+const localAI = new LocalAIService('http://127.0.0.1');
 
 async function init() {
   await fs.mkdir(DEFAULT_APP_DIR, { recursive: true });

@@ -1,12 +1,14 @@
 class LocalAIService {
+    public port: number;
     private baseUrl: string;
 
     constructor(baseUrl: string) {
-        this.baseUrl = baseUrl;
+      this.port = 5353;
+      this.baseUrl = baseUrl;
     }
 
     async loadModel(modelPath: string, isCuda: boolean = false): Promise<void> {
-        const response = await fetch(`${this.baseUrl}/load_model`, {
+        const response = await fetch(`${this.baseUrl}:${this.port}/load_model`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ model_path: modelPath, is_cuda: isCuda }),
@@ -19,7 +21,7 @@ class LocalAIService {
     }
 
     async runModel(inputImageBase64: string, boxSize: number, outputPath: string): Promise<any> {
-        const response = await fetch(`${this.baseUrl}/run_model`, {
+        const response = await fetch(`${this.baseUrl}:${this.port}/run_model`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
