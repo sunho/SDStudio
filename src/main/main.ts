@@ -21,6 +21,7 @@ const chokidar = require('chokidar');
 import webpackPaths from '../../.erb/configs/webpack.paths';
 import { Config } from './config';
 import { spawn } from 'child_process';
+import fsExtra from 'fs-extra';
 import LocalAIService from './localai';
 const StreamZip = require('node-stream-zip');
 
@@ -123,7 +124,6 @@ const fsSync = require('fs');
 const tar = require('tar-fs');
 const tarStream = require('tar-stream');
 const fs = require('fs').promises;
-const gunzip = require('gunzip-maybe');
 
 ipcMain.handle('zip-files', async (event, files, outPath) => {
   const dir = path.dirname(APP_DIR + '/' + outPath);
@@ -222,7 +222,15 @@ ipcMain.handle('rename-file', async (event, oldfile, newfile) => {
 });
 
 ipcMain.handle('rename-dir', async (event, oldfile, newfile) => {
-  return await fs.rename(APP_DIR + '/' + oldfile, APP_DIR + '/' + newfile);
+  const platform = os.platform();
+
+  if (platform === 'win32') {
+    // What the fuck windows
+    await fsExtra.copy(APP_DIR + '/' + oldfile, APP_DIR + '/' + newfile);
+    await fsExtra.rmdir(APP_DIR + '/' + oldfile, {recursive:true});
+  } else {
+    return await fs.rename(APP_DIR + '/' + oldfile, APP_DIR + '/' + newfile);
+  }
 });
 
 ipcMain.handle('delete-file', async (event, filename) => {
