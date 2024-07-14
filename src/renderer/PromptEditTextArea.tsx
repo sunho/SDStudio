@@ -249,7 +249,7 @@ class CursorMemorizeEditor {
     while (startIdx > 0 && !',\n'.includes(curText[startIdx-1])) {
       startIdx--;
     }
-    return curText.substring(startIdx, start+1).trim();
+    return curText.substring(startIdx, start).trim();
   }
 
   setCurWord(word: string) {
@@ -552,6 +552,7 @@ class CursorMemorizeEditor {
   async handlePaste(e: any) {
     e.preventDefault();
     await mutex.runExclusive(async () => {
+      this.pushHistory();
       const text = e.clipboardData.getData('text');
       const selection = window.getSelection()!;
       const [start,end] = this.getCaretPosition();
