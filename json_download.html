@@ -1,28 +1,81 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Auto Download JSON</title>
+  <style>
+    #progress-container {
+      width: 100%;
+      background-color: #f3f3f3;
+      margin-top: 20px;
+    }
+
+    #progress-bar {
+      width: 0%;
+      height: 30px;
+      background-color: #4caf50;
+      text-align: center;
+      line-height: 30px;
+      color: black;
+    }
+  </style>
 </head>
 <body>
+  <div id="progress-container">
+    다운로드중...
+    <div id="progress-bar">0%</div>
+  </div>
   <script>
     function getQueryParameter(name) {
       const urlParams = new URLSearchParams(window.location.search);
       return urlParams.get(name);
     }
 
-    function downloadFile(url, filename) {
-      fetch(url)
-        .then(response => response.blob())
-        .then(blob => {
-          const link = document.createElement('a');
-          link.href = URL.createObjectURL(blob);
-          link.download = filename;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        })
-        .catch(error => console.error('Error downloading file:', error));
+    async function downloadFile(url, filename) {
+      const response = await fetch(url);
+      const contentLength = response.headers.get('content-length');
+      const total = parseInt(contentLength, 10);
+      let loaded = 0;
+
+      const reader = response.body.getReader();
+      const stream = new ReadableStream({
+        start(controller) {
+          function push() {
+            reader.read().then(({ done, value }) => {
+              if (done) {
+                controller.close();
+                return;
+              }
+              loaded += value.byteLength;
+              const progress = (loaded / total) * 100;
+              updateProgressBar(progress);
+              controller.enqueue(value);
+              push();
+            }).catch(error => {
+              console.error('Error reading stream:', error);
+              controller.error(error);
+            });
+          }
+          push();
+        }
+      });
+
+      const newResponse = new Response(stream);
+      const blob = await newResponse.blob();
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function updateProgressBar(progress) {
+      const progressBar = document.getElementById('progress-bar');
+      progress = Math.min(progress, 100);
+      progressBar.style.width = progress + '%';
+      progressBar.textContent = Math.floor(progress) + '%';
     }
 
     document.addEventListener('DOMContentLoaded', () => {
