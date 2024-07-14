@@ -466,7 +466,6 @@ const StyleEditor: React.FC<StyleEditorProps> = ({ selectedPreset, onClose }) =>
       <input
         className={grayInput}
         type="text"
-        disabled={selectedPreset != undefined}
         value={presetRef.current.name}
         onChange={(e) => {
           presetRef.current.name = e.currentTarget.value;
