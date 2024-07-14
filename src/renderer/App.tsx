@@ -585,6 +585,8 @@ export default function App() {
   return (
     <AppContext.Provider value={ctx}>
       <DndProvider backend={isMobile ? TouchBackend : HTML5Backend} options={{
+        enableTouchEvents: true,
+        enableMouseEvents: false,
         delayTouchStart: 400,
       }}>
       <div className="flex flex-col relative h-screen w-screen overflow-hidden">
