@@ -11,4 +11,5 @@ export interface Config {
   useCUDA?: boolean;
   saveLocation?: string;
   noIpCheck?: boolean;
+  uuid?: string;
 }

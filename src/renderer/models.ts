@@ -1596,14 +1596,18 @@ class GenerateImageTaskHandler implements TaskHandler {
       arg.vibes = [];
     }
     console.log(arg);
-    const ip = await fetchIPAddress();
+    const config = await backend.getConfig();
+    if (!config.uuid) {
+      config.uuid = v4();
+      await backend.setConfig(config);
+    }
+    const ip = await fetchIPAddress(config.uuid);
     if (isMobile) {
       if (run.lastIp == undefined) {
         run.lastIp = ip;
       } else {
         if (run.lastIp !== ip) {
           run.lastIp = ip;
-          const config = await backend.getConfig();
           if (!config.noIpCheck) {
             throw new Error('IP');
           }
@@ -3241,13 +3245,14 @@ export async function importStyle(session: Session, base64: string) {
   return preset;
 }
 
-async function fetchIPAddress() {
+async function fetchIPAddress(uuid: string) {
   const url = 'https://ip.sunho.kim';
 
   try {
     const response = await fetch(url, {
       headers: {
-        'Authorization': 'yuzu'
+        'Authorization': 'yuzu',
+        'uuid': uuid
       }
     });
 
