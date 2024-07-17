@@ -41,7 +41,8 @@ export type Channels =
   | 'remove-bg'
   | 'select-dir'
   | 'unzip-files'
-  | 'select-file';
+  | 'select-file'
+  | 'get-remain-credits';
 
 const electronHandler = {
   ipcRenderer: {

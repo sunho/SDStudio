@@ -1,4 +1,4 @@
-import { ImageGenInput, Model, Resolution, Sampling } from './backends/imageGen';
+import { ImageGenInput, Model, NoiseSchedule, Resolution, Sampling } from './backends/imageGen';
 import { CircularQueue } from './circularQueue';
 
 import { v4 as uuidv4, v4 } from 'uuid';
@@ -60,6 +60,8 @@ export interface NAIPreSet {
   smeaOff?: boolean;
   dynOn?: boolean;
   sampling?: Sampling;
+  cfgRescale?: number;
+  noiseSchedule?: NoiseSchedule;
 }
 
 export interface NAIStylePreSet {
@@ -74,6 +76,8 @@ export interface NAIStylePreSet {
   dynOn?: boolean;
   sampling?: Sampling;
   profile: string;
+  cfgRescale?: number;
+  noiseSchedule?: NoiseSchedule;
 }
 
 export interface NAIPreSetShared {
@@ -232,6 +236,8 @@ export interface BakedPreSet {
   dyn: boolean;
   steps: number;
   promptGuidance: number;
+  cfgRescale: number;
+  noiseSchedule: NoiseSchedule;
   seed?: number;
 }
 
@@ -1583,6 +1589,8 @@ class GenerateImageTaskHandler implements TaskHandler {
       dyn: params.preset.dyn,
       vibes: vibes,
       steps: params.preset.steps,
+      cfgRescale: params.preset.cfgRescale,
+      noiseSchedule: params.preset.noiseSchedule,
       promptGuidance: params.preset.promptGuidance,
       outputFilePath: outputFilePath,
       seed: params.preset.seed,
@@ -2243,6 +2251,8 @@ export const queueDummyPrompt = (
       steps: preset.steps ?? 28,
       promptGuidance: preset.promptGuidance ?? 5,
       sampling: preset.sampling ?? Sampling.KEulerAncestral,
+      cfgRescale: preset.cfgRescale ?? 0,
+      noiseSchedule: preset.noiseSchedule ?? NoiseSchedule.Native,
     },
     outPath: outPath,
     session,
@@ -2277,6 +2287,8 @@ export const queueScenePrompt = (
       promptGuidance: preset.promptGuidance ?? 5,
       sampling: preset.sampling ?? Sampling.KEulerAncestral,
       seed: shared.seed,
+      cfgRescale: preset.cfgRescale ?? 0,
+      noiseSchedule: preset.noiseSchedule ?? NoiseSchedule.Native,
     },
     outPath: imageService.getImageDir(session, scene),
     session,
@@ -2345,6 +2357,9 @@ export const queueInPaint = async (
   image = dataUriToBase64(image!);
   let mask = await imageService.fetchImage(sessionService.getInpaintMaskPath(session, scene));
   mask = dataUriToBase64(mask!);
+  let sampling = preset.sampling ?? Sampling.KEulerAncestral;
+  if (sampling === Sampling.DDIM)
+    sampling = Sampling.KEulerAncestral;
   const params: GenerateImageTaskParams = {
     preset: {
       prompt,
@@ -2355,7 +2370,9 @@ export const queueInPaint = async (
       dyn: false,
       steps: preset.steps ?? 28,
       promptGuidance: preset.promptGuidance ?? 5,
-      sampling: preset.sampling ?? Sampling.KEulerAncestral,
+      sampling: sampling,
+      cfgRescale: preset.cfgRescale ?? 0,
+      noiseSchedule: preset.noiseSchedule ?? NoiseSchedule.Native,
     },
     outPath: imageService.getInPaintDir(session, scene),
     session,

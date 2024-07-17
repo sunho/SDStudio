@@ -125,7 +125,7 @@ export class NovelAiImageGenService implements ImageGenService {
       parameters: {
         width: resolutionValue.width,
         height: resolutionValue.height,
-        noise_schedule: 'native',
+        noise_schedule: params.noiseSchedule,
         controlnet_strength: 1,
         dynamic_thresholding: false,
         scale: params.promptGuidance,
@@ -148,7 +148,7 @@ export class NovelAiImageGenService implements ImageGenService {
         reference_strength_multiple: [],
         legacy: false,
         legacy_v3_extend: false,
-        cfg_rescale: 0,
+        cfg_rescale: params.cfgRescale,
         add_original_image: params.originalImage ? true : false,
       },
     };
@@ -176,5 +176,26 @@ export class NovelAiImageGenService implements ImageGenService {
 
     const imageEntry = zip.file(zipEntries[0])!;
     return await imageEntry.async('base64');
+  }
+
+  async getRemainCredits(token: string) {
+    const url = this.apiEndpoint;
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+    const reponse =  await fetch(
+      url + '/user/data',
+      {
+        method: 'GET',
+        headers: headers,
+      },
+    );
+    if (!reponse.ok) {
+      throw new Error('HTTP error:' + reponse.status);
+    }
+    const res = await reponse.json();
+    const steps = res["subscription"]["trainingStepsLeft"]
+    return steps["fixedTrainingStepsLeft"] + steps["purchasedTrainingSteps"];
   }
 }

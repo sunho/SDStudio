@@ -51,6 +51,7 @@ export abstract class Backend {
   abstract extractZip(zipPath: string, outPath: string): Promise<void>;
   abstract spawnLocalAI(): Promise<void>;
   abstract isLocalAIRunning(): Promise<boolean>;
+  abstract getRemainCredits(): Promise<number>;
   abstract removeBackground(inputImageBase64: string, outputPath: string): Promise<void>;
   abstract onDownloadProgress(callback: (progress: any) => void): void;
   abstract onImageChanged(callback: (path: string) => void): () => void;

@@ -22,12 +22,16 @@ import { AppContext } from './App';
 import { grayInput, grayLabel, primaryColor, roundButton } from './styles';
 import PromptEditTextArea from './PromptEditTextArea';
 import { Resolution, resolutionMap } from './backends/imageGen';
+import { FaArrowsAlt, FaBrush, FaPaintBrush, FaUndo } from 'react-icons/fa';
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
 interface Props {
   editingScene: InPaintScene;
   onConfirm: () => void;
   onDelete: () => void;
 }
+
+let brushSizeSaved = 10;
 
 const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
   const { pushMessage, curSession, selectedPreset, pushDialog } =
@@ -43,12 +47,16 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
   const [mask, setMask] = useState<string | undefined>(undefined);
   const [resolution, setResolution] = useState('portrait');
   const [taskName, setTaskName] = useState('');
-  const [brushSize, setBrushSize] = useState(10);
+  const [brushSize, setBrushSize] = useState(brushSizeSaved);
   const [currentPrompt, setCurrentPrompt] = useState('');
   const [currentUC, setCurrentUC] = useState('');
   const [originalImage, setOriginalImage] = useState(false);
   const [sceneName, setSceneName] = useState('');
+  const [brushing, setBrushing] = useState(true);
   useEffect(() => {
+    if (isMobile) {
+      setBrushing(false);
+    }
     if (!editingScene) {
       setImage('');
       setMask(undefined);
@@ -90,6 +98,13 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
       imageService.removeEventListener('image-cache-invalidated', loadImage);
     };
   }, [editingScene]);
+  useEffect(()=>{
+    if (brushing) {
+      brushTool.current!.startBrushing();
+    } else {
+      brushTool.current!.stopBrushing();
+    }
+  },[brushing]);
   useEffect(() => {
     getImageDimensions(image)
       .then(({ width, height }) => {
@@ -156,7 +171,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
 
   const brushTool = useRef<BrushToolRef | null>(null);
   return (
-    <div className="md:flex py-4 h-full w-full">
+    <div className="md:flex py-4 h-full w-full overflow-hidden">
       <div className="px-3 flex flex-col grow-0 h-1/2 md:h-auto md:w-1/2 xl:w-1/3 gap-2 overflow-hidden">
         <div className="flex flex-wrap gap-2">
         <div className="mb-1 flex items-center gap-3 flex-none">
@@ -268,24 +283,30 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
           </div>
         </div>
         <div className="flex items-center gap-2 md:gap-4 md:ml-auto pb-2 overflow-hidden w-full">
-          <label className="flex-none" htmlFor="brushSize">{isMobile?"":"브러시 크기:"} {brushSize}</label>
+          {<button className={`rounded-full h-8 w-8 text-white bg-gray-400 flex-none flex items-center justify-center`}
+          onClick={()=>{setBrushing(!brushing)}}
+          >
+            {brushing?<FaArrowsAlt/>:<FaPaintBrush/>}
+          </button>}
+          {isMobile&&<button className={`rounded-full h-8 w-8 text-white bg-gray-400 flex-none flex items-center justify-center`}
+            onClick={() => {
+              brushTool.current!.undo();
+            }}>
+            <FaUndo/>
+          </button>}
+          <label className="flex-none" htmlFor="brushSize">{isMobile?"":"브러시 크기:"} <span className="inline-block w-4">{brushSize}</span></label>
           <input
             id="brushSize"
             type="range"
             min="1"
             max="100"
             value={brushSize}
-            className="flex-1 min-w-0 md:flex-none"
-            onChange={(e: any) => setBrushSize(e.target.value)}
+            className="inline-block flex-1 min-w-0 md:max-w-40"
+            onChange={(e: any) => {
+              setBrushSize(e.target.value);
+              brushSizeSaved = e.target.value;
+            }}
           />
-          {isMobile&&<button
-            className={`${roundButton} bg-gray-400 flex-none`}
-            onClick={() => {
-              brushTool.current!.undo();
-            }}>
-            실행취소
-            </button>
-          }
           <button
             className={`${roundButton} ${primaryColor} flex-none`}
             onClick={() => brushTool.current!.clear()}
@@ -294,17 +315,19 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
           </button>
         </div>
       </div>
-      <div className="h-1/2 md:h-auto md:w-1/2 xl:w-2/3 h-full overflow-hidden flex relative justify-center items-center">
-        <BrushTool
-          brushSize={brushSize}
-          mask={mask ? base64ToDataUri(mask) : undefined}
-          ref={brushTool}
-          image={base64ToDataUri(image)}
-          imageWidth={width}
-          imageHeight={height}
-        />
-        {!isMobile&&<div className="canvas-tooltip">ctrl+z 로 실행 취소 가능</div>}
-      </div>
+        <TransformWrapper disabled={brushing} centerOnInit={true}>
+          <TransformComponent wrapperClass="wrapper flex-none items-center justify-center">
+            <BrushTool
+              brushSize={brushSize}
+              mask={mask ? base64ToDataUri(mask) : undefined}
+              ref={brushTool}
+              image={base64ToDataUri(image)}
+              imageWidth={width}
+              imageHeight={height}
+            />
+          </TransformComponent>
+          {!isMobile&&<div className="canvas-tooltip">ctrl+z 로 실행 취소 가능</div>}
+        </TransformWrapper>
     </div>
   );
 }

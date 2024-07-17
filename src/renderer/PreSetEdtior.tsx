@@ -7,7 +7,7 @@ import {
   FileUploadBase64,
   DropdownSelect,
 } from './UtilComponents';
-import { Resolution, Sampling } from './backends/imageGen';
+import { NoiseSchedule, Resolution, Sampling } from './backends/imageGen';
 import { CommonSetup, ContextMenuType, NAIPreSet, NAIStylePreSet, NAIStylePreSetShared, PreSet, PreSetMode, PromptNode, backend, getDefaultPreset, getDefaultStylePreset, imageService, promptService, queueDummyPrompt, queueScenePrompt, sessionService, taskQueueService, toPARR } from './models';
 import { Context, AppContext } from './App';
 import { base64ToDataUri } from './BrushTool';
@@ -352,6 +352,7 @@ const NAIPreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, m
           menuPlacement="top"
           options={Object.values(Sampling).map((x) => ({ label: x, value: x }))}
           onSelect={(opt) => {
+            selectedPreset.noiseSchedule = NoiseSchedule.Native;
             selectedPreset.sampling = opt.value;
             updatePresets();
           }}
@@ -403,6 +404,47 @@ const NAIPreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, m
           value={selectedPreset.steps ?? 28}
           onChange={(e) => {
             selectedPreset.steps = parseInt(e.target.value);
+            updatePresets();
+          }}
+        />
+      </div>
+      <div className="mt-auto pt-2 flex gap-2 items-center pr-1">
+        <span className={"flex-none " + grayLabel}>CFG 리스케일: </span>
+        <span className="bg-gray-100 p-1 flex-none w-8 text-center">{selectedPreset.cfgRescale ?? 0}</span>
+        <input
+        className="flex-1"
+          type="range"
+          step="0.01"
+          min="0"
+          max="1"
+          disabled={middlePromptMode && presetEditLock}
+          value={selectedPreset.cfgRescale ?? 0}
+          onChange={(e) => {
+            selectedPreset.cfgRescale = parseFloat(e.target.value);
+            updatePresets();
+          }}
+        />
+      </div>
+      <div className="mt-auto pt-2 flex gap-2 items-center">
+        <span className={"flex-none " + grayLabel}>노이즈 스케줄: </span>
+        <DropdownSelect
+          selectedOption={selectedPreset.noiseSchedule ?? NoiseSchedule.Native}
+          disabled={middlePromptMode && presetEditLock}
+          menuPlacement="top"
+          options={Object.values(NoiseSchedule).map((x) => ({ label: x, value: x }))}
+          onSelect={(opt) => {
+            const sampling = selectedPreset.sampling ?? Sampling.KEulerAncestral;
+            if (sampling === Sampling.DDIM) {
+              ctx.pushMessage("해당 샘플링은 노이즈 스케줄을 사용할 수 없습니다");
+              return;
+            }
+            if (opt.value === NoiseSchedule.Karras) {
+              if (sampling === Sampling.KEulerAncestral || sampling === Sampling.KDPMPP2SAncestral) {
+                ctx.pushMessage("해당 샘플링은 karras를 사용할 수 없습니다");
+                return;
+              }
+            }
+            selectedPreset.noiseSchedule = opt.value;
             updatePresets();
           }}
         />

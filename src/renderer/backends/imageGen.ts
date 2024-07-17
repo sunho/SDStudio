@@ -40,6 +40,13 @@ export enum Sampling {
   DDIM = 'ddim_v3',
 }
 
+export enum NoiseSchedule {
+  Native = 'native',
+  Karras = 'karras',
+  Exponential = 'exponential',
+  Polyexponential = 'polyexponential',
+}
+
 export interface Vibe {
   image: string;
   info: number;
@@ -57,6 +64,8 @@ export interface ImageGenInput {
   dyn: boolean;
   steps: number;
   promptGuidance: number;
+  cfgRescale: number;
+  noiseSchedule: NoiseSchedule;
   vibes: Vibe[];
   image?: string;
   mask?: string;
@@ -68,4 +77,5 @@ export interface ImageGenInput {
 export interface ImageGenService {
   login(email: string, password: string): Promise<{ accessToken: string }>;
   generateImage(token: string, params: ImageGenInput): Promise<string>;
+  getRemainCredits(token: string): Promise<number>;
 }
