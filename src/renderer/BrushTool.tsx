@@ -76,6 +76,8 @@ interface Props {
 
 export interface BrushToolRef {
   getMaskBase64(): string;
+  startBrushing(): void;
+  stopBrushing(): void;
   clear(): void;
   undo(): void;
 }
@@ -84,6 +86,7 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
   ({ image, mask, imageWidth, imageHeight, brushSize }, ref) => {
     const canvasRef = useRef<any>(null);
     const [loaded, setLoaded] = useState(false);
+    const brushingRef = useRef(true);
     const isDrawingRef = useRef(false);
     const lastPosRef = useRef({ x: -1, y: -1 });
     const curPosRef = useRef({ x: -1, y: -1 });
@@ -117,6 +120,12 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
       },
       undo() {
         undoImpl();
+      },
+      startBrushing() {
+        brushingRef.current = true;
+      },
+      stopBrushing() {
+        brushingRef.current = false;
       }
     }));
 
@@ -225,6 +234,7 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
       };
 
       const startDrawing = (e: any) => {
+        if (!brushingRef.current) return;
         e.preventDefault();
         ctx.putImageData(curImageRef.current, 0, 0);
         const imageData = curImageRef.current;
@@ -288,7 +298,7 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
     }, [brushSize]);
 
     return (
-      <div className="canvas-container overflow-hidden">
+      <div className="canvas-container overflow-auto w-full md:w-auto h-auto md:h-full ">
         {loaded && <img src={image} className="canvas-image" />}
         <canvas
           className="canvas"

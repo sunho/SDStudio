@@ -19,7 +19,7 @@
     "url": "https://sunho.io"
   },
   "main": "./src/main/main.ts",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "scripts": {
     "build": "concurrently \"npm run build:main\" \"npm run build:renderer\"",
     "build:dll": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true TS_NODE_PROJECT=tsconfig.app.json webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.ts",
@@ -147,6 +147,7 @@
     "react-virtualized": "^9.22.5",
     "react-window": "^1.8.10",
     "react-window-infinite-loader": "^1.0.9",
+    "react-zoom-pan-pinch": "^3.6.0",
     "resize-observer-polyfill": "^1.5.1",
     "textarea-caret": "^3.1.0",
     "uuid": "^9.0.1"

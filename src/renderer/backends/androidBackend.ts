@@ -144,6 +144,11 @@ export class AndroidBackend extends Backend {
     await this.writeDataFile(arg.outputFilePath, res);
   }
 
+  async getRemainCredits(): Promise<number> {
+    const token = await this.readFile('TOKEN.txt');
+    return await this.imageGenService.getRemainCredits(token);
+  }
+
   async login(email: string, password: string): Promise<void> {
     const token = await this.imageGenService.login(email, password);
     await this.writeFile('TOKEN.txt', token.accessToken);
