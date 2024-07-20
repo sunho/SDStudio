@@ -12,6 +12,115 @@ body {
   font-family: "Noto Sans KR", sans-serif;
 }
 
+.line-color {
+  @apply border-slate-300 dark:border-slate-700;
+}
+
+.text-default {
+  @apply text-black dark:text-white;
+}
+
+.text-sub {
+  @apply text-black dark:text-slate-200;
+}
+
+.round-tag {
+  @apply text-white px-3 py-1 rounded-full;
+}
+
+.gray-label {
+  @apply font-medium text-gray-700 dark:text-slate-200;
+}
+
+.back-yellow {
+  @apply bg-yellow-500 text-white dark:bg-indigo-400/25 dark:text-indigo-400;
+}
+
+.back-green {
+  @apply bg-green-500 text-white dark:bg-teal-400/25 dark:text-teal-400;
+}
+
+.back-sky {
+  @apply bg-sky-500 text-white dark:bg-sky-400/25 dark:text-sky-400;
+}
+
+.back-red {
+  @apply bg-red-500 text-white dark:bg-red-400/25 dark:text-red-400;
+}
+
+.back-gray {
+  @apply bg-gray-500 text-white dark:bg-gray-400/25 dark:text-gray-200;
+}
+
+.back-llgray {
+  @apply bg-gray-400 text-white dark:bg-gray-400/25 dark:text-gray-200;
+}
+
+.back-lllgray {
+  @apply bg-gray-300 text-black dark:bg-gray-400/25 dark:text-gray-200;
+}
+
+.back-lgray {
+  @apply bg-gray-300 dark:bg-gray-100/25 dark:text-gray-100;
+}
+
+.back-orange {
+  @apply bg-orange-500 text-white dark:bg-orange-400/25 dark:text-orange-200;
+}
+
+.clickable {
+  @apply active:brightness-75 hover:brightness-90 cursor-pointer select-none;
+}
+
+.round-button {
+  @apply clickable select-none whitespace-nowrap hover:outline-4 hover:outline-sky-400 rounded-full px-2 py-1 md:px-4 md:py-1;
+}
+
+.tab-button {
+  @apply active:brightness-90 hover:brightness-95 select-none h-8 px-1 md:px-2 text-xs md:text-sm;
+}
+
+.icon-button {
+  @apply active:brightness-90 hover:brightness-95 select-none whitespace-nowrap rounded-full text-gray-600 dark:text-white p-1;
+}
+
+.gray-input {
+  @apply focus:border-0 focus:outline-0 rounded-none focus:outline-black bg-gray-200 dark:bg-slate-700 dark:text-white py-1 md:py-1.5 md:pl-2 md:pr-2 text-gray-900 placeholder:text-gray-400;
+}
+
+@layer components {
+  /* .my-react-select-container {
+  } */
+  .my-react-select-container .my-react-select__control {
+    @apply bg-white dark:bg-slate-700 border-2 border-gray-500 dark:border-slate-700 hover:border-gray-500 dark:hover:border-slate-500;
+  }
+
+  .my-react-select-container .my-react-select__control--is-focused {
+    @apply border-gray-500 hover:border-gray-500 dark:border-slate-400 dark:hover:border-slate-400 shadow-none;
+  }
+
+  .my-react-select-container .my-react-select__menu {
+    @apply bg-white dark:bg-slate-700 border-2 border-white dark:border-slate-600;
+  }
+
+  .my-react-select-container .my-react-select__option {
+    @apply text-neutral-600 dark:text-neutral-200 bg-white hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-800;
+  }
+  /* .my-react-select-container .my-react-select__option--is-focused {
+    @apply bg-neutral-200 dark:bg-neutral-800;
+  } */
+
+  .my-react-select-container .my-react-select__indicator-separator {
+    @apply bg-slate-400;
+  }
+
+  .my-react-select-container .my-react-select__input-container,
+  .my-react-select-container .my-react-select__placeholder,
+  .my-react-select-container .my-react-select__single-value {
+    @apply text-black dark:text-neutral-200;
+  }
+}
+
 .alert-window {
   position: fixed;
   z-index: 3000;
@@ -54,7 +163,7 @@ body {
 }
 
 .show-toolbar {
-  height: calc(100% - 55px);
+  height: calc(100% - 57px);
 }
 @media screen and (max-width: 768px) {
   .show-toolbar {
@@ -253,7 +362,7 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 .syntax-error {
-  color: red;
+  @apply text-red-500 dark:text-red-600;
   white-space: inherit;
   word-break: inherit;
 }
@@ -293,6 +402,7 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 .syntax-line {
+  @apply text-black dark:text-slate-300;
   white-space: inherit;
   word-break: inherit;
 }
@@ -308,6 +418,12 @@ input[type='number']::-webkit-outer-spin-button {
 .bg-checkboard {
   background:
       repeating-conic-gradient(#e0e0e0 0% 25%, transparent 0% 50%)
+        50% / 10px 10px
+}
+
+.dark .bg-checkboard{
+  background:
+      repeating-conic-gradient(#e0e0e03c 0% 25%, transparent 0% 50%)
         50% / 10px 10px
 }
 

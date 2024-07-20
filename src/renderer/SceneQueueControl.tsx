@@ -32,7 +32,6 @@ import {
 import { AppContext } from './App';
 import { FloatView } from './FloatView';
 import SceneEditor from './SceneEditor';
-import { primaryColor, roundButton } from './styles';
 import {
   FaCalendarPlus,
   FaEdit,
@@ -193,7 +192,7 @@ export const SceneCell = ({
 
   return (
     <div
-      className={"relative m-2 p-1 bg-white border border-gray-300 " + (isDragging ? "opacity-0 no-touch ":"") + ((isOver)?" outline outline-sky-500":"")}
+      className={"relative m-2 p-1 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-500 " + (isDragging ? "opacity-0 no-touch ":"") + ((isOver)?" outline outline-sky-500":"")}
       style={style}
       ref={(node) => drag(drop(node))}
       onContextMenu={e => {
@@ -210,17 +209,17 @@ export const SceneCell = ({
       }}
     >
       {getSceneQueueCount(scene) > 0 && (
-        <span className="absolute right-0 bg-yellow-400 inline-block mr-3 px-2 py-1 text-center align-middle rounded-md font-bold text-white">
+        <span className="absolute right-0 bg-yellow-400 dark:bg-indigo-400 inline-block mr-3 px-2 py-1 text-center align-middle rounded-md font-bold text-white">
           {getSceneQueueCount(scene)}
         </span>
       )}
-      <div className="-z-10 active:brightness-90 hover:brightness-95 cursor-pointer bg-white"
+      <div className="-z-10 clickable bg-white dark:bg-slate-800"
       onClick={(event) => {
         if (isDragging) return;
         setDisplayScene?.(scene);
       }}
       >
-        <div className={"p-2 flex text-lg text-black " + cellSizes3[cellSize]}>
+        <div className={"p-2 flex text-lg text-default " + cellSizes3[cellSize]}>
           <div className="truncate flex-1">{scene.name}</div>
           <div className="flex-none text-gray-400">{imageService.getOutputs(curSession!, scene).length} </div>
         </div>
@@ -238,7 +237,7 @@ export const SceneCell = ({
       </div>
       <div className="w-full flex mt-auto justify-center items-center gap-2 p-2">
         <button
-          className={`${roundButton} bg-green-500`}
+          className={`round-button back-green`}
           onClick={(e) => {
             e.stopPropagation();
             addToQueue(scene);
@@ -247,7 +246,7 @@ export const SceneCell = ({
           <FaPlus />
         </button>
         <button
-          className={`${roundButton} bg-gray-500`}
+          className={`round-button back-gray`}
           onClick={(e) => {
             e.stopPropagation();
             removeFromQueue(scene);
@@ -256,7 +255,7 @@ export const SceneCell = ({
           <FaRegCalendarTimes />
         </button>
         <button
-          className={`${roundButton} bg-orange-400`}
+          className={`round-button back-orange`}
           onClick={(e) => {
             e.stopPropagation();
             setEditingScene?.(scene);
@@ -404,7 +403,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
             text: (path: string) => {
               return isMainImage(path) ? '즐겨찾기 해제' : '즐겨찾기 지정';
             },
-            className: 'bg-orange-400',
+            className: 'back-orange',
             onClick: async (scene: Scene, path: string, close: () => void) => {
               const filename = path.split('/').pop()!;
               if (isMainImage(path)) {
@@ -419,7 +418,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
           },
           {
             text: '인페인팅 씬 생성',
-            className: 'bg-green-500',
+            className: 'back-green',
             onClick: async (scene: Scene, path: string, close: () => void) => {
               let image = await imageService.fetchImage(path);
               image = dataUriToBase64(image!);
@@ -462,7 +461,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
 
           {
             text: '해당 이미지로 인페인트',
-            className: 'bg-orange-400',
+            className: 'back-orange',
             onClick: async (scene: InPaintScene, path: string, close: () => void) => {
               let image = await imageService.fetchImage(path);
               image = dataUriToBase64(image!);
@@ -477,7 +476,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
           },
           {
             text: '원본 씬으로 이미지 복사',
-            className: 'bg-green-500',
+            className: 'back-green',
             onClick: async (scene: InPaintScene, path: string, close: () => void) => {
               if (!scene.sceneRef) {
                 ctx.pushMessage('원본 씬이 없습니다.');
@@ -505,7 +504,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
   if (type === 'scene' && !isMobile) {
     buttons.push({
       text: '배경 제거 예약',
-      className: 'bg-gray-500',
+      className: 'back-gray',
       // @ts-ignore
       onClick: async (scene: Scene, path: string, close: () => void) => {
         if (!localAIService.ready) {
@@ -961,18 +960,18 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
       {!!showPannel &&
       <div className="flex flex-none pb-2">
         <div className="flex gap-1 md:gap-2">
-          <button className={`${roundButton} ${primaryColor}`} onClick={addScene}>
+          <button className={`round-button back-sky`} onClick={addScene}>
             씬 추가
           </button>
           <button
-            className={`${roundButton} bg-sky-500`}
+            className={`round-button back-sky`}
             onClick={addAllToQueue}
           >
             모두 예약추가
           </button>
           {type === 'scene' && (
             <button
-              className={`${roundButton} bg-gray-400`}
+              className={`round-button back-gray`}
               onClick={()=>exportPackage()}
             >
               {isMobile?"":"이미지 "}내보내기
@@ -980,14 +979,14 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
           )}
           {type === 'scene' && (
           <button
-            className={`${roundButton} bg-gray-400`}
+            className={`round-button back-gray`}
             onClick={openMenu}
           >
             대량 작업
           </button>)}
         </div>
         <div className="ml-auto mr-2 hidden md:block">
-          <button onClick={() => setCellSize((cellSize + 1) % 3)} className={`${roundButton} bg-gray-400`}>
+          <button onClick={() => setCellSize((cellSize + 1) % 3)} className={`round-button back-gray`}>
             {cellSizes[cellSize]}
           </button>
         </div>

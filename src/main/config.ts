@@ -12,4 +12,5 @@ export interface Config {
   saveLocation?: string;
   noIpCheck?: boolean;
   uuid?: string;
+  whiteMode?: boolean;
 }

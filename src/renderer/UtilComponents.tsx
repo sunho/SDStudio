@@ -1,7 +1,6 @@
 import React, { ReactNode, forwardRef, useCallback, useEffect, useRef, useState } from 'react';
 
 import Select from 'react-select';
-import { primaryColor, roundButton } from './styles';
 import { FaAddressBook, FaAmilia, FaDAndD, FaFileUpload, FaPenNib, FaTimes } from 'react-icons/fa';
 import { Scrollbars } from 'react-custom-scrollbars-2';
 import { FaAnchor, FaOpencart, FaPerson } from 'react-icons/fa6';
@@ -42,15 +41,8 @@ export const DropdownSelect = <T,>({
       onChange={handleChange}
       menuPlacement={menuPlacement}
       isDisabled={disabled}
-      className={"w-full " + (className ?? '')}
-      theme={(theme) => ({
-        ...theme,
-        borderRadius: 0,
-        colors: {
-          ...theme.colors,
-          primary: 'black',
-        },
-      })}
+      className={"my-react-select-container w-full " + (className ?? '')}
+      classNamePrefix="my-react-select"
     />
   );
 };
@@ -126,9 +118,9 @@ export const FileUploadBase64: React.FC<{
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onClick={handleClick}
-      className="cursor-pointer w-full h-8 text-gray-700 overflow-hidden rounded-full flex items-center justify-center"
+      className="w-full h-8 overflow-hidden rounded-full back-sky clickable flex items-center justify-center"
       style={{
-        backgroundColor: dragging ? '#0ea5e9' : '#e5e7eb',
+        backgroundColor: dragging ? '#0ea5e9' : undefined
       }}
     >
       <input
@@ -180,8 +172,8 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs, toggleVi
               className={
                 'active:brightness-90 hover:brightness-95 select-none h-8 px-1 md:px-2 text-xs md:text-sm ' +
                 (index === activeTab
-                  ? `${primaryColor} text-white`
-                  : 'bg-gray-400 text-white')
+                  ? `back-sky`
+                  : 'back-llgray')
               }
               onClick={() => handleTabClick(index)}
             >
@@ -190,7 +182,7 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs, toggleVi
           ))}
         </div>
         <div className="flex md:hidden gap-1 w-full">
-          {!tabs[activeTab].banToggle && toggleView && <button className='active:brightness-90 hover:brightness-95 select-none h-8 md:hidden text-sm text-white bg-sky-500 px-2 flex justify-center items-center mr-auto'
+          {!tabs[activeTab].banToggle && toggleView && <button className='active:brightness-90 hover:brightness-95 select-none h-8 md:hidden text-sm back-gray px-2 flex justify-center items-center mr-auto'
             onClick={() => setToggleViewOpen(!toggleViewOpen)}
             >
             {toggleViewOpen?'프롬프트 닫기':'프롬프트 열기'}
@@ -201,8 +193,8 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs, toggleVi
               className={
                 'active:brightness-90 hover:brightness-95 select-none px-2 text-sm h-8 ' +
                 (index === activeTab
-                  ? `${primaryColor} text-white`
-                  : 'bg-gray-400 text-white')
+                  ? `back-sky`
+                  : 'back-gray')
               }
               onClick={() => handleTabClick(index)}
             >

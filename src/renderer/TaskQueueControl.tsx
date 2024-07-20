@@ -13,7 +13,6 @@ import {
   GenerateImageTaskParams,
   RemoveBgTaskParams,
 } from './models';
-import { grayInput, primaryColor, roundButton } from './styles';
 import { FaSpinner } from 'react-icons/fa';
 import { FaPlay, FaRegCalendarTimes, FaStop } from 'react-icons/fa';
 import { FaTimes } from 'react-icons/fa';
@@ -32,8 +31,8 @@ interface ProgressBarProps {
 
 const ProgressBar = ({ duration, isError, text, key }: ProgressBarProps) => {
   return (
-    <div key={key} className="relative w-40 md:w-52 bg-gray-200 rounded-full h-8">
-      <div className="top-0 left-0 w-40 md:w-52 h-8 absolute flex items-center justify-center text-gray-600 gap-2">
+    <div key={key} className="relative w-40 md:w-52 bg-gray-200 dark:bg-slate-700 rounded-full h-8">
+      <div className="top-0 left-0 w-40 md:w-52 h-8 absolute flex items-center justify-center text-gray-600 dark:text-white gap-2">
         <FaRegClock size={20}/>
         <div className="w-28 md:w-40 text-xs md:text-sm text-center overflow-hidden text-nowrap">
           {text}
@@ -42,7 +41,7 @@ const ProgressBar = ({ duration, isError, text, key }: ProgressBarProps) => {
       <div
         className={
           'top-0 left-0 absolute w-40 md:w-52 progress-transition rounded-full h-8 progress-clip-animation ' +
-          (!isError ? 'bg-sky-500' : 'bg-red-500')
+          (!isError ? 'bg-sky-500 dark:bg-indigo-400' : 'bg-red-500')
         }
         style={{ animationDuration: `${duration}s` }}
       ></div>
@@ -201,7 +200,7 @@ const TaskQueueList = ({onClose}: {onClose?: () => void}) => {
     }
   };
 
-  return <div className="absolute bottom-0 mb-14 md:mb-20 bg-white w-60 md:w-96 z-20 shadow-lg prog-list flex flex-col overflow-hidden">
+  return <div className="absolute bottom-0 mb-14 md:mb-20 bg-white dark:bg-slate-700 w-60 md:w-96 z-20 shadow-lg prog-list flex flex-col overflow-hidden">
     <button
       className="ml-auto mt-2 mr-2 text-gray-500 hover:text-gray-700 flex-none"
       onClick={() => {
@@ -213,12 +212,12 @@ const TaskQueueList = ({onClose}: {onClose?: () => void}) => {
     <div className="flex-1 overflow-hidden pb-2">
       <div className="h-full overflow-auto">
         {tasks.map((task, i) => (
-          <div key={i} className="flex mt-2 items-center gap-2 p-2 border-gray-300 border mx-2 rounded-lg">
-            <div className="flex-none">
+          <div key={i} className="flex mt-2 items-center gap-2 p-2 border-gray-300 dark:border-slate-500 border mx-2 rounded-lg">
+            <div className="flex-none ">
               {getEmoji(task)}
             </div>
-            <div className="flex-1 truncate">{getTaskText(task)}</div>
-            <div className="flex-none ml-auto p-2 bg-gray-300 rounded-lg font-medium text-sm text-gray-500">{task!.done}/{task!.total}</div>
+            <div className="flex-1 truncate text-default">{getTaskText(task)}</div>
+            <div className="flex-none ml-auto p-2 bg-gray-300 dark:bg-slate-500 dark:text-white rounded-lg font-medium text-sm text-gray-500">{task!.done}/{task!.total}</div>
           </div>
         ))}
       </div>
@@ -262,7 +261,7 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
         <input
           min={1}
           max={99}
-          className={'ml-2 p-1 md:p-0 md:w-16 text-center ' + grayInput}
+          className={'ml-2 p-1 md:w-16 text-center gray-input'}
           type="number"
           value={ctx.samples}
           onChange={(e: any) => {
@@ -283,7 +282,7 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
       <TaskProgressBar />
       </div>
       <button
-        className={`${roundButton} bg-gray-500 px-2 h-8 md:px-6`}
+        className={`round-button back-gray px-2 h-8 md:px-6`}
         onClick={() => {
           taskQueueService.removeAllTasks();
         }}
@@ -292,7 +291,7 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
       </button>
       {!taskQueueService.isRunning() ? (
         <button
-          className={`${roundButton} bg-green-500 px-2 h-8 md:px-6`}
+          className={`round-button back-green px-2 h-8 md:px-6`}
           onClick={() => {
             (async () => {
               taskQueueService.run();
@@ -303,7 +302,7 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
         </button>
       ) : (
         <button
-          className={`${roundButton} bg-red-500 px-2 h-8 md:px-6`}
+          className={`round-button back-red px-2 h-8 md:px-6`}
           onClick={() => {
             taskQueueService.stop();
           }}

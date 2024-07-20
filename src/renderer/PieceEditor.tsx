@@ -3,7 +3,6 @@ import { AppContext } from './App';
 import { PieceLibrary, backend, promptService, sessionService } from './models';
 import { DropdownSelect } from './UtilComponents';
 import PromptEditTextArea from './PromptEditTextArea';
-import { grayLabel, primaryColor, roundButton } from './styles';
 import {
   FaArrowCircleUp,
   FaFileExport,
@@ -69,7 +68,7 @@ export const PieceCell = ({ pieceName, value, name, curPieceLibrary, onUpdated, 
     preview(getEmptyImage(), { captureDraggingState: true });
   }, [preview]);
 
-  return <div className={"p-3 bg-white border border-gray-300 my-2 " + (isDragging ? "opacity-0" : "")}
+  return <div className={"p-3 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-500 my-2 " + (isDragging ? "opacity-0" : "")}
     style={style ? {...style, width: width} : {}}
     ref={(node) => {
       if (movePiece) {
@@ -80,7 +79,7 @@ export const PieceCell = ({ pieceName, value, name, curPieceLibrary, onUpdated, 
     }}
     >
       <div className="flex pb-2">
-      <div className="font-bold" onDoubleClick={() => {
+      <div className="font-bold text-default" onDoubleClick={() => {
         if (!movePiece) return;
         pushDialog({
           type: 'input-confirm',
@@ -101,7 +100,7 @@ export const PieceCell = ({ pieceName, value, name, curPieceLibrary, onUpdated, 
         });
       }}>{pieceName}</div>
       <button
-        className="ml-auto"
+        className="ml-auto text-red-500 dark:text-white"
         onClick={() => {
           if (!movePiece) return;
           delete curPieceLibrary.pieces[pieceName];
@@ -110,7 +109,7 @@ export const PieceCell = ({ pieceName, value, name, curPieceLibrary, onUpdated, 
           sessionService.reloadPieceLibraryDB(curSession!);
         }}
       >
-        <FaTrash size={20} color="#ef4444" />
+        <FaTrash size={20} />
       </button>
     </div>
     <div className="h-20">
@@ -125,7 +124,7 @@ export const PieceCell = ({ pieceName, value, name, curPieceLibrary, onUpdated, 
       }}
     />
     </div>
-    <div className={"mt-1 " + grayLabel}>
+    <div className={"mt-1 gray-label"}>
     랜덤 줄 선택 모드: <input checked={curPieceLibrary.multi[pieceName]} type="checkbox"
         onChange={(e) => {
           if (!movePiece) return;
@@ -189,7 +188,7 @@ const PieceEditor = () => {
         />
 
         <button
-          className={`${roundButton} ${primaryColor} h-8 px-4 ml-auto`}
+          className={`icon-button h-8 px-4 ml-auto`}
           onClick={async () => {
             pushDialog({
               type: 'input-confirm',
@@ -211,7 +210,7 @@ const PieceEditor = () => {
           <FaPlus />
         </button>
         <button
-          className={`${roundButton} bg-orange-500 h-8 px-4`}
+          className={`icon-button h-8 px-4`}
           onClick={async () => {
             if (!curPieceLibrary) return;
             const outPath =
@@ -232,7 +231,7 @@ const PieceEditor = () => {
           <FaShare />
         </button>
         <button
-          className={`${roundButton} bg-red-500 h-8 px-4`}
+          className={`icon-button h-8 px-4`}
           onClick={async () => {
             if (!selectedPieceLibrary) return;
             pushDialog({
@@ -256,7 +255,7 @@ const PieceEditor = () => {
             <PieceCell key={curPieceLibrary.description! + " " + key} pieceName={key} value={value} name={curPieceLibrary.description} curPieceLibrary={curPieceLibrary} onUpdated={onUpdated} movePiece={movePiece} />
           ))}
           <button
-            className="py-2 px-8 bg-gray-200 rounded-xl"
+            className="py-2 px-8 rounded-xl back-lllgray"
             onClick={async () => {
               pushDialog({
                 type: 'input-confirm',

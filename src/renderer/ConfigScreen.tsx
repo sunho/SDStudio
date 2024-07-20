@@ -1,7 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { backend, imageService, isMobile, localAIService, loginService } from './models';
+import { backend, imageService, isMobile, localAIService, loginService, sessionService } from './models';
 import { Config, ImageEditor, ModelType, RemoveBgQuality } from '../main/config';
-import { grayInput, primaryColor, roundButton } from './styles';
 import { AppContext } from './App';
 
 interface ConfigScreenProps {
@@ -12,6 +11,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
   const { curSession, pushDialog, pushMessage } = useContext(AppContext)!;
   const [imageEditor, setImageEditor] = useState('');
   const [useGPU, setUseGPU] = useState(false);
+  const [whiteMode, setWhiteMode] = useState(false);
   const [noIpCheck, setNoIpCheck] = useState(false);
   const [ready, setReady] = useState(false);
   const [quality, setQuality] = useState('');
@@ -23,6 +23,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
   useEffect(() => {
     (async () => {
       const config = await backend.getConfig();
+      setWhiteMode(config.whiteMode ?? false);
       setImageEditor(config.imageEditor ?? 'photoshop');
       setUseGPU(config.useCUDA ?? false);
       setQuality(config.removeBgQuality ?? 'normal');
@@ -100,24 +101,24 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
   };
   const stageTexts = ['모델 다운로드 중...', '모델 가중치 다운로드 중...', '모델 압축 푸는 중...'];
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white p-6 rounded shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-4">환경설정</h1>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="bg-white dark:bg-slate-800 p-6 rounded shadow-md w-full max-w-md">
+        <h1 className="text-2xl font-bold mb-4 text-default">환경설정</h1>
         <div className="mb-4">
-          <label htmlFor="imageEditor" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="imageEditor" className="block text-sm gray-label">
             NAI 로그인
           </label>
           <div className="p-1 flex flex-col">
             <div className="flex gap-2 mb-2 w-full overflow-hidden">
               <input
-                className={`${grayInput} block flex-1`}
+                className={`gray-input block flex-1`}
                 type="text"
                 placeholder="이메일"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
               <input
-                className={`${grayInput} block flex-1`}
+                className={`gray-input block flex-1`}
                 type="password"
                 placeholder="암호"
                 value={password}
@@ -126,27 +127,33 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
             </div>
             <div className="flex items-center">
             <p className="flex items-center gap-1">
-              <span className="text-sm text-gray-700">로그인 상태:</span>{' '}
+              <span className="text-sm gray-label">로그인 상태:</span>{' '}
               {loggedIn ? (
-                <span className={`${roundTag} bg-green-500`}>Yes</span>
+                <span className={`${roundTag} back-green`}>Yes</span>
               ) : (
-                <span className={`${roundTag} bg-red-500`}>No</span>
+                <span className={`${roundTag} back-red`}>No</span>
               )}
             </p>
-            <button className={`bg-sky-500 text-white py-1 px-2 rounded hover:brightness-95 active:brightness-90 ml-auto`} onClick={login}>
+            <button className={`back-sky py-1 px-2 rounded hover:brightness-95 active:brightness-90 ml-auto`} onClick={login}>
               로그인
             </button>
             </div>
           </div>
         </div>
         {isMobile && <div className="mb-4 flex items-center gap-2">
-          <label htmlFor="noIpCheck" className="text-sm font-medium text-gray-700">
+          <label htmlFor="noIpCheck" className="text-sm gray-label">
             IP 체크 끄기
           </label>
           <input type="checkbox" checked={noIpCheck} onChange={(e) => setNoIpCheck(e.target.checked)} />
         </div>}
+        {<div className="mb-4 flex items-center gap-2">
+          <label htmlFor="whiteMode" className="text-sm gray-label">
+            화이트 모드 켜기
+          </label>
+          <input type="checkbox" checked={whiteMode} onChange={(e) => setWhiteMode(e.target.checked)} />
+        </div>}
         {!isMobile && <> <div className="mb-4">
-          <label htmlFor="imageEditor" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="imageEditor" className="block text-sm gray-label">
             선호 이미지 편집기
           </label>
           <select
@@ -162,7 +169,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
         </div>
         {!ready && <div className="mt-4">
           <button
-            className="w-full bg-green-500 text-white py-2 rounded"
+            className="w-full back-green py-2 rounded"
             onClick={() => {
               if (!localAIService.downloading)
                 localAIService.download();
@@ -174,7 +181,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
         }
         {ready && <>
         <div className="flex gap-2 mt-4">
-          <label htmlFor="imageEditor" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="imageEditor" className="block text-sm gray-label">
             배경 제거 시 GPU 사용 <a onClick={() => {
               backend.openWebPage('https://developer.nvidia.com/cuda-11-8-0-download-archive');
             }} className="underline text-blue-500 cursor-pointer">(CUDA를 설치 해야함)</a>
@@ -186,7 +193,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
             />
         </div>
         <div className="mt-4">
-          <label htmlFor="bgQuality" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="bgQuality" className="block text-sm gray-label">
             배경 제거 퀄리티
           </label>
           <select
@@ -204,19 +211,19 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
         </div>
         </>}
         <button
-          className="mt-4 w-full bg-green-500 text-white py-2 rounded hover:brightness-95 active:brightness-90"
+          className="mt-4 w-full back-green py-2 rounded hover:brightness-95 active:brightness-90"
           onClick={selectFolder}
           >
             이미지 및 데이터 저장 위치 지정
         </button></>}
         <button
-          className="mt-4 w-full bg-red-500 text-white py-2 rounded hover:brightness-95 active:brightness-90"
+          className="mt-4 w-full back-red py-2 rounded hover:brightness-95 active:brightness-90"
           onClick={clearImageCache}
           >
           이미지 캐시 초기화
         </button>
         <button
-          className="mt-4 w-full bg-sky-500 text-white py-2 rounded hover:brightness-95 active:brightness-90"
+          className="mt-4 w-full back-sky py-2 rounded hover:brightness-95 active:brightness-90"
           onClick={async () => {
             const old = await backend.getConfig();
             const config: Config = {
@@ -225,10 +232,12 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
               modelType: 'quality',
               removeBgQuality: quality as RemoveBgQuality,
               noIpCheck: noIpCheck,
+              whiteMode: whiteMode,
             };
             await backend.setConfig(config);
             if (old.useCUDA !== useGPU)
               localAIService.modelChanged();
+            sessionService.configChanged();
             onSave();
           }}
         >

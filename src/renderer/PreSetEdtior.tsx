@@ -11,9 +11,8 @@ import { NoiseSchedule, Resolution, Sampling } from './backends/imageGen';
 import { CommonSetup, ContextMenuType, NAIPreSet, NAIStylePreSet, NAIStylePreSetShared, PreSet, PreSetMode, PromptNode, backend, getDefaultPreset, getDefaultStylePreset, imageService, promptService, queueDummyPrompt, queueScenePrompt, sessionService, taskQueueService, toPARR } from './models';
 import { Context, AppContext } from './App';
 import { base64ToDataUri } from './BrushTool';
-import { grayInput, grayLabel, primaryColor, roundButton } from './styles';
 import PromptEditTextArea from './PromptEditTextArea';
-import { FaImage, FaPlus, FaTrash } from 'react-icons/fa';
+import { FaImage, FaPlus, FaTrash, FaTrashAlt } from 'react-icons/fa';
 import { FloatView } from './FloatView';
 import { v4 } from 'uuid';
 import { BigPromptEditor } from './SceneEditor';
@@ -33,8 +32,8 @@ const PreSetSelect = ({ selectedPreset, setSelectedPreset, onChange }: { selecte
   const presets = curSession!.presets.filter(x=>x.type === 'preset');
   return <div className="w-full h-full">
     <div className="flex items-center mb-3">
-      <p className="text-xl font-bold ">이미지 생성 프리셋</p>
-    <button className={`${roundButton} bg-gray-400 ml-auto text-sm h-8 `} onClick={() => {
+      <p className="text-xl font-bold text-default">이미지 생성 프리셋</p>
+    <button className={`round-button back-llgray ml-auto text-sm h-8 `} onClick={() => {
       curSession!.presetMode = 'style';
       setSelectedPreset(curSession!.presets.filter(x=>x.type==='style')[0]);
       sessionService.markUpdated(curSession!.name);
@@ -54,7 +53,7 @@ const PreSetSelect = ({ selectedPreset, setSelectedPreset, onChange }: { selecte
         }}
       />
       <button
-        className={`${roundButton} ${primaryColor} w-20`}
+        className={`icon-button`}
         onClick={() => {
           pushDialog({
             type: 'input-confirm',
@@ -76,10 +75,10 @@ const PreSetSelect = ({ selectedPreset, setSelectedPreset, onChange }: { selecte
           });
         }}
       >
-        추가
+        <FaPlus/>
       </button>
       <button
-        className={`${roundButton} bg-red-500 w-20`}
+        className={`icon-button`}
         onClick={() => {
           if (length <= 1) {
             pushMessage('프리셋은 최소 한 개 이상이어야 합니다');
@@ -97,7 +96,7 @@ const PreSetSelect = ({ selectedPreset, setSelectedPreset, onChange }: { selecte
           });
         }}
       >
-        삭제
+        <FaTrashAlt/>
       </button>
     </div>
   </div>
@@ -152,7 +151,7 @@ export const VibeEditor = ({ disabled, closeEditor }: VibeEditorProps) => {
             <VibeImage path={vibe.path} className="flex-none w-28 h-28 object-cover"/>
             <div className="flex flex-col gap-2 w-full">
               <div className="flex w-full items-center md:flex-row flex-col">
-                <div className={"whitespace-nowrap flex-none mr-auto md:mr-0" + grayLabel}>정보 추출률 (IS):</div>
+                <div className={"whitespace-nowrap flex-none mr-auto md:mr-0 gray-label"}>정보 추출률 (IS):</div>
                 <div className="flex flex-1 md:w-auto w-full gap-1">
                   <input className="flex-1" type="range" step="0.01" min="0" max="1" value={vibe.info} onChange={(e) => {
                     vibe.info = parseFloat(e.target.value);
@@ -160,11 +159,11 @@ export const VibeEditor = ({ disabled, closeEditor }: VibeEditorProps) => {
                   }}
                   disabled={disabled}
                     />
-                  <div className="w-11 flex-none text-lg text-center">{vibe.info}</div>
+                  <div className="w-11 flex-none text-lg text-center back-lllgray">{vibe.info}</div>
                 </div>
               </div>
               <div className="flex w-full md:flex-row flex-col items-center">
-                <div className={"whitepace-nowrap flex-none mr-auto md:mr-0" + grayLabel}>레퍼런스 강도 (RS):</div>
+                <div className={"whitepace-nowrap flex-none mr-auto md:mr-0 gray-label"}>레퍼런스 강도 (RS):</div>
                 <div className="flex flex-1 md:w-auto w-full gap-1">
                   <input className="flex-1" type="range" step="0.01" min="0" max="1" value={vibe.strength} onChange={(e) => {
                     vibe.strength = parseFloat(e.target.value);
@@ -172,11 +171,11 @@ export const VibeEditor = ({ disabled, closeEditor }: VibeEditorProps) => {
                   }}
                   disabled={disabled}
                   />
-                  <div className="w-11 flex-none text-lg text-center">{vibe.strength}</div>
+                  <div className="w-11 flex-none text-lg text-center back-lllgray">{vibe.strength}</div>
                 </div>
               </div>
               <div className="flex-none flex ml-auto mt-auto">
-                <button className={`${roundButton} h-8 px-8 ml-auto ` + ((disabled) ? 'bg-gray-400' : 'bg-red-500')} onClick={() => {
+                <button className={`round-button h-8 px-8 ml-auto ` + ((disabled) ? 'back-gray' : 'back-red')} onClick={() => {
                   if (disabled) return;
                   commonSetup.shared.vibes = commonSetup.shared.vibes.filter(x => x !== vibe);
                   updatePresets();
@@ -191,7 +190,7 @@ export const VibeEditor = ({ disabled, closeEditor }: VibeEditorProps) => {
     </div>
     <div className="flex-none mt-auto pt-2 flex gap-2 items-center">
       <FileUploadBase64 notext disabled={disabled} onFileSelect={vibeChange}></FileUploadBase64>
-      <button className={`${roundButton} bg-gray-500 h-8 w-full`} onClick={closeEditor}>
+      <button className={`round-button back-gray h-8 w-full`} onClick={closeEditor}>
         바이브 설정 닫기
       </button>
     </div>
@@ -204,13 +203,13 @@ export const VibeButton = ({ onClick }: { onClick: () => void }) => {
 
   return <>
     {commonSetup.shared.vibes.length === 0 &&
-    <button className={`${roundButton} bg-gray-500 h-8 w-full flex`} onClick={onClick}>
+    <button className={`round-button back-gray h-8 w-full flex`} onClick={onClick}>
       <div className="flex-1">바이브 이미지 설정 열기</div>
     </button>
     }
     {commonSetup.shared.vibes.length > 0 &&
     <div className="w-full flex items-center">
-      <div className={"flex-none mr-2 " + grayLabel}>바이브 설정:</div>
+      <div className={"flex-none mr-2 gray-label"}>바이브 설정:</div>
       <VibeImage path={commonSetup.shared.vibes[0].path} className="flex-1 h-14 rounded-xl object-cover cursor-pointer hover:brightness-95 active:brightness-90" onClick={onClick}/>
     </div>
     }
@@ -219,7 +218,7 @@ export const VibeButton = ({ onClick }: { onClick: () => void }) => {
 
 const EditorField = ({ label, full, children, bold }: { label: string; children: React.ReactNode; full: boolean; bold?: boolean; }) => {
   return <>
-    <div className={"pt-2 pb-1 " + grayLabel}>
+    <div className={"pt-2 pb-1 gray-label"}>
       {bold ? <b>{label}</b> : label}
     </div>
     <div className={full ? "flex-1 min-h-0" : "flex-none mt-3"}>
@@ -230,7 +229,7 @@ const EditorField = ({ label, full, children, bold }: { label: string; children:
 
 const InlineEditorField = ({ label, children }: { label: string; children: React.ReactNode; }) => {
   return <div className="flex gap-2 items-center">
-    <span className={"flex-none " + grayLabel}>{label}:</span>
+    <span className={"flex-none gray-label"}>{label}:</span>
     {children}
   </div>
 }
@@ -312,9 +311,9 @@ const NAIPreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, m
       </EditorField>
       {!samplerSetting && !vibeSetting && <div className="flex-none mt-3">
       {!styleEditMode && <div className="mt-auto flex gap-2 items-center">
-        <span className={"flex-none " + grayLabel}>시드: </span>
+        <span className={"flex-none gray-label"}>시드: </span>
         <input
-          className={`w-full ${grayInput}`}
+          className={`w-full gray-input`}
           disabled={middlePromptMode && presetEditLock}
           value={commonSetup.shared.seed ?? ''}
           onChange={(e) => {
@@ -337,7 +336,7 @@ const NAIPreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, m
         <VibeButton onClick={()=>setVibeSetting(true)}/>
       </div>}
       <div className="flex-none mt-3 flex gap-2 items-center">
-        <button className={`${roundButton} bg-gray-500 h-8 w-full`} onClick={() => setSamplerSetting(true)}>
+        <button className={`round-button back-gray h-8 w-full`} onClick={() => setSamplerSetting(true)}>
           샘플링 설정 열기
         </button>
       </div>
@@ -345,7 +344,7 @@ const NAIPreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, m
       {samplerSetting &&
        <div className="flex-none">
       <div className="mt-auto pt-2 flex gap-2 items-center">
-        <span className={"flex-none " + grayLabel}>샘플러: </span>
+        <span className={"flex-none gray-label"}>샘플러: </span>
         <DropdownSelect
           selectedOption={selectedPreset.sampling}
           disabled={middlePromptMode && presetEditLock}
@@ -359,13 +358,13 @@ const NAIPreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, m
         />
       </div>
       <div className="mt-auto pt-2 flex gap-2 items-center pr-1">
-        <span className={"flex-none " + grayLabel}>SMEA: </span>
+        <span className={"flex-none gray-label"}>SMEA: </span>
         <input  type="checkbox" checked={!selectedPreset.smeaOff} onChange={(e) => {
             selectedPreset.smeaOff = !e.target.checked;
             updatePresets();
           }} disabled={middlePromptMode && presetEditLock}
         />
-        <span className={"flex-none " + grayLabel}>DYN: </span>
+        <span className={"flex-none gray-label"}>DYN: </span>
         <input type="checkbox" checked={selectedPreset.dynOn} onChange={(e) => {
             selectedPreset.dynOn = e.target.checked;
             updatePresets();
@@ -374,8 +373,8 @@ const NAIPreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, m
         />
       </div>
       <div className="mt-auto pt-2 flex gap-2 items-center pr-1">
-        <span className={"flex-none " + grayLabel}>프롬프트 가이던스: </span>
-        <span className="bg-gray-100 p-1 flex-none w-8 text-center">{selectedPreset.promptGuidance ?? 5}</span>
+        <span className={"flex-none gray-label"}>프롬프트 가이던스: </span>
+        <span className="back-lllgray p-1 flex-none w-8 text-center">{selectedPreset.promptGuidance ?? 5}</span>
         <input
         className="flex-1"
           type="range"
@@ -391,9 +390,9 @@ const NAIPreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, m
         />
       </div>
       <div className="relative mt-auto pt-2 flex gap-2 items-center pr-1">
-        <span className={"flex-none " + grayLabel}>스탭: </span>
+        <span className={"flex-none gray-label"}>스탭: </span>
         {selectedPreset!.steps && selectedPreset!.steps > 28 &&<span className="absolute text-white bg-red-700 right-0 bottom-16 px-4">Anlas가 소모되는 세팅입니다 (유료임)</span>}
-        <span className="bg-gray-100 p-1 flex-none w-8 text-center">{selectedPreset.steps ?? 28}</span>
+        <span className="back-lllgray p-1 flex-none w-8 text-center">{selectedPreset.steps ?? 28}</span>
         <input
         className="flex-1"
           type="range"
@@ -409,8 +408,8 @@ const NAIPreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, m
         />
       </div>
       <div className="mt-auto pt-2 flex gap-2 items-center pr-1">
-        <span className={"flex-none " + grayLabel}>CFG 리스케일: </span>
-        <span className="bg-gray-100 p-1 flex-none w-8 text-center">{selectedPreset.cfgRescale ?? 0}</span>
+        <span className={"flex-none gray-label"}>CFG 리스케일: </span>
+        <span className="back-lllgray p-1 flex-none w-8 text-center">{selectedPreset.cfgRescale ?? 0}</span>
         <input
         className="flex-1"
           type="range"
@@ -426,7 +425,7 @@ const NAIPreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, m
         />
       </div>
       <div className="mt-auto pt-2 flex gap-2 items-center">
-        <span className={"flex-none " + grayLabel}>노이즈 스케줄: </span>
+        <span className={"flex-none gray-label"}>노이즈 스케줄: </span>
         <DropdownSelect
           selectedOption={selectedPreset.noiseSchedule ?? NoiseSchedule.Native}
           disabled={middlePromptMode && presetEditLock}
@@ -450,7 +449,7 @@ const NAIPreSetEditor: React.FC<Props> = ({ selectedPreset, setSelectedPreset, m
         />
       </div>
       <div className="mt-auto pt-2 flex gap-2 items-center">
-        <button className={`${roundButton} bg-gray-500 h-8 w-full`} onClick={() => setSamplerSetting(false)}>
+        <button className={`round-button back-gray h-8 w-full`} onClick={() => setSamplerSetting(false)}>
           샘플링 설정 닫기
         </button>
       </div>
@@ -504,9 +503,9 @@ const StyleEditor: React.FC<StyleEditorProps> = ({ selectedPreset, onClose }) =>
   return <div className="flex flex-col h-full">
     <div className="grow-0 pt-2 px-3 flex gap-3 items-center text-nowrap flex-wrap mb-2 md:mb-0">
       <div className="flex items-center gap-2">
-      <label>그림체 이름:</label>
+      <label className="gray-label">그림체 이름:</label>
       <input
-        className={grayInput}
+        className='gray-input'
         type="text"
         value={presetRef.current.name}
         onChange={(e) => {
@@ -516,7 +515,7 @@ const StyleEditor: React.FC<StyleEditorProps> = ({ selectedPreset, onClose }) =>
       />
       </div>
       {!selectedPreset && <button
-          className={`${roundButton} ${primaryColor}`}
+          className={`round-button back-sky`}
           onClick={async () => {
             if (!presetRef.current.name) {
               pushMessage('이름을 입력하세요');
@@ -612,8 +611,8 @@ const NAIStylePreSetEditor: React.FC<Props> = ({ globalMode, selectedPreset, set
       className="p-3 flex flex-col h-full relative"
     >
       {!middlePromptMode&&<div className="flex items-center mb-3">
-        <p className="text-xl font-bold">이미지 생성</p>
-          <button className={`${roundButton} bg-gray-400 ml-auto text-sm h-8`} onClick={() => {
+        <p className="text-xl font-bold text-default">이미지 생성</p>
+          <button className={`round-button back-llgray ml-auto text-sm h-8`} onClick={() => {
             curSession!.presetMode = 'preset';
             setSelectedPreset(curSession!.presets.filter(x=>x.type==='preset')[0]);
             sessionService.markUpdated(curSession!.name);
@@ -622,12 +621,12 @@ const NAIStylePreSetEditor: React.FC<Props> = ({ globalMode, selectedPreset, set
       {showStyleEditor && <FloatView onEscape={() => setShowStyleEditor(false)} priority={0}>
         <StyleEditor selectedPreset={editingPreset} onClose={()=>setShowStyleEditor(false)}/>
       </FloatView>}
-      {!vibeSetting && <><span className={"flex-none pb-2 " + grayLabel}>그림체</span>
+      {!vibeSetting && <><span className={"flex-none pb-2 gray-label"}>그림체</span>
       <div className={"overflow-hidden min-h-0 " + (middlePromptMode ? "h-1/5" : "h-1/3")}>
         <div className="h-full w-full flex overflow-auto gap-2">
           {presets.filter(x=>x.type === 'style').map((preset) => (
             <div
-              className={"h-full relative flex-none hover:brightness-95 active:brightness-90 cursor-pointer " + (preset == stylePreset ? "border-2 border-sky-500":"border-2 border-white")}
+              className={"h-full relative flex-none hover:brightness-95 active:brightness-90 cursor-pointer " + (preset == stylePreset ? "border-2 border-sky-500":"border-2 line-color")}
               key={preset.name}
               onContextMenu={e => {
                 show({
@@ -651,7 +650,7 @@ const NAIStylePreSetEditor: React.FC<Props> = ({ globalMode, selectedPreset, set
           ))}
           <div className="h-full relative flex-none flex flex-col">
             <div
-              className="flex-1 w-10 flex m-4 items-center justify-center rounded-xl bg-gray-300 text-gray-600 cursor-pointer hover:brightness-95 active:brightness-90"
+              className="flex-1 w-10 flex m-4 items-center justify-center rounded-xl clickable back-lllgray"
               onClick={()=>{
                 setEditingPreset(undefined);
                 setShowStyleEditor(true);
@@ -696,9 +695,9 @@ const NAIStylePreSetEditor: React.FC<Props> = ({ globalMode, selectedPreset, set
       {!samplerSetting && !vibeSetting &&
         <div className="flex-none mt-3">
       <div className="mt-auto flex gap-2 items-center">
-        <span className={"flex-none " + grayLabel}>시드: </span>
+        <span className={"flex-none gray-label"}>시드: </span>
         <input
-          className={`w-full ${grayInput}`}
+          className={`w-full gray-input`}
           disabled={middlePromptMode && presetEditLock}
           value={commonSetup.shared.seed ?? ''}
           onChange={(e) => {

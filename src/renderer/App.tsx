@@ -17,27 +17,22 @@ import {
   sessionService,
   appUpdateNoticeService,
   imageService,
-  ContextAlt,
   SceneContextAlt,
   localAIService,
   backend,
   ImageContextAlt,
   isMobile,
   ContextMenuType,
-  PreSetShared,
-  PreSetMode,
   StyleContextAlt,
   dataUriToBase64,
   embedJSONInPNG,
-  readJSONFromPNG,
-  NAIStylePreSet,
   importStyle,
 } from './models';
 import SessionSelect from './SessionSelect';
 import PreSetEditor from './PreSetEdtior';
 import SceneQueuControl, { SceneCell } from './SceneQueueControl';
 import TaskQueueControl from './TaskQueueControl';
-import NAILogin from './NAILogin';
+import TobBar from './TobBar';
 import AlertWindow from './AlertWindow';
 import { DropdownSelect, TabComponent } from './UtilComponents';
 import PieceEditor, { PieceCell } from './PieceEditor';
@@ -57,6 +52,9 @@ import React from 'react';
 import { CellPreview } from './ResultViewer';
 import { SlotPiece } from './SceneEditor';
 import { v4 } from 'uuid';
+
+import styles from './App.module.scss';
+import { StackFixed, StackGrow, VerticalStack } from './LayoutComponents';
 
 export interface Context {
   curSession: Session | undefined;
@@ -134,6 +132,7 @@ export default function App() {
       taskQueueService.stop();
     };
   }, []);
+  const [darkMode, setDarkMode] = useState(false);
   const [curSession, setCurSession] = useState<Session | undefined>(undefined);
   const [selectedPreset, setSelectedPreset] = useState<PreSet | undefined>(
     undefined,
@@ -142,6 +141,17 @@ export default function App() {
   const [messages, setMessages] = useState<string[]>([]);
   const [dialogs, setDialogs] = useState<Dialog[]>([]);
   const updatedIgnored = useRef<boolean>(false);
+  useEffect(() => {
+    const refreshDarkMode = async () => {
+      const conf = await backend.getConfig();
+      setDarkMode(!conf.whiteMode);
+    };
+    refreshDarkMode();
+    sessionService.addEventListener('config-changed', refreshDarkMode);
+    return () => {
+      sessionService.removeEventListener('config-changed', refreshDarkMode);
+    }
+  }, []);
   useEffect(() => {
     const handleUpdate = () => {
       if (appUpdateNoticeService.outdated && !updatedIgnored.current) {
@@ -589,68 +599,66 @@ export default function App() {
         enableMouseEvents: false,
         delayTouchStart: 400,
       }}>
-      <div className="flex flex-col relative h-screen w-screen overflow-hidden">
+      <div className={"flex flex-col relative h-screen w-screen bg-white dark:bg-slate-900 " + (darkMode?"dark":"")}>
         <div className="z-30">
-        <DnDPreview/>
+          <DnDPreview/>
         </div>
         <ErrorBoundary
           onErr={(error, errorInfo) => {
             pushMessage(`${error.message}`);
           }}
         >
-            <FloatViewProvider>
-            <ContextMenuList/>
-            <div className="flex flex-col flex-1 overflow-hidden">
-              <div className="grow-0">
-                <NAILogin
+        <FloatViewProvider>
+          <ContextMenuList/>
+          <VerticalStack>
+            <StackFixed>
+              <TobBar
+              setCurSession={setCurSession}
+              setSelectedPreset={setSelectedPreset}
+                />
+            </StackFixed>
+            <StackGrow className="flex">
+              {curSession && selectedPreset && (
+                <>
+                  <StackGrow outerClassName="hidden md:block">
+                    <PreSetEditor
+                      type={curSession.presetMode}
+                      key={editorKey}
+                      middlePromptMode={false}
+                      selectedPreset={selectedPreset}
+                      setSelectedPreset={setSelectedPreset}
+                    />
+                  </StackGrow>
+                  <StackGrow>
+                    <TabComponent key={curSession.name} tabs={tabs}
+                    toggleView={<PreSetEditor
+                      type={curSession.presetMode}
+                      key={editorKey+"2"}
+                      globalMode
+                      selectedPreset={selectedPreset}
+                      middlePromptMode={false}
+                      setSelectedPreset={setSelectedPreset}
+                    />}
+                    />
+                  </StackGrow>
+                </>
+              )}
+            </StackGrow>
+          </VerticalStack>
+        </FloatViewProvider>
+        <StackFixed>
+          <div className="px-3 py-2 border-t flex gap-3 items-center line-color">
+            <div className="hidden md:block flex-1">
+              <SessionSelect
                 setCurSession={setCurSession}
                 setSelectedPreset={setSelectedPreset}
-                 />
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <div className="flex w-full h-full overflow-hidden">
-                {curSession && selectedPreset && (
-                  <>
-                    <div className="flex-1 overflow-hidden hidden md:block">
-                      <PreSetEditor
-                        type={curSession.presetMode}
-                        key={editorKey}
-                        middlePromptMode={false}
-                        selectedPreset={selectedPreset}
-                        setSelectedPreset={setSelectedPreset}
-                      />
-                    </div>
-                    <div className="flex-1 overflow-hidden">
-                      <TabComponent key={curSession.name} tabs={tabs}
-                      toggleView={<PreSetEditor
-                        type={curSession.presetMode}
-                        key={editorKey+"2"}
-                        globalMode
-                        selectedPreset={selectedPreset}
-                        middlePromptMode={false}
-                        setSelectedPreset={setSelectedPreset}
-                      />}
-                      />
-                    </div>
-                  </>
-                )}
-                </div>
-              </div>
+              />
             </div>
-            </FloatViewProvider>
-          <div className="grow-0">
-            <div className="px-3 py-2 border-t flex gap-3 items-center">
-              <div className="hidden md:block flex-1">
-                <SessionSelect
-                  setCurSession={setCurSession}
-                  setSelectedPreset={setSelectedPreset}
-                />
-              </div>
-              <div className="flex flex-none gap-4 ml-auto">
-                <TaskQueueControl setSamples={setSamples} />
-              </div>
+            <div className="flex flex-none gap-4 ml-auto">
+              <TaskQueueControl setSamples={setSamples} />
             </div>
           </div>
+        </StackFixed>
         </ErrorBoundary>
         <AlertWindow setMessages={setMessages} />
         <ConfirmWindow setDialogs={setDialogs} />

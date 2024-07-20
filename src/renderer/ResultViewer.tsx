@@ -38,8 +38,7 @@ import { AppContext } from './App';
 import { userInfo } from 'os';
 import { CustomScrollbars } from './UtilComponents';
 import Tournament from './Tournament';
-import { grayLabel, roundButton } from './styles';
-import { FaCalendarTimes, FaEdit, FaFolder, FaPaintBrush, FaStar, FaTrash } from 'react-icons/fa';
+import { FaArrowLeft, FaArrowRight, FaCalendarTimes, FaEdit, FaFolder, FaPaintBrush, FaStar, FaTrash } from 'react-icons/fa';
 import { PromptHighlighter } from './SceneEditor';
 import QueueControl from './SceneQueueControl';
 import { FloatView } from './FloatView';
@@ -241,7 +240,7 @@ const Cell = memo(({
     <div
       key={index.toString() + path + imageSize.toString()}
       style={style}
-      className={"image-cell relative hover:brightness-95 active:brightness-90 bg-white cursor-pointer " + (isDragging ? "opacity-0 no-touch" : "") + (isOver ? " border-2 border-sky-500" : "")}
+      className={"image-cell relative hover:brightness-95 active:brightness-90 bg-white dark:bg-slate-900 cursor-pointer " + (isDragging ? "opacity-0 no-touch" : "") + (isOver ? " border-2 border-sky-500" : "")}
       draggable
       onClick={() => {
         if (path) {
@@ -519,11 +518,11 @@ const ResultDetailView = ({
 
 
   return (
-      <div className="z-10 bg-white w-full h-full flex overflow-hidden flex-col md:flex-row">
+      <div className="z-10 bg-white dark:bg-slate-900 w-full h-full flex overflow-hidden flex-col md:flex-row">
         <div className="flex-none md:w-1/3 p-2 md:p-4">
           <div className="flex gap-2 md:gap-3 mb-2 md:mb-6 flex-wrap w-full">
             <button
-              className={`${roundButton} bg-sky-500`}
+              className={`round-button back-sky`}
               onClick={async () => {
                 await backend.showFile(paths[selectedIndex]);
               }}
@@ -532,7 +531,7 @@ const ResultDetailView = ({
             </button>
             {!isMobile &&
             <button
-              className={`${roundButton} bg-sky-500`}
+              className={`round-button back-sky`}
               onClick={async () => {
                 await backend.openImageEditor(paths[selectedIndex]);
                 watchedImages.current.add(paths[selectedIndex]);
@@ -541,7 +540,7 @@ const ResultDetailView = ({
             >이미지 편집</button>
             }
             <button
-              className={`${roundButton} bg-red-500`}
+              className={`round-button back-red`}
               onClick={() => {
                 pushDialog({
                   type: 'confirm',
@@ -556,7 +555,7 @@ const ResultDetailView = ({
             {buttons.map((button, index) => (
               <button
                 key={index}
-                className={`${roundButton} ${button.className}`}
+                className={`round-button ${button.className}`}
                 onClick={() => {
                   button.onClick(scene, paths[selectedIndex], onClose);
                 }}
@@ -565,36 +564,36 @@ const ResultDetailView = ({
               </button>
             ))}
           </div>
-          <button className={`${roundButton} bg-gray-500 md:hidden`} onClick={() => setShowPrompt(!showPrompt)}>
+          <button className={`round-button back-gray md:hidden`} onClick={() => setShowPrompt(!showPrompt)}>
             {!showPrompt ? '자세한 정보 보기' : '자세한 정보 숨기기'}
           </button>
           <div className={"mt-2 md:mt-0 md:block " + (showPrompt?"block":"hidden")}>
             <div className="max-w-full mb-2">
-              <span className={grayLabel}>파일이름: </span>
+              <span className='gray-label'>파일이름: </span>
               <span>{filename}</span>
             </div>
             <div className="w-full mb-2">
-              <div className={grayLabel}>프롬프트 </div>
+              <div className='gray-label'>프롬프트 </div>
               <PromptHighlighter text={middlePrompt} className="w-full h-24 overflow-auto"/>
             </div>
             <div className="w-full mb-2">
-              <div className={grayLabel}>네거티브 프롬프트 </div>
+              <div className='gray-label'>네거티브 프롬프트 </div>
               <PromptHighlighter text={uc} className="w-full h-24 overflow-auto"/>
             </div>
             <div className="w-full mb-2">
-              <span className={grayLabel}>시드: </span>
+              <span className='gray-label'>시드: </span>
               {seed}
             </div>
             <div className="w-full mb-2">
-              <span className={grayLabel}>프롬프트 가이던스: </span>
+              <span className='gray-label'>프롬프트 가이던스: </span>
               {scale}
             </div>
             <div className="w-full mb-2">
-              <span className={grayLabel}>샘플러: </span>
+              <span className='gray-label'>샘플러: </span>
               {sampler}
             </div>
             <div className="w-full mb-2">
-              <span className={grayLabel}>스텝: </span>
+              <span className='gray-label'>스텝: </span>
               {steps}
             </div>
           </div>
@@ -621,20 +620,20 @@ const ResultDetailView = ({
           )}
           <div className="absolute bottom-0 md:bottom-auto right-0 md:top-10 flex gap-3 p-4 w-full md:w-auto">
             <button
-              className={`${roundButton} ml-0 md:ml-auto h-10 md:h-auto w-20 md:w-auto bg-gray-500 mr-auto md:mr-0 text-lg md:text-base`}
+              className={`round-button  ml-0 md:ml-auto h-10 md:h-8 w-20 md:w-auto bg-gray-300 text-gray-700 mr-auto md:mr-0 text-xl md:text-base`}
               onClick={() => {
                 setSelectedIndex((selectedIndex - 1 + paths.length) % paths.length);
               }}
             >
-              이전
+              <FaArrowLeft/>
             </button>
             <button
-              className={`${roundButton} h-10 md:h-auto w-20 md:w-auto bg-gray-500 text-lg md:text-base`}
+              className={`round-button h-10 md:h-8 w-20 md:w-auto bg-gray-300 text-xl text-gray-700 md:text-base`}
               onClick={() => {
                 setSelectedIndex((selectedIndex + 1) % paths.length);
               }}
             >
-              다음
+              <FaArrowRight/>
             </button>
           </div>
         </div>
@@ -775,9 +774,9 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
           />
         </FloatView>
       )}
-      <div className="flex-none p-2 md:p-4 border-b border-gray-300">
+      <div className="flex-none p-2 md:p-4 border-b line-color">
         <div className="mb-2 md:mb-4 flex items-center">
-          <span className="font-bold text-lg md:text-2xl">
+          <span className="font-bold text-lg md:text-2xl text-default">
             {
               !isMobile ? (scene.type === "inpaint" ? <span className="inline-flex items-center gap-1">🖌️ 인페인트 씬 {scene.name}의 생성된 이미지</span> : <span className="inline-flex items-center gap-1">🖼️ 일반 씬 {scene.name}의 생성된 이미지</span>)
               : (scene.type === "inpaint" ? <span className="inline-flex items-center gap-1">🖌️ 인페인트 씬 {scene.name}</span> : <span className="inline-flex items-center gap-1">🖼️ 일반 씬 {scene.name}</span>)
@@ -787,34 +786,34 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
         <div className="md:flex justify-between items-center mt-2 md:mt-4">
           <div className="flex gap-2 md:gap-3">
             <button
-              className={`${roundButton} bg-sky-500`}
+              className={`round-button back-sky`}
               onClick={() => setTournament(true)}
             >
               이상형 월드컵
             </button>
             <button
-              className={`${roundButton} bg-green-500`}
+              className={`round-button back-green`}
               onClick={async () => {
                 await queueGenericScene(curSession!, selectedPreset!, scene, samples);
               }}>
               {!isMobile?"예약 추가":<FaPlus/>}
             </button>
             <button
-              className={`${roundButton} bg-gray-500`}
+              className={`round-button back-gray`}
               onClick={() => {
                 removeTaskFromGenericScene(curSession!, scene);
               }}>
               {!isMobile?"예약 제거":<FaCalendarTimes/>}
             </button>
             <button
-              className={`${roundButton} bg-orange-400`}
+              className={`round-button back-orange`}
               onClick={() => {
                 onEdit(scene);
               }}>
               {!isMobile?"씬 편집":<FaEdit/>}
             </button>
             {!isMobile && <button
-              className={`${roundButton} bg-sky-500`}
+              className={`round-button back-sky`}
               onClick={async () => {
                 await backend.showFile(getResultDirectory(curSession!, scene));
               }}
@@ -822,7 +821,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
               <FaFolder/>
             </button>}
             <button
-              className={`${roundButton} bg-red-500`}
+              className={`round-button back-red`}
               onClick={() => {
                 onDeleteImages(scene);
               }}>
@@ -831,7 +830,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
           </div>
           {scene.type === 'scene' && <span className="flex ml-auto gap-1 md:gap-2 mt-2 md:mt-0">
             {tabNames.map((tabName, index) => (
-            <button className={`${roundButton} ` + (selectedTab === index ? 'bg-sky-500' : 'bg-gray-400')} onClick={() => setSelectedTab(index)}>
+            <button className={`round-button ` + (selectedTab === index ? 'back-sky' : 'back-llgray')} onClick={() => setSelectedTab(index)}>
               {tabName}
             </button>
             ))}
@@ -878,13 +877,13 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(({
           onSelected={onSelected}
         />
       </div>
-      <div className="absolute gap-1 m-2 bottom-0 bg-white p-1 right-0 opacity-30 hover:opacity-100 transition-all flex">
+      <div className="absolute gap-1 m-2 bottom-0 bg-white dark:bg-slate-800 p-1 right-0 opacity-30 hover:opacity-100 transition-all flex">
       {selectedTab !== 1 && imagesSizes.map((size, index) => (
         <button
           key={index}
           className={`text-white w-8 h-8 hover:brightness-95 active:brightness-90 cursor-pointer
           ${
-            imageSize === index ? 'bg-gray-500' : 'bg-gray-400'
+            imageSize === index ? 'bg-gray-600' : 'bg-gray-400'
           }`}
           onClick={() => {
             setImageSize(index);
