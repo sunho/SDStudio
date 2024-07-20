@@ -152,7 +152,6 @@ jobs:
           cp capacitor.config.deploy.ts capacitor.config.ts
           npm install
           npm install ./externals/capacitor-background-mode
-          npm run postinstall-electron
 
       - name: Get version and commit hash
         id: get-version
