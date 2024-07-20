@@ -143,7 +143,7 @@
     "react-virtualized": "^9.22.5",
     "react-window": "^1.8.10",
     "react-window-infinite-loader": "^1.0.9",
-    "react-zoom-pan-pinch": "^3.6.0",
+    "react-zoom-pan-pinch": "3.6.0",
     "resize-observer-polyfill": "^1.5.1",
     "textarea-caret": "^3.1.0",
     "uuid": "^9.0.1"
