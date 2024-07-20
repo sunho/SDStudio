@@ -1,6 +1,5 @@
 import { useContext, useEffect, useState } from 'react';
 import { AppContext } from './App';
-import { grayInput } from './styles';
 import { DropdownSelect } from './UtilComponents';
 
 export interface Dialog {
@@ -52,8 +51,8 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
     <>
       {dialogs.length > 0 && (
         <div className="fixed flex justify-center w-full confirm-window">
-          <div className="flex flex-col justify-between m-4 p-4 rounded-md shadow-xl bg-white text-black w-96">
-            <div className="break-keep text-center">
+          <div className="flex flex-col justify-between m-4 p-4 rounded-md shadow-xl bg-white dark:bg-slate-800 text-black w-96">
+            <div className="break-keep text-center text-default">
               {curDialog.text}
             </div>
             {curDialog.type === 'input-confirm' && (
@@ -61,20 +60,20 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                className={`${grayInput} mt-4 mb-4`}
+                className={`gray-input mt-4 mb-4`}
               />
             )}
             <div className={"justify-end mt-4 " + ((curDialog.type === 'select' || curDialog.type === 'dropdown') ? 'flex flex-col gap-2' : 'flex')}>
               {curDialog.type === 'confirm' && (
                 <>
                   <button
-                    className={"mr-2 px-4 py-2 rounded text-white " + (curDialog.green ? "bg-sky-500" : "bg-red-500")}
+                    className={"mr-2 px-4 py-2 rounded clickable " + (curDialog.green ? "back-sky" : "back-red")}
                     onClick={handleConfirm}
                   >
                     확인
                   </button>
                   <button
-                    className="px-4 py-2 rounded bg-gray-500 text-white"
+                    className="px-4 py-2 rounded back-gray clickable "
                     onClick={() => {
                       setDialogs(dialogs.slice(0, dialogs.length - 1));
                       setInputValue('');
@@ -86,7 +85,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
               )}
               {curDialog.type === 'yes-only' && (
                 <button
-                  className="px-4 py-2 rounded bg-sky-500 text-white"
+                  className="px-4 py-2 rounded back-sky clickable"
                   onClick={handleConfirm}
                 >
                   확인
@@ -95,13 +94,13 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
               {curDialog.type === 'input-confirm' && (
                 <>
                   <button
-                    className="mr-2 px-4 py-2 rounded bg-sky-500 text-white"
+                    className="mr-2 px-4 py-2 rounded back-sky clickable"
                     onClick={handleConfirm}
                   >
                     확인
                   </button>
                   <button
-                    className="px-4 py-2 rounded bg-gray-500 text-white"
+                    className="px-4 py-2 rounded back-gray clickable"
                     onClick={() => {
                       setDialogs(dialogs.slice(0, dialogs.length - 1));
                       setInputValue('');
@@ -116,7 +115,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                   {curDialog.items!.map((item, idx) => (
                     <button
                       key={idx}
-                      className={"w-full px-4 py-2 rounded mr-2 " + (curDialog.graySelect?"bg-gray-200 text-gray-700":"bg-sky-500 text-white")}
+                      className={"w-full px-4 py-2 rounded mr-2 clickable " + (curDialog.graySelect?"back-lgray":"back-sky")}
                       onClick={() => {
                         setDialogs(dialogs.slice(0, dialogs.length - 1));
                         if (curDialog.callback) {
@@ -128,7 +127,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                     </button>
                   ))}
                   <button
-                    className="w-full px-4 py-2 rounded bg-gray-500 text-white"
+                    className="w-full px-4 py-2 clickable rounded back-gray"
                     onClick={() => {
                       setDialogs(dialogs.slice(0, dialogs.length - 1));
                     }}
@@ -155,13 +154,13 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                   </div>
                   <div className="flex gap-2 ml-auto mt-5">
                     <button
-                      className="flex-1 px-4 py-2 block rounded bg-sky-500 text-white"
+                      className="flex-1 px-4 py-2 block rounded back-sky clickable"
                       onClick={handleConfirm}
                     >
                       확인
                     </button>
                     <button
-                      className="flex-1 px-4 py-2 block rounded bg-gray-500 text-white"
+                      className="flex-1 px-4 py-2 block rounded back-gray clickable"
                       onClick={() => {
                         setDialogs(dialogs.slice(0, dialogs.length - 1));
                         setInputValue('');

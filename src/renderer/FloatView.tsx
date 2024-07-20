@@ -78,10 +78,10 @@ export const FloatViewProvider: React.FC<FloatViewProviderProps> = ({ children }
       {children}
       {!!views.length && <div className={"top-0 absolute w-full z-10 float-view " + (views[0].showToolbar ? 'show-toolbar' : 'h-full')}>
       {views.map((view) => (
-        <div key={view.id} className="bg-white h-full w-full" style={{ position: 'absolute', zIndex: view.id }}>
+        <div key={view.id} className="bg-white dark:bg-slate-900 h-full w-full" style={{ position: 'absolute', zIndex: view.id }}>
         <div className="flex flex-col h-full w-full">
-            <div className="flex-none border-b border-gray-300">
-              <button className="button" onClick={(e) => {
+            <div className="flex-none border-b line-color">
+              <button className="text-default button" onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   closeTopView();

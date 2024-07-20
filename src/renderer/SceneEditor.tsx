@@ -34,7 +34,6 @@ import { FaTrash } from 'react-icons/fa';
 import { AppContext } from './App';
 import Denque from 'denque';
 import { writeFileSync } from 'original-fs';
-import { grayInput, primaryColor, roundButton } from './styles';
 import { windowsStore } from 'process';
 import Scrollbars from 'react-custom-scrollbars-2';
 import PromptEditTextArea from './PromptEditTextArea';
@@ -63,7 +62,7 @@ export const PromptHighlighter = ({
   const { curSession } = useContext(AppContext)!;
   return (
     <div
-      className={'max-w-full break-words bg-gray-200 ' + (className ?? '')}
+      className={'max-w-full break-words bg-gray-200 dark:bg-slate-700 ' + (className ?? '')}
       dangerouslySetInnerHTML={{ __html: highlightPrompt(curSession!, text) }}
     ></div>
   );
@@ -150,9 +149,9 @@ export const BigPromptEditor = ({ sceneMode, selectedPreset, presetMode, getMidd
           setSelectedPreset={setSelectedPreset} />
       </div>
       <div className="h-full flex flex-col p-2 overflow-hidden block md:hidden">
-        <div className="flex-none font-bold">중위 프롬프트 (이 씬에만 적용됨):</div>
+        <div className="flex-none font-bold text-sub">중위 프롬프트 (이 씬에만 적용됨):</div>
         <div className="flex-1 p-2 overflow-hidden"><PromptEditTextArea disabled={editDisabled} onChange={setMiddlePrompt} value={getMiddlePrompt()}/></div>
-        <div className="flex-none"><button className={`${roundButton} ${primaryColor}`} onClick={() => setPromptOpen(true)}>상세설정</button></div>
+        <div className="flex-none"><button className={`round-button back-sky`} onClick={() => setPromptOpen(true)}>상세설정</button></div>
       </div>
     </div>
     <div className="flex-none h-2/3 md:h-auto md:w-2/3 overflow-hidden">
@@ -162,7 +161,7 @@ export const BigPromptEditor = ({ sceneMode, selectedPreset, presetMode, getMidd
         src={image} />}
         </div>
         <div className="ml-auto flex-none flex gap-4 pt-2 mb-2 md:mb-0">
-        {path && <button className={`${roundButton} bg-orange-400 h-8 md:w-36 flex items-center justify-center`}
+        {path && <button className={`round-button back-orange h-8 md:w-36 flex items-center justify-center`}
           onClick={()=>{
             setMainImage && setMainImage(path);
           }}
@@ -172,7 +171,7 @@ export const BigPromptEditor = ({ sceneMode, selectedPreset, presetMode, getMidd
         <TaskProgressBar fast/>
         {!taskQueueService.isRunning() ? (
           <button
-            className={`${roundButton} bg-green-500 h-8 w-16 md:w-36 flex items-center justify-center`}
+            className={`round-button back-green h-8 w-16 md:w-36 flex items-center justify-center`}
             onClick={()=>{
               queuePrompt(getMiddlePrompt(), (path: string) => {
                 setPath(path);
@@ -183,7 +182,7 @@ export const BigPromptEditor = ({ sceneMode, selectedPreset, presetMode, getMidd
           </button>
         ) : (
           <button
-            className={`${roundButton} bg-red-500 h-8 w-16 md:w-36 flex items-center justify-center`}
+            className={`round-button back-red h-8 w-16 md:w-36 flex items-center justify-center`}
             onClick={() => {
               taskQueueService.removeAllTasks();
               taskQueueService.stop();
@@ -248,7 +247,7 @@ export const SlotPiece = ({ scene, piece, onChanged, removePiece, moveSlotPiece,
     key={piece.id!}
     ref={(node) => drag(drop(node))}
     style={style}
-    className={'p-3 m-2 bg-gray-200 rounded-xl ' + (isDragging ? 'opacity-0' : '') + (isOver ? ' outline outline-sky-500' : '')}
+    className={'p-3 m-2 bg-gray-200 dark:bg-slate-600 rounded-xl ' + (isDragging ? 'opacity-0' : '') + (isOver ? ' outline outline-sky-500' : '')}
   >
     <div className={"mb-3 h-12 w-28 md:h-24 md:w-48"}>
     <PromptEditTextArea
@@ -263,7 +262,7 @@ export const SlotPiece = ({ scene, piece, onChanged, removePiece, moveSlotPiece,
     />
     </div>
     <div className="flex gap-2 select-none">
-      <label>활성화</label>
+      <label className="gray-label">활성화</label>
       <input
         type="checkbox"
         checked={piece.enabled}
@@ -274,13 +273,13 @@ export const SlotPiece = ({ scene, piece, onChanged, removePiece, moveSlotPiece,
         }}
       />
       <button
-        className="active:brightness-90 hover:brightness-95 ml-auto"
+        className="active:brightness-90 hover:brightness-95 ml-auto text-red-500 dark:text-red-400"
         onClick={() => {
           if (!moveSlotPiece) return;
           removePiece && removePiece(piece);
         }}
       >
-        <FaTrash size={20} color="#ef4444" />
+        <FaTrash size={20} />
       </button>
     </div>
   </div>
@@ -365,7 +364,7 @@ const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
             <SlotPiece key={piece.id!} scene={scene} piece={piece} onChanged={onChanged} removePiece={(piece: PromptPiece) => removePiece(slot, slot.indexOf(piece)!)} moveSlotPiece={moveSlotPiece}/>
           ))}
           <button
-            className="p-2 m-2 w-14 bg-gray-200 rounded-xl flex justify-center"
+            className="p-2 m-2 w-14 back-lllgray clickable rounded-xl flex justify-center"
             onClick={() => {
               slot.push({ prompt: '', enabled: true, id: uuidv4()});
               onChanged && onChanged();
@@ -376,7 +375,7 @@ const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
         </div>
       ))}
       <button
-        className="p-2 m-2 h-14 flex items-center bg-gray-200 rounded-xl"
+        className="p-2 m-2 h-14 flex items-center back-lllgray clickable rounded-xl"
         onClick={() => {
           scene.slots.push([{ prompt: '', enabled: true, id: uuidv4() }]);
           onChanged && onChanged();
@@ -478,9 +477,9 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
       <div className="flex flex-col overflow-hidden h-full w-full">
       <div className="grow-0 pt-2 px-3 flex gap-3 items-center text-nowrap flex-wrap mb-2 md:mb-0">
         <div className="flex items-center gap-2">
-        <label>씬 이름:</label>
+        <label className="gray-label">씬 이름:</label>
         <input
-          className={grayInput}
+          className='gray-input'
           type="text"
           value={curName}
           onChange={(e) => {
@@ -489,7 +488,7 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
         />
         </div>
         <div className="flex items-center gap-2 ">
-        <label>해상도:</label>
+        <label className="gray-label">해상도:</label>
         <div className="md:w-36">
           <DropdownSelect
             options={resolutionOptions}
@@ -515,7 +514,7 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
         </div>
 
         <button
-          className={`${roundButton} ${primaryColor}`}
+          className={`round-button back-sky`}
           onClick={async () => {
             if (curName in curSession!.scenes) {
               pushMessage('해당 이름의 씬이 이미 존재합니다');
@@ -529,7 +528,7 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
           이름 변경
         </button>
         <button
-          className={`${roundButton} bg-red-500`}
+          className={`round-button back-red`}
           onClick={() => {
             pushDialog({
               type: 'confirm',

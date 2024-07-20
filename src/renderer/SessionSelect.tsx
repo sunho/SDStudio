@@ -2,7 +2,6 @@ import * as React from 'react';
 import { useContext, useEffect, useState } from 'react';
 import { PreSet, Session, backend, getFirstFile, imageService, sessionService, taskQueueService, zipService } from './models';
 import { AppContext } from './App';
-import { primaryColor, roundButton } from './styles';
 import { DropdownSelect, Option } from './UtilComponents';
 import TaskQueueControl from './TaskQueueControl';
 import {
@@ -76,7 +75,7 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSelectedPreset }) =>
 
   return (
     <div className="flex gap-2 items-center w-full">
-    <span className="hidden md:inline whitespace-nowrap">프로젝트: </span>
+    <span className="hidden md:inline whitespace-nowrap text-sub">프로젝트: </span>
     <div className="md:max-w-80 w-full">
       <DropdownSelect
         menuPlacement="top"
@@ -86,13 +85,13 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSelectedPreset }) =>
       />
     </div>
     <button
-      className={`${roundButton} ${primaryColor} w-18 h-8`}
+      className={`icon-button nback-sky mx-1`}
       onClick={addSession}
     >
       <FaPlus size={18} />
     </button>
     <button
-      className={`${roundButton} bg-orange-500 h-8 w-18`}
+      className={`icon-button nback-orange mx-1`}
       onClick={async () => {
         ctx.pushDialog({
           type: 'select',
@@ -182,7 +181,7 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSelectedPreset }) =>
       <FaShare />
     </button>
     <button
-      className={`${roundButton} bg-red-500 w-18 h-8`}
+      className={`icon-button nback-red mx-1`}
       onClick={deleteSession}
     >
       <FaTrashAlt size={18} />{' '}

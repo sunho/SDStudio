@@ -1118,9 +1118,9 @@ const PromptEditTextArea = ({
     }
   }, []);
 
-  let bgColor = whiteBg ? 'bg-gray-100' : 'bg-gray-200';
+  let bgColor = whiteBg ? 'bg-gray-100 dark:bg-slate-700' : 'bg-gray-200 dark:bg-slate-700';
   if (fullScreen)
-    bgColor = 'bg-white shadow-lg'
+    bgColor = 'bg-white dark:bg-slate-600 shadow-lg'
 
   return (
     <>
@@ -1137,7 +1137,7 @@ const PromptEditTextArea = ({
             if(!disabled)
               setFullScreen(!fullScreen);
           }}
-          className="text-gray-500 hover:text-gray-600 opacity-50 mr-1 mt-1"
+          className="text-gray-500 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-300 opacity-50 mr-1 mt-1"
         >
           {!fullScreen ? <FaExpand></FaExpand> : <FaTimes></FaTimes>}
         </button>

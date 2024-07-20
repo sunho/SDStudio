@@ -865,6 +865,10 @@ export class SessionService extends ResourceSyncService<Session> {
     this.dispatchEvent(new CustomEvent('style-edit-start', { detail: { preset } }));
   }
 
+  configChanged(): void {
+    this.dispatchEvent(new CustomEvent('config-changed', {}));
+  }
+
   async reloadPieceLibraryDB(session: Session) {
     const res = [];
     for (const [k,v] of Object.entries(session.library)) {

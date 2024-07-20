@@ -11,7 +11,6 @@ import {
   ContextMenuType,
 } from './models';
 import { AppContext } from './App';
-import { roundButton } from './styles';
 import { useContextMenu } from 'react-contexify';
 
 interface TournamentProps {
@@ -200,7 +199,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
   const round = scene.round!;
   return (
     <div className="flex flex-col w-full h-full">
-      <div className="p-2 md:p-4 flex flex-none gap-2 items-center">
+      <div className="p-2 md:p-4 flex flex-none gap-2 items-center text-default">
         {!!players.length ? (
           <span className="font-bold text-xl">
             {finalRank + 1}위 결정 이상형 월드컵 {getCurWinRank()} ({Math.floor(round.curPlayer/2) + 1}/
@@ -210,11 +209,11 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
           <span className="font-bold text-xl">모든 순위가 확정되었습니다</span>
         )}
       </div>
-      <div className="px-2 pb-2 md:px-4 md:pb-4 flex flex-none gap-2 w-full border-b border-gray-300 flex-wrap">
-        <button className={`${roundButton} bg-sky-500`} onClick={showFolder}>
+      <div className="px-2 pb-2 md:px-4 md:pb-4 flex flex-none gap-2 w-full border-b line-color flex-wrap">
+        <button className={`round-button back-sky`} onClick={showFolder}>
           결과 폴더 열기
         </button>
-        <button className={`${roundButton} bg-red-500`} onClick={resetRanks}>
+        <button className={`round-button back-red`} onClick={resetRanks}>
           순위 초기화
         </button>
         <button
@@ -225,14 +224,14 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
               setPlayers([round.players[round.curPlayer].path, round.players[round.curPlayer+1].path]);
             }
           }}
-          className={`${roundButton} bg-gray-500`}
+          className={`round-button back-gray`}
         >
           실행취소
         </button>
-        <button className={`${roundButton} bg-orange-400`} onClick={reroll}>
+        <button className={`round-button back-orange`} onClick={reroll}>
           대진 리롤
         </button>
-        <button className={`${roundButton} bg-orange-400`} onClick={() => {
+        <button className={`round-button back-orange`} onClick={() => {
           if (players.length && !lock.current){
             round.winMask[round.curPlayer] = false;
             round.winMask[round.curPlayer+1] = false;
@@ -241,7 +240,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
         }}>
           둘다 패배 처리
         </button>
-        <button className={`${roundButton} bg-orange-400`} onClick={() => {
+        <button className={`round-button back-orange`} onClick={() => {
           if (players.length && !lock.current){
             round.winMask[round.curPlayer] = true;
             round.winMask[round.curPlayer+1] = true;
@@ -280,7 +279,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
                 }}
               />
             </div>
-            <div className="bg-gray-300 h-px w-full md:w-px md:h-full flex-none"></div>
+            <div className="bg-gray-300 dark:bg-slate-700 h-px w-full md:w-px md:h-full flex-none"></div>
             <div className="flex-1 justify-center items-center flex overflow-hidden">
               <img
                 onClick={() => {
