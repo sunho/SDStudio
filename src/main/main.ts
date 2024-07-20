@@ -9,7 +9,7 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain, screen, webContents, dialog } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, screen, webContents, dialog, nativeImage, clipboard } from 'electron';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
@@ -316,6 +316,11 @@ ipcMain.handle('select-file', async () => {
   } else {
     return filePaths[0]
   }
+});
+
+ipcMain.handle('copy-image-to-clipboard', async (event, imagePath) => {
+  const image = nativeImage.createFromPath(APP_DIR + '/' + imagePath);
+  clipboard.writeImage(image);
 });
 
 const util = require('util');

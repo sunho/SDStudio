@@ -42,7 +42,8 @@ export type Channels =
   | 'select-dir'
   | 'unzip-files'
   | 'select-file'
-  | 'get-remain-credits';
+  | 'get-remain-credits'
+  | 'copy-image-to-clipboard';
 
 const electronHandler = {
   ipcRenderer: {

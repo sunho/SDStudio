@@ -13,6 +13,7 @@ dependencies {
     implementation project(':capacitor-community-file-opener')
     implementation project(':capacitor-community-http')
     implementation project(':capacitor-app')
+    implementation project(':capacitor-clipboard')
     implementation project(':capacitor-filesystem')
     implementation project(':capacitor-share')
     implementation project(':capawesome-capacitor-file-picker')

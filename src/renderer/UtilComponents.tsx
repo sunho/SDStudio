@@ -182,7 +182,7 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs, toggleVi
           ))}
         </div>
         <div className="flex md:hidden gap-1 w-full">
-          {!tabs[activeTab].banToggle && toggleView && <button className='active:brightness-90 hover:brightness-95 select-none h-8 md:hidden text-sm back-gray px-2 flex justify-center items-center mr-auto'
+          {!tabs[activeTab].banToggle && toggleView && <button className='active:brightness-90 hover:brightness-95 select-none h-8 md:hidden text-sm back-llgray px-2 flex justify-center items-center mr-auto'
             onClick={() => setToggleViewOpen(!toggleViewOpen)}
             >
             {toggleViewOpen?'프롬프트 닫기':'프롬프트 열기'}
@@ -194,7 +194,7 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs, toggleVi
                 'active:brightness-90 hover:brightness-95 select-none px-2 text-sm h-8 ' +
                 (index === activeTab
                   ? `back-sky`
-                  : 'back-gray')
+                  : 'back-llgray')
               }
               onClick={() => handleTabClick(index)}
             >

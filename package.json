@@ -19,7 +19,7 @@
     "url": "https://sunho.io"
   },
   "main": "./src/main/main.ts",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "scripts": {
     "build": "concurrently \"npm run build:main\" \"npm run build:renderer\"",
     "build:dll": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true TS_NODE_PROJECT=tsconfig.app.json webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.ts",
@@ -93,6 +93,7 @@
     "@capacitor-community/http": "^1.4.1",
     "@capacitor/android": "^6.1.0",
     "@capacitor/app": "^6.0.0",
+    "@capacitor/clipboard": "^6.0.0",
     "@capacitor/core": "^6.1.0",
     "@capacitor/filesystem": "^6.0.0",
     "@capacitor/ios": "^6.1.0",

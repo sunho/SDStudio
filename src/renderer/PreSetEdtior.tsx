@@ -80,7 +80,7 @@ const PreSetSelect = ({ selectedPreset, setSelectedPreset, onChange }: { selecte
       <button
         className={`icon-button`}
         onClick={() => {
-          if (length <= 1) {
+          if (presets.length <= 1) {
             pushMessage('프리셋은 최소 한 개 이상이어야 합니다');
             return;
           }

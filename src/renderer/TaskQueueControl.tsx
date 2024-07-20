@@ -255,7 +255,7 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
         }}
       />}
       <div className="whitespace-nowrap">
-        <span className="whitespace-nowrap">
+        <span className="whitespace-nowrap text-default">
         개수:
         </span>
         <input
