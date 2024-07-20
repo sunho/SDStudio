@@ -1579,7 +1579,7 @@ class GenerateImageTaskHandler implements TaskHandler {
       prompt = '1girl';
     }
     const vibes = await Promise.all(params.preset.vibes.map(async (x: any) => ({
-      image: dataUriToBase64((await imageService.fetchImage(x.path))!),
+      image: dataUriToBase64((await imageService.fetchImage(imageService.getVibesDir(params.session) + '/' + x.path.split('/').pop()!))!),
       info: x.info,
       strength: x.strength
     })))
