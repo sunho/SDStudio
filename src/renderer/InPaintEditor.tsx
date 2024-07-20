@@ -176,14 +176,14 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
         <div className="mb-1 flex items-center gap-3 flex-none">
           <label className="gray-label">
             씬 이름:{' '}
+          </label>
             <input
               type="text"
-              className='gray-input'
+              className='gray-input flex-1'
               value={taskName}
               disabled={!!editingScene}
               onChange={handleTaskNameChange}
             />
-          </label>
           {editingScene && (
             <button
               className={`round-button back-red`}

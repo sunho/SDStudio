@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'io.sunho.SDStudio',
   appName: 'SDStudio',
-  webDir: 'dist',
+  webDir: 'release/app/dist/renderer',
   server: {
     url: "http://192.168.0.118:5173",
     cleartext: true
