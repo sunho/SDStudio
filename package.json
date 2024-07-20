@@ -1,5 +1,5 @@
 {
-  "name": "SDStudio",
+  "name": "sdstudio",
   "description": "A foundation for scalable desktop apps",
   "keywords": [
     "electron",
@@ -19,26 +19,21 @@
     "url": "https://sunho.io"
   },
   "main": "./src/main/main.ts",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "scripts": {
     "build": "concurrently \"npm run build:main\" \"npm run build:renderer\"",
-    "build:dll": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true TS_NODE_PROJECT=tsconfig.app.json webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.ts",
-    "build:main": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true TS_NODE_PROJECT=tsconfig.app.json webpack --config ./.erb/configs/webpack.config.main.prod.ts",
-    "build:renderer": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true TS_NODE_PROJECT=tsconfig.app.json webpack --config ./.erb/configs/webpack.config.renderer.prod.ts",
-    "postinstall-electron": "ts-node --project tsconfig.app.json .erb/scripts/check-native-dep.js && electron-builder install-app-deps && npm run build:dll",
+    "build:dll": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.ts",
+    "build:main": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.main.prod.ts",
+    "build:renderer": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.renderer.prod.ts",
+    "postinstall-electron": "ts-node .erb/scripts/check-native-dep.js && electron-builder install-app-deps && npm run build:dll",
     "lint": "cross-env NODE_ENV=development eslint . --ext .js,.jsx,.ts,.tsx",
-    "package-corss": "ts-node --project tsconfig.app.json ./.erb/scripts/clean.js dist && npm run build && electron-builder build -w --x64 --publish never && npm run build:dll",
-    "package": "cross-env TS_NODE_PROJECT=tsconfig.app.json ts-node --project tsconfig.app.json ./.erb/scripts/clean.js dist && npm run build && electron-builder build --publish never && npm run build:dll",
-    "rebuild": "cross-env TS_NODE_PROJECT=tsconfig.app.json electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
-    "start": "ts-node --project tsconfig.app.json ./.erb/scripts/check-port-in-use.js && npm run start:renderer",
+    "package-corss": "ts-node ./.erb/scripts/clean.js dist && npm run build && electron-builder build -w --x64 --publish never && npm run build:dll",
+    "package": "cross-env ts-node ./.erb/scripts/clean.js dist && npm run build && electron-builder build --publish never && npm run build:dll",
+    "rebuild": "cross-env electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
+    "start": "ts-node ./.erb/scripts/check-port-in-use.js && npm run start:renderer",
     "start:main": "cross-env NODE_ENV=development electronmon -r ts-node/register/transpile-only .",
-    "start:preload": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true TS_NODE_PROJECT=tsconfig.app.json webpack --config ./.erb/configs/webpack.config.preload.dev.ts",
-    "start:renderer": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true TS_NODE_PROJECT=tsconfig.app.json webpack serve --config ./.erb/configs/webpack.config.renderer.dev.ts",
-    "test": "jest",
-    "dev": "vite",
-    "build-vite": "tsc -b && vite build",
-    "preview": "vite preview",
-    "serve": "vite dev --host"
+    "start:preload": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.preload.dev.ts",
+    "start:renderer": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack serve --config ./.erb/configs/webpack.config.renderer.dev.ts"
   },
   "browserslist": [],
   "prettier": {
@@ -230,6 +225,7 @@
     "typescript": "^5.2.2",
     "url-loader": "^4.1.1",
     "vite": "^5.3.2",
+    "vite-plugin-external": "^4.3.1",
     "vite-plugin-plain-text": "^1.4.2",
     "webpack": "^5.88.2",
     "webpack-bundle-analyzer": "^4.9.1",

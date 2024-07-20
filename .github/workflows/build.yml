@@ -152,6 +152,7 @@ jobs:
           cp capacitor.config.deploy.ts capacitor.config.ts
           npm install
           npm install ./externals/capacitor-background-mode
+          npm run postinstall-electron
 
       - name: Get version and commit hash
         id: get-version
@@ -162,7 +163,7 @@ jobs:
           echo "commit_hash=$commit_hash" >> $GITHUB_ENV
 
       - name: Build Web
-        run: npm run build-vite
+        run: npm run build:renderer
 
       - name: Build Capacitor Android Project
         run: npx cap sync android

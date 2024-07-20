@@ -112,8 +112,7 @@ export class AndroidBackend extends Backend {
     (async () => {
       this.tagDBId = (await TagDB.createDB({name: "tags"})).id;
       this.piecesDBId = (await TagDB.createDB({name: "pieces"})).id;
-      const csv = await fetch(DBCSV).then(res => res.text());
-      await TagDB.loadDB({id: this.tagDBId, path: csv});
+      await TagDB.loadDB({id: this.tagDBId, path: DBCSV});
     })();
   }
 
