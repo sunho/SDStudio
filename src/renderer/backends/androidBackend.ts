@@ -18,6 +18,7 @@ import packageInfo from "../../../package.json"
 import ZipService from "./zipService";
 import { FilePicker } from '@capawesome/capacitor-file-picker';
 import { Share } from '@capacitor/share';
+import { Clipboard } from '@capacitor/clipboard';
 
 const APP_DIR = ".SDStudio";
 let config: Config = {};
@@ -472,5 +473,12 @@ export class AndroidBackend extends Backend {
 
   onClose(callback: () => void): () => void {
     return () => {};
+  }
+
+  async copyImageToClipboard(imagePath: string): Promise<void> {
+    const dataUri = await this.readDataFile(imagePath);
+    await Clipboard.write({
+      image: dataUri
+    });
   }
 }

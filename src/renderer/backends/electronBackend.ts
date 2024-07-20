@@ -220,4 +220,8 @@ export class ElectornBackend extends Backend {
   onClose(callback: () => void | Promise<void>): () => void {
     return window.electron.ipcRenderer.on('close', callback);
   }
+
+  async copyImageToClipboard(imagePath: string): Promise<void> {
+    await invoke('copy-image-to-clipboard', imagePath);
+  }
 }

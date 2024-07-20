@@ -62,7 +62,7 @@ const SceneSelector: React.FC<SceneSelectorProps> = ({ scenes, text, getImage, o
         <div className="flex-1 overflow-hidden pt-4 pb-2">
           <div className="flex flex-wrap h-full overflow-auto gap-2 content-start text-sub">
             {scenes.map(scene => (
-              <div className={"hover:brightness-95 active:brightness-90 cursor-pointer p-2 border border-gray-400 dark:border-slate-400 flex-none flex flex-col items-center " + (selectedScenes.some(selected => selected.name === scene.name) ? "border-sky-500 dark:border-sky-500 bg-sky-200 dark:bg-slate-800":"bg-white dark:bg-slate-800")}
+              <div className={"hover:brightness-95 active:brightness-90 cursor-pointer p-2 border flex-none flex flex-col items-center " + (selectedScenes.some(selected => selected.name === scene.name) ? "border-sky-500 dark:border-sky-500 bg-sky-200 dark:bg-slate-700":"bg-white dark:bg-slate-800  border-gray-400 dark:border-slate-400")}
               onClick={()=>toggleSceneSelection(scene)}
                key={scene.name}>
                 <div><SceneImage getImage={getImage} scene={scene}></SceneImage></div>

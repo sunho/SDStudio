@@ -506,11 +506,16 @@ export default function App() {
         },
       });
     };
+    const clipboardImage = async (ctx: ImageContextAlt) => {
+      await backend.copyImageToClipboard(ctx.path);
+    }
     const handleImageItemClick = ({id, props}: any) => {
       if (id === 'duplicate') {
         duplicateImage(props.ctx as ImageContextAlt);
       } else if (id === 'copy') {
         copyImage(props.ctx as ImageContextAlt);
+      } else if (id === 'clipboard') {
+        clipboardImage(props.ctx as ImageContextAlt);
       }
     };
     const exportStyle = async (ctx: StyleContextAlt) => {
@@ -556,6 +561,7 @@ export default function App() {
       <Menu id={ContextMenuType.Image}>
         <Item id="duplicate" onClick={handleImageItemClick}>해당 이미지 복제</Item>
         <Item id="copy" onClick={handleImageItemClick}>다른 씬으로 이미지 복사</Item>
+        {!isMobile&&<Item id="clipboard" onClick={handleImageItemClick}>클립보드로 이미지 복사</Item>}
       </Menu>
       <Menu id={ContextMenuType.Style}>
         <Item id="export" onClick={handleStyleItemClick}>해당 그림체 내보내기</Item>
