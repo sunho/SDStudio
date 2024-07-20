@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'SDStudio',
   webDir: 'release/app/dist/renderer',
   server: {
-    url: "http://192.168.0.118:5173",
+    url: "http://192.168.0.118:1212",
     cleartext: true
   },
   android: { allowMixedContent: true },
