@@ -13,6 +13,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
   const [useGPU, setUseGPU] = useState(false);
   const [whiteMode, setWhiteMode] = useState(false);
   const [noIpCheck, setNoIpCheck] = useState(false);
+  const [refreshImage, setRefreshImage] = useState(false);
   const [ready, setReady] = useState(false);
   const [quality, setQuality] = useState('');
   const [progress, setProgress] = useState(0);
@@ -28,6 +29,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
       setUseGPU(config.useCUDA ?? false);
       setQuality(config.removeBgQuality ?? 'normal');
       setNoIpCheck(config.noIpCheck ?? false);
+      setRefreshImage(config.refreshImage ?? false);
     })();
     const checkReady = () => {
       setReady(localAIService.ready);
@@ -140,18 +142,6 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
             </div>
           </div>
         </div>
-        {isMobile && <div className="mb-4 flex items-center gap-2">
-          <label htmlFor="noIpCheck" className="text-sm gray-label">
-            IP 체크 끄기
-          </label>
-          <input type="checkbox" checked={noIpCheck} onChange={(e) => setNoIpCheck(e.target.checked)} />
-        </div>}
-        {<div className="mb-4 flex items-center gap-2">
-          <label htmlFor="whiteMode" className="text-sm gray-label">
-            화이트 모드 켜기
-          </label>
-          <input type="checkbox" checked={whiteMode} onChange={(e) => setWhiteMode(e.target.checked)} />
-        </div>}
         {!isMobile && <> <div className="mb-4">
           <label htmlFor="imageEditor" className="block text-sm gray-label">
             선호 이미지 편집기
@@ -210,6 +200,24 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
           </select>
         </div>
         </>}
+        {isMobile && <div className="mt-4 flex items-center gap-2">
+          <label htmlFor="noIpCheck" className="text-sm gray-label">
+            IP 체크 끄기
+          </label>
+          <input type="checkbox" checked={noIpCheck} onChange={(e) => setNoIpCheck(e.target.checked)} />
+        </div>}
+        {<div className="mt-4 flex items-center gap-2">
+          <label htmlFor="whiteMode" className="text-sm gray-label">
+            화이트 모드 켜기
+          </label>
+          <input type="checkbox" checked={whiteMode} onChange={(e) => setWhiteMode(e.target.checked)} />
+        </div>}
+        {!isMobile && <div className="mt-4 flex items-center gap-2">
+          <label htmlFor="whiteMode" className="text-sm gray-label">
+            이미지 폴더 직접 편집 감지
+          </label>
+          <input type="checkbox" checked={refreshImage} onChange={(e) => setRefreshImage(e.target.checked)} />
+        </div>}
         <button
           className="mt-4 w-full back-green py-2 rounded hover:brightness-95 active:brightness-90"
           onClick={selectFolder}
@@ -232,6 +240,7 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
               modelType: 'quality',
               removeBgQuality: quality as RemoveBgQuality,
               noIpCheck: noIpCheck,
+              refreshImage: refreshImage,
               whiteMode: whiteMode,
             };
             await backend.setConfig(config);

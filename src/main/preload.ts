@@ -43,7 +43,8 @@ export type Channels =
   | 'unzip-files'
   | 'select-file'
   | 'get-remain-credits'
-  | 'copy-image-to-clipboard';
+  | 'copy-image-to-clipboard'
+  | 'lookup-tag';
 
 const electronHandler = {
   ipcRenderer: {

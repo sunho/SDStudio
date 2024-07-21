@@ -1998,7 +1998,12 @@ export const createPrompts = async (
           if (regex.test(word) || word === 'multiple girls' || word === 'multiple boys' || word === 'multiple others') {
             newFront.push(word);
           } else {
-            rest.push(word);
+            const tag = await backend.lookupTag(word);
+            if (tag && tag.category === 4) {
+              newFront.push(word);
+            } else {
+              rest.push(word);
+            }
           }
         }
         front = newFront.concat(rest);
