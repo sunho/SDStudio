@@ -49,6 +49,8 @@ import { getEmptyImage } from 'react-dnd-html5-backend';
 import { useContextMenu } from 'react-contexify';
 import { Resolution, resolutionMap } from './backends/imageGen';
 import SceneSelector from './SceneSelector';
+import { v4 } from 'uuid';
+import { ImageOptimizeMethod } from './backend';
 
 interface SceneCellProps {
   scene: GenericScene;
@@ -615,7 +617,7 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
     sessionService.mainImageUpdated();
   };
   const exportPackage = async (selected?: Scene[]) => {
-    const exportImpl = async (prefix: string, fav: boolean) => {
+    const exportImpl = async (prefix: string, fav: boolean, opt: string, imageSize: number) => {
       const paths = [];
       await imageService.refreshBatch(curSession!);
       const scenes = selected ?? Object.values(curSession!.scenes);
@@ -652,6 +654,38 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
           }
         }
       }
+      if (opt!=='original') {
+        try {
+          let done = 0;
+          for (const item of paths)  {
+            const outputPath = 'tmp/' + v4() + '.webp';
+            ctx.setProgressDialog({
+              text: '이미지 크기 최적화 중..',
+              done: done,
+              total: paths.length
+            })
+            await backend.resizeImage({
+              inputPath: item.path,
+              outputPath: outputPath,
+              maxHeight: imageSize,
+              maxWidth: imageSize,
+              optimize: opt === 'lossy' ? ImageOptimizeMethod.LOSSY : ImageOptimizeMethod.LOSSLESS
+            });
+            item.path = outputPath;
+            item.name = item.name.substring(0, item.name.length-4) + '.webp';
+            done++;
+          }
+        } catch(e: any) {
+          ctx.pushMessage(e.message);
+          ctx.setProgressDialog(undefined);
+          return
+        }
+      }
+      ctx.setProgressDialog({
+        text: '이미지 압축파일 생성중..',
+        done: 0,
+        total: 1
+      });
       const outFilePath =
         'exports/' +
         curSession!.name +
@@ -665,50 +699,78 @@ const QueueControl = memo(({ type, className, showPannel, filterFunc, onClose }:
         });
         return;
       }
-      ctx.pushDialog({
-        type: 'yes-only',
-        text: '이미지 내보냅니다. 잠시 기다려주세요.'
-      });
-      await zipService.zipFiles(paths, outFilePath);
+      try {
+        await zipService.zipFiles(paths, outFilePath);
+      } catch(e: any) {
+        ctx.pushMessage(e.message);
+        ctx.setProgressDialog(undefined);
+        return;
+      }
+      ctx.setProgressDialog(undefined);
       ctx.pushDialog({
         type: 'yes-only',
         text: '이미지 내보내기가 완료되었습니다'
       });
       await backend.showFile(outFilePath);
+      ctx.setProgressDialog(undefined);
     }
-    ctx.pushDialog({
+    const menu = await ctx.pushDialogAsync({
       type: 'select',
       text: '내보낼 이미지를 선택해주세요',
       items: [
         { text: '즐겨찾기 이미지만 내보내기', value: 'fav'},
         { text: '모든 이미지 전부 내보내기', value: 'all'}
       ],
-      callback: async (menu) => {
-        ctx.pushDialog({
-          type: 'select',
-          text: '파일 이름 형식을 선택해주세요',
-          items: [
-            { text: '(씬이름).(이미지 번호).png', value: 'normal' },
-            { text: '(캐릭터 이름).(씬이름).(이미지 번호)', value: 'prefix' },
-          ],
-          callback: async (format) => {
-            if (!format) return;
-            if (format === 'normal') {
-              await exportImpl('', menu === 'fav');
-            } else {
-              ctx.pushDialog({
-                type: 'input-confirm',
-                text: '캐릭터 이름을 입력해주세요',
-                callback: async (prefix) => {
-                  if (!prefix) return;
-                  await exportImpl(prefix + '.', menu === 'fav');
-                }
-              });
-            }
-          }
-        });
-      },
     });
+    if (!menu)  return;
+    const format = await ctx.pushDialogAsync({
+      type: 'select',
+      text: '파일 이름 형식을 선택해주세요',
+      items: [
+        { text: '(씬이름).(이미지 번호).png', value: 'normal' },
+        { text: '(캐릭터 이름).(씬이름).(이미지 번호)', value: 'prefix' },
+      ],
+    });
+    if (!format) return;
+
+     const optItems = [
+      { text: '원본', value: 'original' },
+      { text: '저손실 webp 최적화 (에셋용 권장)', value: 'lossy' },
+    ];
+    if (!isMobile) {
+      optItems.push({ text: '무손실 webp 최적화', value: 'lossless' });
+    }
+    const opt = await ctx.pushDialogAsync({
+      type: 'select',
+      text: '이미지 크기 최적화 방법을 선택해주세요',
+      items: optItems
+    });
+    if (!opt) return;
+    let imageSize = 0;
+    if (opt !== 'original')  {
+      const inputImageSize = await ctx.pushDialogAsync({
+        type: 'input-confirm',
+        text: '이미지 픽셀 크기를 결정해주세요 (추천값 1024)'
+      })
+      if (!inputImageSize) return;
+      try {
+        imageSize = parseInt(inputImageSize);
+      } catch (error) {
+        return;
+      }
+    }
+    if (format === 'normal') {
+      await exportImpl('', menu === 'fav', opt, imageSize);
+    } else {
+      ctx.pushDialog({
+        type: 'input-confirm',
+        text: '캐릭터 이름을 입력해주세요',
+        callback: async (prefix) => {
+          if (!prefix) return;
+          await exportImpl(prefix + '.', menu === 'fav', opt, imageSize);
+        }
+      });
+    }
   };
 
   const removeBg = async (selected: Scene[]) => {

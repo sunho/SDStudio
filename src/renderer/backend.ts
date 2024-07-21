@@ -7,11 +7,17 @@ export interface FileEntry {
   path: string;
 }
 
+export enum ImageOptimizeMethod {
+  LOSSY = 1,
+  LOSSLESS = 2
+}
+
 export interface ResizeImageInput {
   inputPath: string;
   outputPath: string;
   maxWidth: number;
   maxHeight: number;
+  optimize?: ImageOptimizeMethod;
 }
 
 export abstract class Backend {
@@ -22,6 +28,7 @@ export abstract class Backend {
   abstract generateImage(arg: ImageGenInput): Promise<void>;
   abstract login(email: string, password: string): Promise<void>;
   abstract showFile(arg: string): Promise<void>;
+  abstract copyToDownloads(path: string): Promise<void>;
   abstract zipFiles(files: FileEntry[], outPath: string): Promise<void>;
   abstract unzipFiles(tarPath: string, outPath: string): Promise<void>;
   abstract searchTags(word: string): Promise<any>;
@@ -54,7 +61,8 @@ export abstract class Backend {
   abstract isLocalAIRunning(): Promise<boolean>;
   abstract getRemainCredits(): Promise<number>;
   abstract removeBackground(inputImageBase64: string, outputPath: string): Promise<void>;
-  abstract onDownloadProgress(callback: (progress: any) => void): void;
+  abstract onDownloadProgress(callback: (progress: any) => void): () => void;
+  abstract onZipProgress(callback: (progress: any) => void): () => void;
   abstract onImageChanged(callback: (path: string) => void): () => void;
   abstract onClose(callback: () => void): () => void;
 }

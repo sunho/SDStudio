@@ -29,6 +29,7 @@ const StreamZip = require('node-stream-zip');
 import contextMenu from 'electron-context-menu';
 import * as electronDL from 'electron-dl';
 import { createGzip } from 'zlib';
+import { ImageOptimizeMethod } from '../renderer/backend';
 
 interface DataBaseConns {
   tagDBId: number;
@@ -135,7 +136,12 @@ ipcMain.handle('zip-files', async (event, files, outPath) => {
   const pack = tarStream.pack();
 
   pack.pipe(fsSync.createWriteStream(APP_DIR + "/" +outPath));
+  let done = 0;
   for (const file of files) {
+    mainWindow!.webContents.send('zip-progress', {
+      done: done,
+      total: files.length
+    });
     await new Promise((resolve, reject) => {
       const srcPath = file.path;
       const destPath = file.name;
@@ -147,6 +153,7 @@ ipcMain.handle('zip-files', async (event, files, outPath) => {
       entry.on('finish',resolve);
       stream.pipe(entry);
     });
+    done++;
   }
   pack.finalize();
 });
@@ -282,17 +289,28 @@ ipcMain.handle('download', async (event, url, dest, filename) => {
 
 ipcMain.handle(
   'resize-image',
-  async (event, { inputPath, outputPath, maxWidth, maxHeight }) => {
+  async (event, { inputPath, outputPath, maxWidth, maxHeight, optimize }) => {
     inputPath = APP_DIR + '/' + inputPath;
     outputPath = APP_DIR + '/' + outputPath;
     const dir = path.dirname(outputPath);
     await fs.mkdir(dir, { recursive: true });
-    await sharp(inputPath)
+    let instance = sharp(inputPath)
       .resize(maxWidth, maxHeight, {
         fit: sharp.fit.inside,
         withoutEnlargement: true,
+      });
+    if (optimize === ImageOptimizeMethod.LOSSY) {
+      instance = instance.webp({
+        quality: 80,
+        lossless: false,
       })
-      .toFile(outputPath);
+    }
+    if (optimize === ImageOptimizeMethod.LOSSLESS) {
+      instance = instance.webp({
+        lossless: true,
+      })
+    }
+    await instance.toFile(outputPath);
   },
 );
 

@@ -524,10 +524,14 @@ const ResultDetailView = ({
             <button
               className={`round-button back-sky`}
               onClick={async () => {
-                await backend.showFile(paths[selectedIndex]);
+                if (isMobile) {
+                  await backend.copyToDownloads(paths[selectedIndex]);
+                } else {
+                  await backend.showFile(paths[selectedIndex]);
+                }
               }}
             >
-              파일 위치 열기
+              {!isMobile?"파일 위치 열기":"파일 다운로드"}
             </button>
             {!isMobile &&
             <button
