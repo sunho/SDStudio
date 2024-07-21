@@ -572,7 +572,7 @@ const ResultDetailView = ({
             {!showPrompt ? '자세한 정보 보기' : '자세한 정보 숨기기'}
           </button>
           <div className={"mt-2 md:mt-0 md:block " + (showPrompt?"block":"hidden")}>
-            <div className="max-w-full mb-2">
+            <div className="max-w-full mb-2 text-sub">
               <span className='gray-label'>파일이름: </span>
               <span>{filename}</span>
             </div>
@@ -584,19 +584,19 @@ const ResultDetailView = ({
               <div className='gray-label'>네거티브 프롬프트 </div>
               <PromptHighlighter text={uc} className="w-full h-24 overflow-auto"/>
             </div>
-            <div className="w-full mb-2">
+            <div className="w-full mb-2 text-sub">
               <span className='gray-label'>시드: </span>
               {seed}
             </div>
-            <div className="w-full mb-2">
+            <div className="w-full mb-2 text-sub">
               <span className='gray-label'>프롬프트 가이던스: </span>
               {scale}
             </div>
-            <div className="w-full mb-2">
+            <div className="w-full mb-2 text-sub">
               <span className='gray-label'>샘플러: </span>
               {sampler}
             </div>
-            <div className="w-full mb-2">
+            <div className="w-full mb-2 text-sub">
               <span className='gray-label'>스텝: </span>
               {steps}
             </div>

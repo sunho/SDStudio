@@ -85,6 +85,10 @@ export class ElectornBackend extends Backend {
     return await invoke('search-tags', word);
   }
 
+  async lookupTag(word: string): Promise<any> {
+    return await invoke('lookup-tag', word);
+  }
+
   async loadPiecesDB(pieces: string[]): Promise<void> {
     await invoke('load-pieces-db', pieces);
   }

@@ -42,6 +42,7 @@ let databases: DataBaseConns = {
 };
 
 let mainWindow: BrowserWindow | null = null;
+let tagMap: Map<string, any> = new Map();
 
 async function listFilesInDirectory(dir: any) {
   try {
@@ -556,6 +557,10 @@ ipcMain.handle('extract-zip', async (event, zipPath, outPath) => {
   }
 });
 
+ipcMain.handle('lookup-tag', (event, word) => {
+  return tagMap.get(word);
+});
+
 let localAIRunning = false;
 
 const net = require('net');
@@ -812,6 +817,18 @@ async function init() {
   databases.tagDBId = native.createDB('danbooru');
   native.loadDB(databases.tagDBId, dbCsvContent);
   databases.pieceDBId = native.createDB('pieces');
+  dbCsvContent.split("\n").forEach((x: string) => {
+    const comps: string[] = x.split(',');
+    if (comps.length !== 4) return;
+    tagMap.set(comps[0], {
+      word: comps[0],
+      normalized: comps[0],
+      freq: parseInt(comps[2]),
+      category: parseInt(comps[1]),
+      redirect: comps[3],
+      priority: 0,
+    });
+  })
   await initFolder();
 }
 
@@ -820,22 +837,24 @@ async function initFolder() {
     APP_DIR = config.saveLocation;
   }
   await fs.mkdir(APP_DIR, { recursive: true });
-  const handle = chokidar.watch(APP_DIR, {
-    persistent: true,
-    ignoreInitial: true,
-    usePolling: false,
-  });
-  handle.on('change', async (changedPath: string) => {
-    let curPath = path.relative(APP_DIR, changedPath);
-    const comps = curPath.split(path.sep);
-    if (comps.length === 0) return;
-    if (comps[0] === '.') {
-      comps.shift();
-    }
-    if (comps[0] === 'outs' || comps[0] === 'inpaints') {
-      mainWindow!.webContents.send('image-changed', comps.join('/'));
-    }
-  });
+  if (config.refreshImage) {
+    const handle = chokidar.watch(APP_DIR, {
+      persistent: true,
+      ignoreInitial: true,
+      usePolling: false,
+    });
+    handle.on('change', async (changedPath: string) => {
+      let curPath = path.relative(APP_DIR, changedPath);
+      const comps = curPath.split(path.sep);
+      if (comps.length === 0) return;
+      if (comps[0] === '.') {
+        comps.shift();
+      }
+      if (comps[0] === 'outs' || comps[0] === 'inpaints') {
+        mainWindow!.webContents.send('image-changed', comps.join('/'));
+      }
+    });
+  }
 }
 
 init();

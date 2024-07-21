@@ -1,7 +1,7 @@
 import { Config } from "../../main/config";
 import { ImageGenInput, ImageGenService } from "./imageGen";
 import { Backend, FileEntry, ImageOptimizeMethod, ResizeImageInput } from "../backend";
-import { SceneContextAlt, ContextAlt, ImageContextAlt, dataUriToBase64, zipService } from "../models";
+import { SceneContextAlt, ContextAlt, ImageContextAlt, dataUriToBase64, zipService, WordTag } from "../models";
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { FileOpener, FileOpenerOptions } from '@capacitor-community/file-opener';
 import { Buffer } from 'buffer';
@@ -93,8 +93,10 @@ export class AndroidBackend extends Backend {
   private imageGenService: ImageGenService;
   private tagDBId?: number;
   private piecesDBId?: number;
+  private tagMap: Map<string, WordTag>;
   constructor() {
     super();
+    this.tagMap = new Map();
     Filesystem.mkdir({
       path: APP_DIR,
       recursive: true,
@@ -113,6 +115,18 @@ export class AndroidBackend extends Backend {
       this.tagDBId = (await TagDB.createDB({name: "tags"})).id;
       this.piecesDBId = (await TagDB.createDB({name: "pieces"})).id;
       await TagDB.loadDB({id: this.tagDBId, path: DBCSV});
+      DBCSV.split("\n").forEach((x: string) => {
+        const comps: string[] = x.split(',');
+        if (comps.length !== 4) return;
+        this.tagMap.set(comps[0], {
+          word: comps[0],
+          normalized: comps[0],
+          freq: parseInt(comps[2]),
+          category: parseInt(comps[1]),
+          redirect: comps[3],
+          priority: 0,
+        });
+      })
     })();
   }
 
@@ -222,6 +236,10 @@ export class AndroidBackend extends Backend {
   async searchTags(word: string): Promise<any> {
     const args = {id: this.tagDBId!, query: word};
     return (await TagDB.search(args)).results;
+  }
+
+  async lookupTag(word: string): Promise<any> {
+    return this.tagMap.get(word);
   }
 
   async loadPiecesDB(pieces: string[]): Promise<void> {
