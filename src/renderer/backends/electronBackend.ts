@@ -69,7 +69,7 @@ export class ElectornBackend extends Backend {
     await invoke('show-file', arg);
   }
 
-  async showDownloads(): Promise<void> {
+  async copyToDownloads(path: string): Promise<void> {
     return;
   }
 
