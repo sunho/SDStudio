@@ -37,7 +37,7 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSelectedPreset }) =>
         text: '신규 프로젝트 이름을 입력해주세요',
         callback: async (inputValue) => {
           if (inputValue) {
-            if (inputValue in sessionNames) {
+            if (sessionNames.includes(inputValue)) {
               ctx.pushMessage('이미 존재하는 프로젝트 이름입니다.');
               return;
             }
@@ -130,16 +130,24 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSelectedPreset }) =>
                   ctx.pushMessage('이미 내보내기 작업이 진행중입니다.');
                   return;
                 }
-                ctx.pushDialog({
-                  type: 'yes-only',
-                  text: '백업을 내보내는 중입니다. 잠시 기다려주세요.',
-                })
-                await sessionService.exportSessionDeep(ctx.curSession, path);
+                ctx.setProgressDialog({
+                  text: '압축 파일 생성중..',
+                  done: 0,
+                  total: 1
+                });
+                try {
+                  await sessionService.exportSessionDeep(ctx.curSession, path);
+                } catch (e: any) {
+                  ctx.setProgressDialog(undefined);
+                  return;
+                }
+                ctx.setProgressDialog(undefined);
                 ctx.pushDialog({
                   type: 'yes-only',
                   text: '백업이 완료되었습니다.',
                 })
                 await backend.showFile(path);
+                ctx.setProgressDialog(undefined);
               }
             } else if (value === 'load') {
               const file = await getFirstFile();
@@ -156,11 +164,19 @@ const SessionSelect: React.FC<Props> = ({ setCurSession, setSelectedPreset }) =>
                     }
                     const tarPath = await backend.selectFile();
                     if (tarPath) {
-                      ctx.pushDialog({
-                        type: 'yes-only',
-                        text: '백업을 불러오는 중입니다. 잠시 기다려주세요.',
-                      })
-                      await sessionService.importSessionDeep(tarPath, inputValue);
+                      ctx.setProgressDialog({
+                        text: '프로젝트 백업을 불러오는 중입니다...',
+                        done: 0,
+                        total: 1
+                      });
+                      try {
+                        await sessionService.importSessionDeep(tarPath, inputValue);
+                      } catch (e: any) {
+                        ctx.setProgressDialog(undefined);
+                        ctx.pushMessage(e.message);
+                        return;
+                      }
+                      ctx.setProgressDialog(undefined);
                       ctx.pushDialog({
                         type: 'yes-only',
                         text: '프로젝트 백업을 불러왔습니다.',

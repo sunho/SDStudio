@@ -1,6 +1,6 @@
 import { Config } from "../../main/config";
 import { ImageGenInput, ImageGenService } from "./imageGen";
-import { Backend, FileEntry, ResizeImageInput } from "../backend";
+import { Backend, FileEntry, ImageOptimizeMethod, ResizeImageInput } from "../backend";
 import { SceneContextAlt, ContextAlt, ImageContextAlt, dataUriToBase64, zipService } from "../models";
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { FileOpener, FileOpenerOptions } from '@capacitor-community/file-opener';
@@ -162,6 +162,20 @@ export class AndroidBackend extends Backend {
     await Share.share({
       url: urlRes.uri,
     });
+  }
+
+  async copyToDownloads(path: string): Promise<void> {
+    const file = await Filesystem.readFile({
+      path: `${APP_DIR}/${path}`,
+      directory: Directory.Documents,
+    });
+    await Filesystem.writeFile({
+      path: 'Download/' + path.split('/').pop()!,
+      data: file.data,
+      directory: Directory.ExternalStorage,
+      recursive: true,
+    });
+    await ZipService.showDownloads({});
   }
 
   async zipFiles(files: FileEntry[], outPath: string): Promise<void> {
@@ -404,9 +418,15 @@ export class AndroidBackend extends Backend {
 
     // Create a canvas for the output image
     const outputCanvas = document.createElement('canvas');
-    const ratio = img.height / img.width;
-    outputCanvas.width = maxWidth;
-    outputCanvas.height = Math.floor(maxWidth * ratio);
+    if (img.width > img.height) {
+      const ratio = img.height / img.width;
+      outputCanvas.width = Math.min(img.width, maxWidth);
+      outputCanvas.height = Math.floor(outputCanvas.width * ratio);
+    } else {
+      const ratio = img.width / img.height;
+      outputCanvas.height = Math.min(img.height, maxWidth);
+      outputCanvas.width = Math.floor(outputCanvas.height * ratio);
+    }
 
     await pica.resize(canvas, outputCanvas, {
       unsharpAmount: 160,
@@ -414,7 +434,12 @@ export class AndroidBackend extends Backend {
       unsharpThreshold: 1
     });
 
-    const outputBlob = await pica.toBlob(outputCanvas, 'image/png', 0.9);
+    let outputBlob: any;
+    if (input.optimize === ImageOptimizeMethod.LOSSY) {
+      outputBlob = await pica.toBlob(outputCanvas, 'image/webp', 0.8);
+    } else {
+      outputBlob = await pica.toBlob(outputCanvas, 'image/png', 0.9);
+    }
 
     const arrayBuffer = await outputBlob.arrayBuffer();
     const outputBuffer = Buffer.from(arrayBuffer);
@@ -463,6 +488,10 @@ export class AndroidBackend extends Backend {
   }
 
   onDownloadProgress(callback: (progress: any) => void | Promise<void>): () => void{
+    return () => {};
+  }
+
+  onZipProgress(callback: (progress: any) => void | Promise<void>): () => void{
     return () => {};
   }
 

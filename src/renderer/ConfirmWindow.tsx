@@ -5,6 +5,7 @@ import { DropdownSelect } from './UtilComponents';
 export interface Dialog {
   text: string;
   callback?: ((value?: string, text?: string) => void) | ((value?: string, text?:string) => Promise<void>);
+  onCancel?: () => void;
   type: 'confirm' | 'yes-only' | 'input-confirm' | 'select' | 'dropdown';
   inputValue?: string;
   green?: boolean;
@@ -75,6 +76,8 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                   <button
                     className="px-4 py-2 rounded back-gray clickable "
                     onClick={() => {
+                      if (curDialog.onCancel)
+                        curDialog.onCancel();
                       setDialogs(dialogs.slice(0, dialogs.length - 1));
                       setInputValue('');
                     }}
@@ -102,6 +105,8 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                   <button
                     className="px-4 py-2 rounded back-gray clickable"
                     onClick={() => {
+                      if (curDialog.onCancel)
+                        curDialog.onCancel();
                       setDialogs(dialogs.slice(0, dialogs.length - 1));
                       setInputValue('');
                     }}
@@ -129,6 +134,8 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                   <button
                     className="w-full px-4 py-2 clickable rounded back-gray"
                     onClick={() => {
+                      if (curDialog.onCancel)
+                        curDialog.onCancel();
                       setDialogs(dialogs.slice(0, dialogs.length - 1));
                     }}
                   >
@@ -162,6 +169,8 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                     <button
                       className="flex-1 px-4 py-2 block rounded back-gray clickable"
                       onClick={() => {
+                        if (curDialog.onCancel)
+                          curDialog.onCancel();
                         setDialogs(dialogs.slice(0, dialogs.length - 1));
                         setInputValue('');
                       }}

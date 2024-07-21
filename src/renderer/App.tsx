@@ -55,6 +55,7 @@ import { v4 } from 'uuid';
 
 import styles from './App.module.scss';
 import { StackFixed, StackGrow, VerticalStack } from './LayoutComponents';
+import ProgressWindow, { ProgressDialog } from './ProgressWindow';
 
 export interface Context {
   curSession: Session | undefined;
@@ -63,6 +64,8 @@ export interface Context {
   messages: string[];
   pushMessage: (msg: string) => void;
   pushDialog: (dialog: Dialog) => void;
+  pushDialogAsync: (dialog: Dialog) => Promise<string | undefined>;
+  setProgressDialog: (dialog: ProgressDialog | undefined) => void;
   handleFile: (file: File) => void;
   dialogs: Dialog[];
   samples: number;
@@ -177,6 +180,13 @@ export default function App() {
       console.log(progress);
       localAIService.notifyDownloadProgress(progress.percent);
     });
+    const removeZipProgressListener = backend.onZipProgress((progress: any) => {
+      setProgressDialog({
+        text: '압축파일 생성 중..',
+        done: progress.done,
+        total: progress.total
+      });
+    });
     const removeImageChangedListener = backend.onImageChanged(async (path: string) => {
       console.log('image-changed', path);
       imageService.invalidateCache(path);
@@ -191,6 +201,7 @@ export default function App() {
     return () => {
       removeDonwloadProgressListener();
       removeImageChangedListener();
+      removeZipProgressListener();
       taskQueueService.removeEventListener('ip-check-fail', handleIPCheckFail);
     };
   },[curSession]);
@@ -579,6 +590,20 @@ export default function App() {
     setDialogs((prev) => [...prev, dialog]);
   };
 
+  const pushDialogAsync = async (dialog: Dialog) => {
+    return new Promise<string | undefined>((resolve, reject) => {
+      dialog.callback = (value?: string, text?: string) => {
+        resolve(value);
+      };
+      dialog.onCancel = () => {
+        resolve(undefined);
+      }
+      pushDialog(dialog);
+    });
+  }
+
+  const [progressDialog, setProgressDialog] = useState<ProgressDialog | undefined>(undefined);
+
   const ctx: Context = {
     curSession,
     selectedPreset,
@@ -588,6 +613,8 @@ export default function App() {
     setSelectedPreset,
     pushMessage,
     pushDialog,
+    setProgressDialog,
+    pushDialogAsync,
     handleFile,
   };
 
@@ -668,6 +695,7 @@ export default function App() {
         </ErrorBoundary>
         <AlertWindow setMessages={setMessages} />
         <ConfirmWindow setDialogs={setDialogs} />
+        {progressDialog && <ProgressWindow dialog={progressDialog}/>}
         <PromptTooltip />
       </div>
       </DndProvider>

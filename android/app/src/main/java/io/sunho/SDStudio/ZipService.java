@@ -1,5 +1,8 @@
 package io.sunho.SDStudio;
 
+import static androidx.core.content.ContextCompat.startActivity;
+
+import android.app.DownloadManager;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
@@ -115,6 +118,17 @@ public class ZipService extends Plugin {
       call.resolve();
     } catch (IOException e) {
       call.reject("Failed to unzip files", e);
+    }
+  }
+
+  @PluginMethod
+  public void showDownloads(PluginCall call) {
+    Intent intent=new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS);
+    try {
+      getContext().startActivity(intent);
+      call.resolve();
+    } catch (Exception e) {
+      call.reject("Failed to donwloads folder", e);
     }
   }
 

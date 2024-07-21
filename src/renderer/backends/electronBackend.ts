@@ -69,6 +69,10 @@ export class ElectornBackend extends Backend {
     await invoke('show-file', arg);
   }
 
+  async showDownloads(): Promise<void> {
+    return;
+  }
+
   async zipFiles(files: FileEntry[], outPath: string): Promise<void> {
     await invoke('zip-files', files, outPath);
   }
@@ -191,6 +195,10 @@ export class ElectornBackend extends Backend {
 
   onDownloadProgress(callback: (progress: any) => void | Promise<void>): () => void{
     return window.electron.ipcRenderer.on('download-progress', callback);
+  }
+
+  onZipProgress(callback: (progress: any) => void | Promise<void>): () => void{
+    return window.electron.ipcRenderer.on('zip-progress', callback);
   }
 
   onDuplicateScene(callback: (ctx: SceneContextAlt) => void | Promise<void>): () => void {
