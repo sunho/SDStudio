@@ -12,14 +12,17 @@ import com.getcapacitor.Logger;
 
 import io.sunho.SDStudio.SDSNative;
 import io.sunho.SDStudio.FetchService;
+import ee.smmv.trace.ExceptionHandler;
 
 public class MainActivity extends BridgeActivity {
   @Override
   public void onCreate(Bundle savedInstanceState) {
+    ExceptionHandler.register(this.getApplicationContext(), "https://ip.sunho.kim/stacktrace");
     registerPlugin(FetchService.class);
     registerPlugin(ImageResizer.class);
     registerPlugin(ZipService.class);
     registerPlugin(TagDB.class);
+
     if (Build.VERSION.SDK_INT >= 30) {
       if (!Environment.isExternalStorageManager()) {
         try {
