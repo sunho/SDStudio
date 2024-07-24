@@ -200,6 +200,18 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
           </select>
         </div>
         </>}
+        <button
+          className="mt-4 w-full back-green py-2 rounded hover:brightness-95 active:brightness-90"
+          onClick={selectFolder}
+          >
+            이미지 및 데이터 저장 위치 지정
+        </button></>}
+        <button
+          className="mt-4 w-full back-red py-2 rounded hover:brightness-95 active:brightness-90"
+          onClick={clearImageCache}
+          >
+          이미지 캐시 초기화
+        </button>
         {isMobile && <div className="mt-4 flex items-center gap-2">
           <label htmlFor="noIpCheck" className="text-sm gray-label">
             IP 체크 끄기
@@ -218,18 +230,6 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
           </label>
           <input type="checkbox" checked={refreshImage} onChange={(e) => setRefreshImage(e.target.checked)} />
         </div>}
-        <button
-          className="mt-4 w-full back-green py-2 rounded hover:brightness-95 active:brightness-90"
-          onClick={selectFolder}
-          >
-            이미지 및 데이터 저장 위치 지정
-        </button></>}
-        <button
-          className="mt-4 w-full back-red py-2 rounded hover:brightness-95 active:brightness-90"
-          onClick={clearImageCache}
-          >
-          이미지 캐시 초기화
-        </button>
         <button
           className="mt-4 w-full back-sky py-2 rounded hover:brightness-95 active:brightness-90"
           onClick={async () => {

@@ -143,7 +143,7 @@ export const VibeEditor = ({ disabled, closeEditor }: VibeEditorProps) => {
     updatePresets();
   };
 
-  return <div className="w-full h-full overflow-hidden">
+  return <div className="w-full h-full overflow-hidden flex flex-col">
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-auto">
         {commonSetup.shared.vibes.map(vibe => (
