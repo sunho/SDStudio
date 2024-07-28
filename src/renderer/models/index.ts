@@ -87,14 +87,3 @@ appUpdateNoticeService.run();
 
 export const localAIService = new LocalAIService();
 localAIService.statsModels();
-
-declare global {
-  interface Window {
-    curSession?: Session;
-    promptService: PromptService;
-    sessionService: SessionService;
-    imageService: ImageService;
-    taskQueueService: TaskQueueService;
-    loginService: LoginService;
-  }
-}
