@@ -1,26 +1,34 @@
-import { Config } from "../../main/config";
-import { ImageGenInput, ImageGenService } from "./imageGen";
-import { Backend, FileEntry, ImageOptimizeMethod, ResizeImageInput } from "../backend";
-import { SceneContextAlt, ContextAlt, ImageContextAlt, dataUriToBase64, zipService, WordTag } from "../models";
+import { Config } from '../../main/config';
+import { ImageGenInput, ImageGenService } from './imageGen';
+import {
+  Backend,
+  FileEntry,
+  ImageOptimizeMethod,
+  ResizeImageInput,
+} from '../backend';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
-import { FileOpener, FileOpenerOptions } from '@capacitor-community/file-opener';
+import {
+  FileOpener,
+  FileOpenerOptions,
+} from '@capacitor-community/file-opener';
 import { Buffer } from 'buffer';
 import { v4 as uuidv4 } from 'uuid';
 import Pica from 'pica';
-import { NovelAiFetcher, NovelAiImageGenService } from "./genVendors/nai";
-import FetchService from "./fecthService";
-import JSZip from "jszip";
-import { BackgroundMode } from "@anuradev/capacitor-background-mode"
-import { TagDB } from "./tagDB";
+import { NovelAiFetcher, NovelAiImageGenService } from './genVendors/nai';
+import FetchService from './fecthService';
+import JSZip from 'jszip';
+import { BackgroundMode } from '@anuradev/capacitor-background-mode';
+import { TagDB } from './tagDB';
 // @ts-ignore
 import DBCSV from '../../../assets/db.txt';
-import packageInfo from "../../../package.json"
-import ZipService from "./zipService";
+import packageInfo from '../../../package.json';
+import ZipService from './zipService';
 import { FilePicker } from '@capawesome/capacitor-file-picker';
 import { Share } from '@capacitor/share';
 import { Clipboard } from '@capacitor/clipboard';
+import { WordTag } from '../models/Tags';
 
-const APP_DIR = ".SDStudio";
+const APP_DIR = '.SDStudio';
 let config: Config = {};
 const pica = new Pica();
 
@@ -62,7 +70,11 @@ function getDirName(filePath: string): string {
 }
 
 class AndroidFetcher implements NovelAiFetcher {
-  async fetchArrayBuffer(url: string, body: any, headers: any): Promise<ArrayBuffer> {
+  async fetchArrayBuffer(
+    url: string,
+    body: any,
+    headers: any,
+  ): Promise<ArrayBuffer> {
     const controller = new AbortController();
     const response = await FetchService.fetchData({
       url: url,
@@ -79,7 +91,7 @@ class AndroidFetcher implements NovelAiFetcher {
 
       // Write the decoded binary string to the array buffer
       for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+        bytes[i] = binaryString.charCodeAt(i);
       }
 
       return bytes.buffer;
@@ -87,7 +99,6 @@ class AndroidFetcher implements NovelAiFetcher {
     return base64ToArrayBuffer(response.data);
   }
 }
-
 
 export class AndroidBackend extends Backend {
   private imageGenService: ImageGenService;
@@ -102,9 +113,9 @@ export class AndroidBackend extends Backend {
       recursive: true,
       directory: Directory.Documents,
     });
-    this.imageGenService = new NovelAiImageGenService(new AndroidFetcher);
+    this.imageGenService = new NovelAiImageGenService(new AndroidFetcher());
     (async () => {
-      if (await BackgroundMode.checkBatteryOptimizations()){
+      if (await BackgroundMode.checkBatteryOptimizations()) {
         await BackgroundMode.requestDisableBatteryOptimizations();
       }
       await BackgroundMode.enable();
@@ -112,10 +123,10 @@ export class AndroidBackend extends Backend {
     })();
 
     (async () => {
-      this.tagDBId = (await TagDB.createDB({name: "tags"})).id;
-      this.piecesDBId = (await TagDB.createDB({name: "pieces"})).id;
-      await TagDB.loadDB({id: this.tagDBId, path: DBCSV});
-      DBCSV.split("\n").forEach((x: string) => {
+      this.tagDBId = (await TagDB.createDB({ name: 'tags' })).id;
+      this.piecesDBId = (await TagDB.createDB({ name: 'pieces' })).id;
+      await TagDB.loadDB({ id: this.tagDBId, path: DBCSV });
+      DBCSV.split('\n').forEach((x: string) => {
         const comps: string[] = x.split(',');
         if (comps.length !== 4) return;
         this.tagMap.set(comps[0], {
@@ -126,7 +137,7 @@ export class AndroidBackend extends Backend {
           redirect: comps[3],
           priority: 0,
         });
-      })
+      });
     })();
   }
 
@@ -200,21 +211,20 @@ export class AndroidBackend extends Backend {
         directory: Directory.Documents,
         recursive: true,
       });
-    } catch (e) {
-    }
+    } catch (e) {}
     const urlRes = await Filesystem.getUri({
       path: `${APP_DIR}`,
       directory: Directory.Documents,
     });
-    const fullDir = urlRes.uri.slice(7)
-    console.log(fullDir)
-    files = files.map(x => ({
+    const fullDir = urlRes.uri.slice(7);
+    console.log(fullDir);
+    files = files.map((x) => ({
       name: x.name,
-      path: fullDir +'/'+ x.path,
+      path: fullDir + '/' + x.path,
     }));
     outPath = fullDir + '/' + outPath;
 
-    await ZipService.zipFiles({files, outPath});
+    await ZipService.zipFiles({ files, outPath });
   }
 
   async unzipFiles(zipPath: string, outPath: string): Promise<void> {
@@ -223,7 +233,10 @@ export class AndroidBackend extends Backend {
       directory: Directory.Documents,
     });
     const fullDir = urlRes.uri.slice(7);
-    await ZipService.unzipFiles({zipPath: zipPath, outPath: fullDir + '/' + outPath});
+    await ZipService.unzipFiles({
+      zipPath: zipPath,
+      outPath: fullDir + '/' + outPath,
+    });
   }
 
   async selectFile(): Promise<string | undefined> {
@@ -234,7 +247,7 @@ export class AndroidBackend extends Backend {
   }
 
   async searchTags(word: string): Promise<any> {
-    const args = {id: this.tagDBId!, query: word};
+    const args = { id: this.tagDBId!, query: word };
     return (await TagDB.search(args)).results;
   }
 
@@ -243,15 +256,17 @@ export class AndroidBackend extends Backend {
   }
 
   async loadPiecesDB(pieces: string[]): Promise<void> {
-    const csv = pieces.map((x: string) => {
-      return `<${x}>,0,0,null`;
-    }).join('\n');
-    const args = {id:this.piecesDBId!, path: csv};
+    const csv = pieces
+      .map((x: string) => {
+        return `<${x}>,0,0,null`;
+      })
+      .join('\n');
+    const args = { id: this.piecesDBId!, path: csv };
     await TagDB.loadDB(args);
   }
 
   async searchPieces(word: string): Promise<any> {
-    const args = {id: this.piecesDBId!, query: word};
+    const args = { id: this.piecesDBId!, query: word };
     return (await TagDB.search(args)).results;
   }
 
@@ -260,7 +275,7 @@ export class AndroidBackend extends Backend {
       path: `${APP_DIR}/${arg}`,
       directory: Directory.Documents,
     });
-    return files.map(x => x.name);
+    return files.map((x) => x.name);
   }
 
   async readFile(filename: string): Promise<string> {
@@ -280,7 +295,7 @@ export class AndroidBackend extends Backend {
         directory: Directory.Documents,
         recursive: true,
       });
-    } catch(e) {}
+    } catch (e) {}
     const tmpFile = `${APP_DIR}/${uuidv4()}`;
     await Filesystem.writeFile({
       path: tmpFile,
@@ -303,8 +318,7 @@ export class AndroidBackend extends Backend {
         directory: Directory.Documents,
         recursive: true,
       });
-    } catch (e) {
-    }
+    } catch (e) {}
     await Filesystem.copy({
       from: `${APP_DIR}/${src}`,
       to: `${APP_DIR}/${dest}`,
@@ -332,7 +346,7 @@ export class AndroidBackend extends Backend {
         directory: Directory.Documents,
         recursive: true,
       });
-    } catch(e) {}
+    } catch (e) {}
     const tmpFile = `${APP_DIR}/${uuidv4()}`;
     await Filesystem.writeFile({
       path: tmpFile,
@@ -415,8 +429,7 @@ export class AndroidBackend extends Backend {
         directory: Directory.Documents,
         recursive: true,
       });
-    } catch(e){
-    }
+    } catch (e) {}
 
     const { data } = await Filesystem.readFile({
       path: inputPath,
@@ -449,7 +462,7 @@ export class AndroidBackend extends Backend {
     await pica.resize(canvas, outputCanvas, {
       unsharpAmount: 160,
       unsharpRadius: 0.6,
-      unsharpThreshold: 1
+      unsharpThreshold: 1,
     });
 
     let outputBlob: any;
@@ -497,7 +510,10 @@ export class AndroidBackend extends Backend {
     return false;
   }
 
-  async removeBackground(inputImageBase64: string, outputPath: string): Promise<void> {
+  async removeBackground(
+    inputImageBase64: string,
+    outputPath: string,
+  ): Promise<void> {
     return;
   }
 
@@ -505,11 +521,13 @@ export class AndroidBackend extends Backend {
     return undefined;
   }
 
-  onDownloadProgress(callback: (progress: any) => void | Promise<void>): () => void{
+  onDownloadProgress(
+    callback: (progress: any) => void | Promise<void>,
+  ): () => void {
     return () => {};
   }
 
-  onZipProgress(callback: (progress: any) => void | Promise<void>): () => void{
+  onZipProgress(callback: (progress: any) => void | Promise<void>): () => void {
     return () => {};
   }
 
@@ -524,7 +542,7 @@ export class AndroidBackend extends Backend {
   async copyImageToClipboard(imagePath: string): Promise<void> {
     const dataUri = await this.readDataFile(imagePath);
     await Clipboard.write({
-      image: dataUri
+      image: dataUri,
     });
   }
 }

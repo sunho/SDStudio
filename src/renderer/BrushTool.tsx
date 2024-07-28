@@ -103,7 +103,7 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
         ctx.putImageData(imageData, 0, 0);
         historyRef.current.pop();
       }
-    }
+    };
 
     useImperativeHandle(ref, () => ({
       getMaskBase64() {
@@ -126,7 +126,7 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
       },
       stopBrushing() {
         brushingRef.current = false;
-      }
+      },
     }));
 
     useEffect(() => {

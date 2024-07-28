@@ -1,7 +1,21 @@
-import React, { ReactNode, forwardRef, useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  ReactNode,
+  forwardRef,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import Select from 'react-select';
-import { FaAddressBook, FaAmilia, FaDAndD, FaFileUpload, FaPenNib, FaTimes } from 'react-icons/fa';
+import {
+  FaAddressBook,
+  FaAmilia,
+  FaDAndD,
+  FaFileUpload,
+  FaPenNib,
+  FaTimes,
+} from 'react-icons/fa';
 import { Scrollbars } from 'react-custom-scrollbars-2';
 import { FaAnchor, FaOpencart, FaPerson } from 'react-icons/fa6';
 import { FloatView } from './FloatView';
@@ -41,7 +55,7 @@ export const DropdownSelect = <T,>({
       onChange={handleChange}
       menuPlacement={menuPlacement}
       isDisabled={disabled}
-      className={"my-react-select-container w-full " + (className ?? '')}
+      className={'my-react-select-container w-full ' + (className ?? '')}
       classNamePrefix="my-react-select"
     />
   );
@@ -120,7 +134,7 @@ export const FileUploadBase64: React.FC<{
       onClick={handleClick}
       className="w-full h-8 overflow-hidden rounded-full back-sky clickable flex items-center justify-center"
       style={{
-        backgroundColor: dragging ? '#0ea5e9' : undefined
+        backgroundColor: dragging ? '#0ea5e9' : undefined,
       }}
     >
       <input
@@ -129,7 +143,9 @@ export const FileUploadBase64: React.FC<{
         onChange={handleFileChange}
         className="hidden"
       />
-      <p className="whitespace-nowrap">{(file && !notext) ? file.name : <FaFileUpload />}</p>
+      <p className="whitespace-nowrap">
+        {file && !notext ? file.name : <FaFileUpload />}
+      </p>
     </div>
   );
 };
@@ -138,7 +154,7 @@ interface TabProps {
   label: string;
   content: React.ReactNode;
   banToggle?: boolean;
-  emoji: React.ReactNode
+  emoji: React.ReactNode;
   onClick?: () => void;
 }
 
@@ -149,7 +165,11 @@ interface TabComponentProps {
   left?: boolean;
 }
 
-export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs, toggleView }) => {
+export const TabComponent: React.FC<TabComponentProps> = ({
+  left,
+  tabs,
+  toggleView,
+}) => {
   const [activeTab, setActiveTab] = useState(0);
   const [toggleViewOpen, setToggleViewOpen] = useState(false);
 
@@ -171,9 +191,7 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs, toggleVi
               key={index}
               className={
                 'active:brightness-90 hover:brightness-95 select-none h-8 px-1 md:px-2 text-xs md:text-sm ' +
-                (index === activeTab
-                  ? `back-sky`
-                  : 'back-llgray')
+                (index === activeTab ? `back-sky` : 'back-llgray')
               }
               onClick={() => handleTabClick(index)}
             >
@@ -182,19 +200,20 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs, toggleVi
           ))}
         </div>
         <div className="flex md:hidden gap-1 w-full">
-          {!tabs[activeTab].banToggle && toggleView && <button className='active:brightness-90 hover:brightness-95 select-none h-8 md:hidden text-sm back-llgray px-2 flex justify-center items-center mr-auto'
-            onClick={() => setToggleViewOpen(!toggleViewOpen)}
+          {!tabs[activeTab].banToggle && toggleView && (
+            <button
+              className="active:brightness-90 hover:brightness-95 select-none h-8 md:hidden text-sm back-llgray px-2 flex justify-center items-center mr-auto"
+              onClick={() => setToggleViewOpen(!toggleViewOpen)}
             >
-            {toggleViewOpen?'프롬프트 닫기':'프롬프트 열기'}
-          </button>}
+              {toggleViewOpen ? '프롬프트 닫기' : '프롬프트 열기'}
+            </button>
+          )}
           {tabs.map((tab, index) => (
             <button
               key={index}
               className={
                 'active:brightness-90 hover:brightness-95 select-none px-2 text-sm h-8 ' +
-                (index === activeTab
-                  ? `back-sky`
-                  : 'back-llgray')
+                (index === activeTab ? `back-sky` : 'back-llgray')
               }
               onClick={() => handleTabClick(index)}
             >
@@ -204,9 +223,11 @@ export const TabComponent: React.FC<TabComponentProps> = ({ left, tabs, toggleVi
         </div>
       </div>
       <div className="flex-1 overflow-hidden relative">
-        {!tabs[activeTab].banToggle && toggleViewOpen && <FloatView priority={0} onEscape={()=>setToggleViewOpen(false)}>
-          {toggleView}
-        </FloatView>}
+        {!tabs[activeTab].banToggle && toggleViewOpen && (
+          <FloatView priority={0} onEscape={() => setToggleViewOpen(false)}>
+            {toggleView}
+          </FloatView>
+        )}
         {tabs.map((tab, index) => (
           <div
             key={index}
@@ -241,7 +262,13 @@ export const NumberSelect: React.FC<{
   );
 };
 
-export const Collapsible = ({ title, children } : { title: string, children: ReactNode }) => {
+export const Collapsible = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) => {
   const [isOpen, setIsOpen] = useState(true);
 
   const toggleCollapse = () => {
@@ -260,14 +287,20 @@ export const Collapsible = ({ title, children } : { title: string, children: Rea
   );
 };
 
-export const TextAreaWithUndo = ({ value, onChange } : { value: string, onChange: (value: string) => void }) => {
+export const TextAreaWithUndo = ({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) => {
   const textAreaRef = useRef<any>(null);
   useEffect(() => {
     if (value !== textAreaRef.current.value) {
       textAreaRef.current.value = value;
     }
   }, [value]);
-  const handleChange = (e:any) => {
+  const handleChange = (e: any) => {
     const newValue = e.target.value;
     onChange(newValue);
   };
@@ -280,8 +313,13 @@ export const TextAreaWithUndo = ({ value, onChange } : { value: string, onChange
   );
 };
 
-export const CustomScrollbars = ({ onScroll, forwardedRef, style, children }: any) => {
-  const refSetter = useCallback((scrollbarsRef:any) => {
+export const CustomScrollbars = ({
+  onScroll,
+  forwardedRef,
+  style,
+  children,
+}: any) => {
+  const refSetter = useCallback((scrollbarsRef: any) => {
     if (scrollbarsRef) {
       forwardedRef(scrollbarsRef.view);
     } else {
@@ -292,7 +330,7 @@ export const CustomScrollbars = ({ onScroll, forwardedRef, style, children }: an
   return (
     <Scrollbars
       ref={refSetter}
-      style={{ ...style, overflow: "hidden" }}
+      style={{ ...style, overflow: 'hidden' }}
       onScroll={onScroll}
     >
       {children}

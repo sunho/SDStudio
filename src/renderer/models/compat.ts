@@ -1,10 +1,5 @@
-import {
-  Scene,
-  PreSet,
-  Session,
-  SessionService,
-  getDefaultPreset,
-} from './models';
+import { getDefaultPreset } from './PromptService';
+import { Scene, Session } from './types';
 
 export interface DenDenPrePrompt {
   name: string;

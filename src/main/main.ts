@@ -9,7 +9,17 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain, screen, webContents, dialog, nativeImage, clipboard } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  shell,
+  ipcMain,
+  screen,
+  webContents,
+  dialog,
+  nativeImage,
+  clipboard,
+} from 'electron';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
@@ -25,7 +35,6 @@ import fsExtra from 'fs-extra';
 import LocalAIService from './localai';
 const StreamZip = require('node-stream-zip');
 
-
 import contextMenu from 'electron-context-menu';
 import * as electronDL from 'electron-dl';
 import { createGzip } from 'zlib';
@@ -38,7 +47,7 @@ interface DataBaseConns {
 
 let databases: DataBaseConns = {
   tagDBId: -1,
-  pieceDBId: -1
+  pieceDBId: -1,
 };
 
 let mainWindow: BrowserWindow | null = null;
@@ -105,7 +114,11 @@ ipcMain.handle('get-config', async (event) => {
 
 ipcMain.handle('set-config', async (event, newConfig) => {
   config = newConfig;
-  await fs.writeFile(path.join(DEFAULT_APP_DIR, 'config.json'), JSON.stringify(config), 'utf-8');
+  await fs.writeFile(
+    path.join(DEFAULT_APP_DIR, 'config.json'),
+    JSON.stringify(config),
+    'utf-8',
+  );
 });
 
 ipcMain.handle('get-version', async (event) => {
@@ -136,12 +149,12 @@ ipcMain.handle('zip-files', async (event, files, outPath) => {
   await fs.mkdir(dir, { recursive: true });
   const pack = tarStream.pack();
 
-  pack.pipe(fsSync.createWriteStream(APP_DIR + "/" +outPath));
+  pack.pipe(fsSync.createWriteStream(APP_DIR + '/' + outPath));
   let done = 0;
   for (const file of files) {
     mainWindow!.webContents.send('zip-progress', {
       done: done,
-      total: files.length
+      total: files.length,
     });
     await new Promise((resolve, reject) => {
       const srcPath = file.path;
@@ -151,7 +164,7 @@ ipcMain.handle('zip-files', async (event, files, outPath) => {
       const entry = pack.entry({ name: destPath, size: size });
       stream.on('error', reject);
       entry.on('error', reject);
-      entry.on('finish',resolve);
+      entry.on('finish', resolve);
       stream.pipe(entry);
     });
     done++;
@@ -162,8 +175,7 @@ ipcMain.handle('zip-files', async (event, files, outPath) => {
 ipcMain.handle('unzip-files', async (event, zipPath, outPath) => {
   outPath = APP_DIR + '/' + outPath;
   await fs.mkdir(outPath, { recursive: true });
-  const stream = fsSync.createReadStream(zipPath)
-    .pipe(tar.extract(outPath))
+  const stream = fsSync.createReadStream(zipPath).pipe(tar.extract(outPath));
   await new Promise((resolve, reject) => {
     stream.on('finish', resolve);
     stream.on('error', reject);
@@ -175,9 +187,11 @@ ipcMain.handle('search-tags', async (event, word) => {
 });
 
 ipcMain.handle('load-pieces-db', async (event, pieces) => {
-  const csv = pieces.map((x: string) => {
-    return `<${x}>,0,0,null`;
-  }).join('\n');
+  const csv = pieces
+    .map((x: string) => {
+      return `<${x}>,0,0,null`;
+    })
+    .join('\n');
   native.loadDB(databases.pieceDBId, csv);
 });
 
@@ -222,8 +236,8 @@ ipcMain.handle('write-data-file', async (event, filename, data) => {
 });
 
 ipcMain.handle('rename-file', async (event, oldfile, newfile) => {
-  const oldPath = path.join(APP_DIR,oldfile);
-  const newPath = path.join(APP_DIR,newfile);
+  const oldPath = path.join(APP_DIR, oldfile);
+  const newPath = path.join(APP_DIR, newfile);
   watchHandles.delete(oldPath);
   watchHandles.delete(newPath);
   return await fs.rename(APP_DIR + '/' + oldfile, APP_DIR + '/' + newfile);
@@ -235,7 +249,7 @@ ipcMain.handle('rename-dir', async (event, oldfile, newfile) => {
   if (platform === 'win32') {
     // What the fuck windows
     await fsExtra.copy(APP_DIR + '/' + oldfile, APP_DIR + '/' + newfile);
-    await fsExtra.rmdir(APP_DIR + '/' + oldfile, {recursive:true});
+    await fsExtra.rmdir(APP_DIR + '/' + oldfile, { recursive: true });
   } else {
     return await fs.rename(APP_DIR + '/' + oldfile, APP_DIR + '/' + newfile);
   }
@@ -275,9 +289,9 @@ ipcMain.handle('download', async (event, url, dest, filename) => {
     saveAs: false,
     openFolderWhenDone: false,
     filename,
-    onProgress: (progress:any) => {
+    onProgress: (progress: any) => {
       mainWindow!.webContents.send('download-progress', progress);
-    }
+    },
   };
   try {
     await electronDL.download(mainWindow!, url, options);
@@ -295,21 +309,20 @@ ipcMain.handle(
     outputPath = APP_DIR + '/' + outputPath;
     const dir = path.dirname(outputPath);
     await fs.mkdir(dir, { recursive: true });
-    let instance = sharp(inputPath)
-      .resize(maxWidth, maxHeight, {
-        fit: sharp.fit.inside,
-        withoutEnlargement: true,
-      });
+    let instance = sharp(inputPath).resize(maxWidth, maxHeight, {
+      fit: sharp.fit.inside,
+      withoutEnlargement: true,
+    });
     if (optimize === ImageOptimizeMethod.LOSSY) {
       instance = instance.webp({
         quality: 80,
         lossless: false,
-      })
+      });
     }
     if (optimize === ImageOptimizeMethod.LOSSLESS) {
       instance = instance.webp({
         lossless: true,
-      })
+      });
     }
     await instance.toFile(outputPath);
   },
@@ -317,23 +330,23 @@ ipcMain.handle(
 
 ipcMain.handle('select-dir', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
-    properties: ['openDirectory']
-  })
+    properties: ['openDirectory'],
+  });
   if (canceled) {
-    return
+    return;
   } else {
-    return filePaths[0]
+    return filePaths[0];
   }
 });
 
 ipcMain.handle('select-file', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
-    properties: ['openFile']
-  })
+    properties: ['openFile'],
+  });
   if (canceled) {
-    return
+    return;
   } else {
-    return filePaths[0]
+    return filePaths[0];
   }
 });
 
@@ -356,7 +369,7 @@ async function openImageEditor(inputPath: string) {
   const editor = config.imageEditor ?? 'photoshop';
   const homeDir = os.homedir();
   const gimpBaseDirCand1 = path.join(homeDir, 'AppData', 'Local', 'Programs');
-  const gimpBaseDirCand2 = "C:\\Program Files";
+  const gimpBaseDirCand2 = 'C:\\Program Files';
   async function findGimpPath(baseDir: string) {
     const platform = os.platform();
 
@@ -365,7 +378,9 @@ async function openImageEditor(inputPath: string) {
       const binDir = 'bin';
       const gimpPath = path.join(baseDir, gimpDir, binDir);
       const files = await fs.readdir(gimpPath);
-      const gimpExecutable = files.find((file: string) => file.startsWith('gimp-') && file.endsWith('.exe'));
+      const gimpExecutable = files.find(
+        (file: string) => file.startsWith('gimp-') && file.endsWith('.exe'),
+      );
       if (gimpExecutable) {
         return path.join(gimpPath, gimpExecutable);
       } else {
@@ -395,7 +410,12 @@ async function openImageEditor(inputPath: string) {
 
   async function findPhotoshopPath(paths: string[]) {
     for (let photoshopPath of paths) {
-      if (await fs.access(photoshopPath).then(() => true).catch(() => false)) {
+      if (
+        await fs
+          .access(photoshopPath)
+          .then(() => true)
+          .catch(() => false)
+      ) {
         return photoshopPath;
       }
     }
@@ -406,7 +426,10 @@ async function openImageEditor(inputPath: string) {
   editorsToTry.splice(editorsToTry.indexOf(editor), 1);
   editorsToTry.unshift(editor);
   const runProgram = async (program: string) => {
-    const command = os.platform() === 'win32' ? `"${program}" "${path.resolve(inputPath)}"` : `open -a "${program}" "${path.resolve(inputPath)}"`;
+    const command =
+      os.platform() === 'win32'
+        ? `"${program}" "${path.resolve(inputPath)}"`
+        : `open -a "${program}" "${path.resolve(inputPath)}"`;
 
     exec(command, (err: any) => {
       if (err) {
@@ -417,7 +440,7 @@ async function openImageEditor(inputPath: string) {
     });
   };
   for (const edi of editorsToTry) {
-    switch(edi) {
+    switch (edi) {
       case 'photoshop':
         try {
           const photoshopPath = await findPhotoshopPath(commonPaths);
@@ -425,7 +448,7 @@ async function openImageEditor(inputPath: string) {
             runProgram(photoshopPath);
             return;
           }
-        } catch(e){}
+        } catch (e) {}
         break;
       case 'gimp':
         try {
@@ -434,14 +457,14 @@ async function openImageEditor(inputPath: string) {
             runProgram(gimpPath);
             return;
           }
-        } catch(e){}
+        } catch (e) {}
         try {
           const gimpPath = await findGimpPath(gimpBaseDirCand2);
           if (gimpPath) {
             runProgram(gimpPath);
             return;
           }
-        } catch(e){}
+        } catch (e) {}
         break;
       case 'mspaint':
         if (os.platform() === 'win32') {
@@ -465,13 +488,13 @@ ipcMain.handle('watch-image', async (event, inputPath) => {
   const curPath = path.join(dir, path.basename(inputPath));
 
   let tags = null;
-  if (watchHandles.has(curPath) && watchHandles.get(curPath) !== 'null'){
+  if (watchHandles.has(curPath) && watchHandles.get(curPath) !== 'null') {
     tags = watchHandles.get(curPath);
   } else {
     try {
       tags = await exiftool.read(curPath);
     } catch (e) {
-      console.error("Could not read exif:", curPath, e);
+      console.error('Could not read exif:', curPath, e);
     }
   }
   if (!dirWatchHandles.has(dir)) {
@@ -489,7 +512,7 @@ ipcMain.handle('watch-image', async (event, inputPath) => {
         if (!isWritingExifData) {
           if (watchHandles.get(candPath) !== 'null') {
             const trigger = (dur: number, retry: boolean) => {
-              const myCounter = (exclusiveCounter.get(changedPath) ?? 0)+1;
+              const myCounter = (exclusiveCounter.get(changedPath) ?? 0) + 1;
               exclusiveCounter.set(changedPath, myCounter);
               setTimeout(async () => {
                 if (exclusiveCounter.get(changedPath) !== myCounter) {
@@ -498,9 +521,15 @@ ipcMain.handle('watch-image', async (event, inputPath) => {
                 try {
                   isWritingExifData = true;
                   await exiftool.write(changedPath, watchHandles.get(candPath));
-                  console.log('Exif data written:', orgDir + '/' +  path.basename(changedPath));
-                  mainWindow!.webContents.send('image-changed', orgDir + '/' +  path.basename(changedPath));
-                } catch(e) {
+                  console.log(
+                    'Exif data written:',
+                    orgDir + '/' + path.basename(changedPath),
+                  );
+                  mainWindow!.webContents.send(
+                    'image-changed',
+                    orgDir + '/' + path.basename(changedPath),
+                  );
+                } catch (e) {
                 } finally {
                   isWritingExifData = false;
                   exclusiveCounter.delete(changedPath);
@@ -514,7 +543,10 @@ ipcMain.handle('watch-image', async (event, inputPath) => {
             };
             trigger(4000, true);
           }
-          mainWindow!.webContents.send('image-changed', orgDir + '/' +  path.basename(changedPath));
+          mainWindow!.webContents.send(
+            'image-changed',
+            orgDir + '/' + path.basename(changedPath),
+          );
         }
       }
     });
@@ -531,7 +563,7 @@ ipcMain.handle('unwatch-image', async (event, inputPath) => {
 });
 
 ipcMain.handle('load-model', async (event, modelPath) => {
-  modelPath =  path.resolve(path.join(APP_DIR, modelPath));
+  modelPath = path.resolve(path.join(APP_DIR, modelPath));
   await localAI.loadModel(modelPath, config.useCUDA ?? false);
 });
 
@@ -546,7 +578,9 @@ ipcMain.handle('extract-zip', async (event, zipPath, outPath) => {
     const entries = Object.values(await zip.entries());
     zip.on('extract', (entry: any, file: any) => {
       numExtracted++;
-      mainWindow!.webContents.send('download-progress', { percent: numExtracted / entries.length });
+      mainWindow!.webContents.send('download-progress', {
+        percent: numExtracted / entries.length,
+      });
     });
     await fs.mkdir(dir, { recursive: true });
     await zip.extract(null, dir);
@@ -597,10 +631,14 @@ async function findAvailablePort(startPort) {
 
 async function spawnLocalAI() {
   localAI.port = await findAvailablePort(5353);
-  const localaiProcess = spawn(path.join(APP_DIR, 'localai', 'localai'), ['--port', localAI.port.toString()], {
-    stdio: 'inherit',
-    windowsHide: true,
-  });
+  const localaiProcess = spawn(
+    path.join(APP_DIR, 'localai', 'localai'),
+    ['--port', localAI.port.toString()],
+    {
+      stdio: 'inherit',
+      windowsHide: true,
+    },
+  );
   localAIRunning = true;
   localaiProcess.on('close', (code) => {
     localAIRunning = false;
@@ -608,10 +646,10 @@ async function spawnLocalAI() {
 
   const killIt = () => {
     localaiProcess.kill();
-  }
-  process.on("uncaughtException", killIt);
-  process.on("SIGINT", killIt);
-  process.on("SIGTERM", killIt);
+  };
+  process.on('uncaughtException', killIt);
+  process.on('SIGINT', killIt);
+  process.on('SIGTERM', killIt);
   mainWindow!.on('close', killIt);
 }
 
@@ -626,16 +664,20 @@ ipcMain.handle('is-local-ai-running', async (event) => {
 });
 
 const qualityMap: any = {
-  'low': 320,
-  'normal': 640,
-  'high': 1024,
-  'veryhigh': 1536,
-  'veryveryhigh': 2048
-}
+  low: 320,
+  normal: 640,
+  high: 1024,
+  veryhigh: 1536,
+  veryveryhigh: 2048,
+};
 
 ipcMain.handle('remove-bg', async (event, inputImageBase64, outputPath) => {
   outputPath = path.join(APP_DIR, outputPath);
-  await localAI.runModel(inputImageBase64, qualityMap[config.removeBgQuality ?? 'normal'], outputPath);
+  await localAI.runModel(
+    inputImageBase64,
+    qualityMap[config.removeBgQuality ?? 'normal'],
+    outputPath,
+  );
 });
 
 if (process.env.NODE_ENV === 'production') {
@@ -667,7 +709,7 @@ const RESOURCES_PATH = app.isPackaged
   ? path.join(process.resourcesPath, 'assets')
   : path.join(__dirname, '../../assets');
 
-app.commandLine.appendSwitch('remote-allow-origins', 'http://localhost:8315')
+app.commandLine.appendSwitch('remote-allow-origins', 'http://localhost:8315');
 
 const getAssetPath = (...paths: string[]): string => {
   return path.join(RESOURCES_PATH, ...paths);
@@ -677,7 +719,6 @@ const createWindow = async () => {
   if (isDebug) {
     await installExtensions();
   }
-
 
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.workAreaSize;
@@ -696,7 +737,7 @@ const createWindow = async () => {
     },
   });
 
-   contextMenu({
+  contextMenu({
     window: mainWindow,
     prepend: (defaultActions, params, browserWindow) => {
       console.log(params.mediaType);
@@ -737,7 +778,7 @@ const createWindow = async () => {
               click: () => {
                 mainWindow!.webContents.send('duplicate-scene', altContext);
               },
-            }
+            },
           ];
         }
       };
@@ -745,7 +786,7 @@ const createWindow = async () => {
         try {
           const altContext = JSON.parse(params.altText);
           return handleContextAlt(altContext);
-        } catch(e) {
+        } catch (e) {
           console.error(e);
         }
       }
@@ -753,14 +794,13 @@ const createWindow = async () => {
         try {
           const altContext = JSON.parse(params.titleText);
           return handleContextAlt(altContext);
-        } catch(e) {
+        } catch (e) {
           console.error(e);
         }
       }
       return [];
     },
   });
-
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
@@ -789,7 +829,7 @@ const createWindow = async () => {
 
   const menuBuilder = new MenuBuilder(mainWindow);
   menuBuilder.buildMenu();
-  mainWindow.setMenu(null)
+  mainWindow.setMenu(null);
 
   // Open urls in the user's browser
   mainWindow.webContents.setWindowOpenHandler((edata) => {
@@ -811,13 +851,15 @@ const localAI = new LocalAIService('http://127.0.0.1');
 async function init() {
   await fs.mkdir(DEFAULT_APP_DIR, { recursive: true });
   try {
-    config = JSON.parse(await fs.readFile(path.join(DEFAULT_APP_DIR, 'config.json'), 'utf-8'));
-  } catch(e) {}
+    config = JSON.parse(
+      await fs.readFile(path.join(DEFAULT_APP_DIR, 'config.json'), 'utf-8'),
+    );
+  } catch (e) {}
   const dbCsvContent = await fs.readFile(path.join(dataDir, 'db.csv'), 'utf-8');
   databases.tagDBId = native.createDB('danbooru');
   native.loadDB(databases.tagDBId, dbCsvContent);
   databases.pieceDBId = native.createDB('pieces');
-  dbCsvContent.split("\n").forEach((x: string) => {
+  dbCsvContent.split('\n').forEach((x: string) => {
     const comps: string[] = x.split(',');
     if (comps.length !== 4) return;
     tagMap.set(comps[0], {
@@ -828,7 +870,7 @@ async function init() {
       redirect: comps[3],
       priority: 0,
     });
-  })
+  });
   await initFolder();
 }
 
@@ -859,21 +901,21 @@ async function initFolder() {
 
 init();
 
-const gotTheLock = app.requestSingleInstanceLock()
+const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
-  app.quit()
+  app.quit();
 } else {
   app.on('second-instance', (event, commandLine, workingDirectory) => {
     // Someone tried to run a second instance, we should focus our window.
     if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore()
+      if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
-  })
+  });
   /**
-  * Add event listeners...
-  */
+   * Add event listeners...
+   */
 
   app.on('window-all-closed', () => {
     // Respect the OSX convention of having the application in memory even

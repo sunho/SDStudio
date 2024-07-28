@@ -17,4 +17,3 @@ export interface ImageResizerPlugin {
 const ImageResizer = registerPlugin<ImageResizerPlugin>('ImageResizer');
 
 export default ImageResizer;
-

@@ -1,6 +1,5 @@
 import { Config } from '../main/config';
 import { ImageGenInput } from './backends/imageGen';
-import { SceneContextAlt, ContextAlt } from './models';
 
 export interface FileEntry {
   name: string;
@@ -9,7 +8,7 @@ export interface FileEntry {
 
 export enum ImageOptimizeMethod {
   LOSSY = 1,
-  LOSSLESS = 2
+  LOSSLESS = 2,
 }
 
 export interface ResizeImageInput {
@@ -46,8 +45,8 @@ export abstract class Backend {
   abstract deleteFile(filename: string): Promise<void>;
   abstract deleteDir(filename: string): Promise<void>;
   abstract trashFile(filename: string): Promise<void>;
-  abstract selectDir(): Promise<string|undefined>;
-  abstract selectFile(): Promise<string|undefined>;
+  abstract selectDir(): Promise<string | undefined>;
+  abstract selectFile(): Promise<string | undefined>;
   abstract close(): Promise<void>;
   abstract existFile(filename: string): Promise<boolean>;
   abstract download(url: string, dest: string, filename: string): Promise<void>;
@@ -61,7 +60,10 @@ export abstract class Backend {
   abstract spawnLocalAI(): Promise<void>;
   abstract isLocalAIRunning(): Promise<boolean>;
   abstract getRemainCredits(): Promise<number>;
-  abstract removeBackground(inputImageBase64: string, outputPath: string): Promise<void>;
+  abstract removeBackground(
+    inputImageBase64: string,
+    outputPath: string,
+  ): Promise<void>;
   abstract onDownloadProgress(callback: (progress: any) => void): () => void;
   abstract onZipProgress(callback: (progress: any) => void): () => void;
   abstract onImageChanged(callback: (path: string) => void): () => void;

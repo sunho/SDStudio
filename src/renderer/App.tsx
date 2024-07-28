@@ -8,26 +8,6 @@ import {
   useState,
   useRef,
 } from 'react';
-import {
-  taskQueueService,
-  Session,
-  PreSet,
-  isValidSession,
-  isValidPieceLibrary,
-  sessionService,
-  appUpdateNoticeService,
-  imageService,
-  SceneContextAlt,
-  localAIService,
-  backend,
-  ImageContextAlt,
-  isMobile,
-  ContextMenuType,
-  StyleContextAlt,
-  dataUriToBase64,
-  embedJSONInPNG,
-  importStyle,
-} from './models';
 import SessionSelect from './SessionSelect';
 import PreSetEditor from './PreSetEdtior';
 import SceneQueuControl, { SceneCell } from './SceneQueueControl';
@@ -39,14 +19,26 @@ import PieceEditor, { PieceCell } from './PieceEditor';
 import PromptTooltip from './PromptTooltip';
 import ConfirmWindow, { Dialog } from './ConfirmWindow';
 import QueueControl from './SceneQueueControl';
-import { convertDenDenData, isValidDenDenDataFormat } from './compat';
+import { convertDenDenData, isValidDenDenDataFormat } from './models/compat';
 import { FloatViewProvider } from './FloatView';
-import { FaImage, FaImages, FaPenFancy, FaPenNib, FaPuzzlePiece } from 'react-icons/fa';
-import { Menu, Item, Separator, Submenu, useContextMenu } from 'react-contexify';
-import { DndProvider } from 'react-dnd'
-import { HTML5Backend } from 'react-dnd-html5-backend'
-import { TouchBackend } from 'react-dnd-touch-backend'
-import { usePreview } from 'react-dnd-preview'
+import {
+  FaImage,
+  FaImages,
+  FaPenFancy,
+  FaPenNib,
+  FaPuzzlePiece,
+} from 'react-icons/fa';
+import {
+  Menu,
+  Item,
+  Separator,
+  Submenu,
+  useContextMenu,
+} from 'react-contexify';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { TouchBackend } from 'react-dnd-touch-backend';
+import { usePreview } from 'react-dnd-preview';
 
 import React from 'react';
 import { CellPreview } from './ResultViewer';
@@ -56,6 +48,27 @@ import { v4 } from 'uuid';
 import styles from './App.module.scss';
 import { StackFixed, StackGrow, VerticalStack } from './LayoutComponents';
 import ProgressWindow, { ProgressDialog } from './ProgressWindow';
+import {
+  taskQueueService,
+  backend,
+  sessionService,
+  appUpdateNoticeService,
+  localAIService,
+  imageService,
+  isMobile,
+} from './models';
+import { dataUriToBase64 } from './models/ImageService';
+import { importStyle, embedJSONInPNG } from './models/SessionService';
+import {
+  PreSet,
+  isValidSession,
+  isValidPieceLibrary,
+  SceneContextAlt,
+  ImageContextAlt,
+  StyleContextAlt,
+  ContextMenuType,
+  Session,
+} from './models/types';
 
 export interface Context {
   curSession: Session | undefined;
@@ -105,29 +118,44 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 }
 
 const DnDPreview = () => {
-  const preview = usePreview()
+  const preview = usePreview();
   if (!preview.display) {
-    return null
+    return null;
   }
-  const {itemType, item, style} = preview;
+  const { itemType, item, style } = preview;
   style['rotate'] = '2deg';
   style['transformOrigin'] = 'center';
   let res: any = null;
   if (itemType === 'scene') {
     const { scene, curSession, getImage, cellSize } = item as any;
-    res = <SceneCell scene={scene} curSession={curSession} getImage={getImage} cellSize={cellSize} style={style} />
-  }  else if (itemType === 'image') {
+    res = (
+      <SceneCell
+        scene={scene}
+        curSession={curSession}
+        getImage={getImage}
+        cellSize={cellSize}
+        style={style}
+      />
+    );
+  } else if (itemType === 'image') {
     const { path, cellSize, imageSize } = item as any;
-    res = <CellPreview path={path} cellSize={cellSize} imageSize={imageSize} style={style} />
+    res = (
+      <CellPreview
+        path={path}
+        cellSize={cellSize}
+        imageSize={imageSize}
+        style={style}
+      />
+    );
   } else if (itemType === 'piece') {
-    res = <PieceCell {...item as any} style={style} />;
-  } else if (itemType === 'slot'){
-    res = <SlotPiece {...item as any} style={style} />;
+    res = <PieceCell {...(item as any)} style={style} />;
+  } else if (itemType === 'slot') {
+    res = <SlotPiece {...(item as any)} style={style} />;
   } else {
-    return <></>
+    return <></>;
   }
   return res;
-}
+};
 
 export default function App() {
   useEffect(() => {
@@ -153,7 +181,7 @@ export default function App() {
     sessionService.addEventListener('config-changed', refreshDarkMode);
     return () => {
       sessionService.removeEventListener('config-changed', refreshDarkMode);
-    }
+    };
   }, []);
   useEffect(() => {
     const handleUpdate = () => {
@@ -165,7 +193,7 @@ export default function App() {
           callback: () => {
             backend.openWebPage('https://github.com/sunho/SDStudio/releases');
           },
-        })
+        });
         updatedIgnored.current = true;
       }
     };
@@ -174,23 +202,27 @@ export default function App() {
     return () => {
       appUpdateNoticeService.removeEventListener('updated', handleUpdate);
     };
-  },[]);
+  }, []);
   useEffect(() => {
-    const removeDonwloadProgressListener = backend.onDownloadProgress((progress: any) => {
-      console.log(progress);
-      localAIService.notifyDownloadProgress(progress.percent);
-    });
+    const removeDonwloadProgressListener = backend.onDownloadProgress(
+      (progress: any) => {
+        console.log(progress);
+        localAIService.notifyDownloadProgress(progress.percent);
+      },
+    );
     const removeZipProgressListener = backend.onZipProgress((progress: any) => {
       setProgressDialog({
         text: '압축파일 생성 중..',
         done: progress.done,
-        total: progress.total
+        total: progress.total,
       });
     });
-    const removeImageChangedListener = backend.onImageChanged(async (path: string) => {
-      console.log('image-changed', path);
-      imageService.invalidateCache(path);
-    });
+    const removeImageChangedListener = backend.onImageChanged(
+      async (path: string) => {
+        console.log('image-changed', path);
+        imageService.invalidateCache(path);
+      },
+    );
     const handleIPCheckFail = () => {
       pushDialog({
         type: 'yes-only',
@@ -204,7 +236,7 @@ export default function App() {
       removeZipProgressListener();
       taskQueueService.removeEventListener('ip-check-fail', handleIPCheckFail);
     };
-  },[curSession]);
+  }, [curSession]);
 
   const handleFile = async (file: File) => {
     if (file.type === 'application/json') {
@@ -234,13 +266,12 @@ export default function App() {
               pushDialog({
                 type: 'yes-only',
                 text: '그림체를 임포트 했습니다',
-              })
+              });
             }
-          } catch(e) {
-          }
+          } catch (e) {}
         };
         reader.readAsDataURL(file);
-      } catch(err) {
+      } catch (err) {
         console.error(err);
       }
     }
@@ -255,7 +286,11 @@ export default function App() {
             await sessionService.importSessionShallow(json, json.name);
             const newSession = (await sessionService.get(json.name))!;
             setCurSession(newSession);
-            setSelectedPreset(newSession.presets.filter(x => x.type === newSession.presetMode)[0]);
+            setSelectedPreset(
+              newSession.presets.filter(
+                (x) => x.type === newSession.presetMode,
+              )[0],
+            );
             pushDialog({
               type: 'yes-only',
               text: '프로젝트를 임포트 했습니다',
@@ -272,28 +307,33 @@ export default function App() {
                   await sessionService.importSessionShallow(json, value);
                   const newSession = (await sessionService.get(value))!;
                   setCurSession(newSession);
-                  setSelectedPreset(newSession.presets.filter(x => x.type === newSession.presetMode)[0]);
+                  setSelectedPreset(
+                    newSession.presets.filter(
+                      (x) => x.type === newSession.presetMode,
+                    )[0],
+                  );
                 } catch (e) {
                   pushMessage('이미 존재하는 프로젝트 이름입니다.');
                 }
               },
             });
           }
-        }
+        };
         if (!curSession) {
           await importCool();
         } else {
           pushDialog({
             type: 'select',
             text: '프로젝트를 임포트 합니다. 원하시는 방식을 선택해주세요.',
-            items: [{
+            items: [
+              {
                 text: '새 프로젝트로 임포트',
-                value: 'new-project'
+                value: 'new-project',
               },
               {
                 text: '현재 프로젝트에 씬만 임포트 (⚠️! 씬이 덮어씌워짐)',
-                value: 'cur-project'
-              }
+                value: 'cur-project',
+              },
             ],
             callback: async (option?: string) => {
               if (option === 'new-project') {
@@ -319,7 +359,7 @@ export default function App() {
                 });
               }
             },
-          })
+          });
         }
       };
       if (isValidSession(json)) {
@@ -394,8 +434,7 @@ export default function App() {
 
   useEffect(() => {
     window.curSession = curSession;
-    if (curSession)
-      sessionService.reloadPieceLibraryDB(curSession);
+    if (curSession) sessionService.reloadPieceLibraryDB(curSession);
     return () => {
       window.curSession = undefined;
     };
@@ -410,7 +449,8 @@ export default function App() {
       }
       const newScene = JSON.parse(JSON.stringify(scene));
       let cnt = 0;
-      const newName = () => (ctx.name + '_copy' + (cnt === 0 ? '' : cnt.toString()));
+      const newName = () =>
+        ctx.name + '_copy' + (cnt === 0 ? '' : cnt.toString());
       while (newName() in curSession![field]) {
         cnt++;
       }
@@ -453,7 +493,7 @@ export default function App() {
       sessionService.markUpdated(curSession!.name);
       sessionService.sceneOrderChanged();
     };
-    const handleSceneItemClick = ({id, props}: any) => {
+    const handleSceneItemClick = ({ id, props }: any) => {
       const ctx = props.ctx as SceneContextAlt;
       if (id === 'duplicate') {
         duplicateScene(ctx);
@@ -462,7 +502,7 @@ export default function App() {
       } else if (id === 'move-back') {
         moveSceneBack(ctx);
       }
-    }
+    };
     const duplicateImage = async (ctx: ImageContextAlt) => {
       const tmp = ctx.path.slice(0, ctx.path.lastIndexOf('/'));
       const dir = tmp.split('/').pop()!;
@@ -474,10 +514,7 @@ export default function App() {
       }
       await backend.copyFile(
         ctx.path,
-        tmp +
-          '/' +
-          Date.now().toString() +
-          '.png',
+        tmp + '/' + Date.now().toString() + '.png',
       );
       imageService.refresh(curSession!, scene);
       pushDialog({
@@ -494,8 +531,7 @@ export default function App() {
           value: key,
         })),
         callback: async (value) => {
-          if (!value)
-            return;
+          if (!value) return;
 
           const scene = curSession!.scenes[value];
           if (!scene) {
@@ -519,8 +555,8 @@ export default function App() {
     };
     const clipboardImage = async (ctx: ImageContextAlt) => {
       await backend.copyImageToClipboard(ctx.path);
-    }
-    const handleImageItemClick = ({id, props}: any) => {
+    };
+    const handleImageItemClick = ({ id, props }: any) => {
       if (id === 'duplicate') {
         duplicateImage(props.ctx as ImageContextAlt);
       } else if (id === 'copy') {
@@ -530,31 +566,42 @@ export default function App() {
       }
     };
     const exportStyle = async (ctx: StyleContextAlt) => {
-      const pngData = dataUriToBase64(await backend.readDataFile(imageService.getVibesDir(curSession!) + '/' + ctx.preset.profile));
+      const pngData = dataUriToBase64(
+        await backend.readDataFile(
+          imageService.getVibesDir(curSession!) + '/' + ctx.preset.profile,
+        ),
+      );
       const newPngData = embedJSONInPNG(pngData, ctx.preset);
-      const path = 'exports/'+ctx.preset.name+'_'+Date.now().toString()+'.png';
+      const path =
+        'exports/' + ctx.preset.name + '_' + Date.now().toString() + '.png';
       await backend.writeDataFile(path, newPngData);
       await backend.showFile(path);
-    }
+    };
     const deleteStyle = async (ctx: StyleContextAlt) => {
       pushDialog({
         type: 'confirm',
         text: '정말로 삭제하시겠습니까?',
         callback: async () => {
-          if (ctx.session.presets.filter(p => p.type === 'style').length === 1) {
+          if (
+            ctx.session.presets.filter((p) => p.type === 'style').length === 1
+          ) {
             pushMessage('마지막 그림체는 삭제할 수 없습니다');
             return;
           }
-          ctx.session.presets = ctx.session.presets.filter(p => p != ctx.preset);
-          setSelectedPreset(ctx.session.presets.filter(p => p.type === 'style')[0]);
+          ctx.session.presets = ctx.session.presets.filter(
+            (p) => p != ctx.preset,
+          );
+          setSelectedPreset(
+            ctx.session.presets.filter((p) => p.type === 'style')[0],
+          );
           sessionService.markUpdated(ctx.session.name);
         },
       });
-    }
+    };
     const editStyle = async (ctx: StyleContextAlt) => {
       sessionService.styleEditStart(ctx.preset);
     };
-    const handleStyleItemClick = ({id, props}: any) => {
+    const handleStyleItemClick = ({ id, props }: any) => {
       if (id === 'export') {
         exportStyle(props.ctx as StyleContextAlt);
       } else if (id === 'delete') {
@@ -563,24 +610,46 @@ export default function App() {
         editStyle(props.ctx as StyleContextAlt);
       }
     };
-    return <>
-      <Menu id={ContextMenuType.Scene}>
-        <Item id="duplicate" onClick={handleSceneItemClick}>해당 씬 복제</Item>
-        <Item id="move-front" onClick={handleSceneItemClick}>해당 씬 맨 위로</Item>
-        <Item id="move-back" onClick={handleSceneItemClick}>해당 씬 맨 뒤로</Item>
-      </Menu>
-      <Menu id={ContextMenuType.Image}>
-        <Item id="duplicate" onClick={handleImageItemClick}>해당 이미지 복제</Item>
-        <Item id="copy" onClick={handleImageItemClick}>다른 씬으로 이미지 복사</Item>
-        {!isMobile&&<Item id="clipboard" onClick={handleImageItemClick}>클립보드로 이미지 복사</Item>}
-      </Menu>
-      <Menu id={ContextMenuType.Style}>
-        <Item id="export" onClick={handleStyleItemClick}>해당 그림체 내보내기</Item>
-        <Item id="edit" onClick={handleStyleItemClick}>해당 그림체 편집</Item>
-        <Item id="delete" onClick={handleStyleItemClick}>해당 그림체 삭제</Item>
-      </Menu>
-    </>;
-  }
+    return (
+      <>
+        <Menu id={ContextMenuType.Scene}>
+          <Item id="duplicate" onClick={handleSceneItemClick}>
+            해당 씬 복제
+          </Item>
+          <Item id="move-front" onClick={handleSceneItemClick}>
+            해당 씬 맨 위로
+          </Item>
+          <Item id="move-back" onClick={handleSceneItemClick}>
+            해당 씬 맨 뒤로
+          </Item>
+        </Menu>
+        <Menu id={ContextMenuType.Image}>
+          <Item id="duplicate" onClick={handleImageItemClick}>
+            해당 이미지 복제
+          </Item>
+          <Item id="copy" onClick={handleImageItemClick}>
+            다른 씬으로 이미지 복사
+          </Item>
+          {!isMobile && (
+            <Item id="clipboard" onClick={handleImageItemClick}>
+              클립보드로 이미지 복사
+            </Item>
+          )}
+        </Menu>
+        <Menu id={ContextMenuType.Style}>
+          <Item id="export" onClick={handleStyleItemClick}>
+            해당 그림체 내보내기
+          </Item>
+          <Item id="edit" onClick={handleStyleItemClick}>
+            해당 그림체 편집
+          </Item>
+          <Item id="delete" onClick={handleStyleItemClick}>
+            해당 그림체 삭제
+          </Item>
+        </Menu>
+      </>
+    );
+  };
 
   const pushMessage = (msg: string) => {
     setMessages((prev) => [...prev, msg]);
@@ -597,12 +666,14 @@ export default function App() {
       };
       dialog.onCancel = () => {
         resolve(undefined);
-      }
+      };
       pushDialog(dialog);
     });
-  }
+  };
 
-  const [progressDialog, setProgressDialog] = useState<ProgressDialog | undefined>(undefined);
+  const [progressDialog, setProgressDialog] = useState<
+    ProgressDialog | undefined
+  >(undefined);
 
   const ctx: Context = {
     curSession,
@@ -619,85 +690,112 @@ export default function App() {
   };
 
   const tabs = [
-    { label: '이미지생성', content: <QueueControl type="scene" showPannel/>, emoji: <FaImages/> },
-    { label: '인페인트', content: <QueueControl type="inpaint" showPannel/>, emoji: <FaPenFancy/> },
-    { label: '프롬프트조각', content: <PieceEditor />, emoji: <FaPuzzlePiece/> },
+    {
+      label: '이미지생성',
+      content: <QueueControl type="scene" showPannel />,
+      emoji: <FaImages />,
+    },
+    {
+      label: '인페인트',
+      content: <QueueControl type="inpaint" showPannel />,
+      emoji: <FaPenFancy />,
+    },
+    {
+      label: '프롬프트조각',
+      content: <PieceEditor />,
+      emoji: <FaPuzzlePiece />,
+    },
   ];
-  const editorKey = curSession?.presetMode === 'preset' ? 'preset_' + curSession.name + '_' + selectedPreset?.name : 'style_' + curSession?.name;
+  const editorKey =
+    curSession?.presetMode === 'preset'
+      ? 'preset_' + curSession.name + '_' + selectedPreset?.name
+      : 'style_' + curSession?.name;
 
   return (
     <AppContext.Provider value={ctx}>
-      <DndProvider backend={isMobile ? TouchBackend : HTML5Backend} options={{
-        enableTouchEvents: true,
-        enableMouseEvents: false,
-        delayTouchStart: 400,
-      }}>
-      <div className={"flex flex-col relative h-screen w-screen bg-white dark:bg-slate-900 " + (darkMode?"dark":"")}>
-        <div className="z-30">
-          <DnDPreview/>
-        </div>
-        <ErrorBoundary
-          onErr={(error, errorInfo) => {
-            pushMessage(`${error.message}`);
-          }}
+      <DndProvider
+        backend={isMobile ? TouchBackend : HTML5Backend}
+        options={{
+          enableTouchEvents: true,
+          enableMouseEvents: false,
+          delayTouchStart: 400,
+        }}
+      >
+        <div
+          className={
+            'flex flex-col relative h-screen w-screen bg-white dark:bg-slate-900 ' +
+            (darkMode ? 'dark' : '')
+          }
         >
-        <FloatViewProvider>
-          <ContextMenuList/>
-          <VerticalStack>
-            <StackFixed>
-              <TobBar
-              setCurSession={setCurSession}
-              setSelectedPreset={setSelectedPreset}
-                />
-            </StackFixed>
-            <StackGrow className="flex">
-              {curSession && selectedPreset && (
-                <>
-                  <StackGrow outerClassName="hidden md:block">
-                    <PreSetEditor
-                      type={curSession.presetMode}
-                      key={editorKey}
-                      middlePromptMode={false}
-                      selectedPreset={selectedPreset}
-                      setSelectedPreset={setSelectedPreset}
-                    />
-                  </StackGrow>
-                  <StackGrow>
-                    <TabComponent key={curSession.name} tabs={tabs}
-                    toggleView={<PreSetEditor
-                      type={curSession.presetMode}
-                      key={editorKey+"2"}
-                      globalMode
-                      selectedPreset={selectedPreset}
-                      middlePromptMode={false}
-                      setSelectedPreset={setSelectedPreset}
-                    />}
-                    />
-                  </StackGrow>
-                </>
-              )}
-            </StackGrow>
-          </VerticalStack>
-        </FloatViewProvider>
-        <StackFixed>
-          <div className="px-3 py-2 border-t flex gap-3 items-center line-color">
-            <div className="hidden md:block flex-1">
-              <SessionSelect
-                setCurSession={setCurSession}
-                setSelectedPreset={setSelectedPreset}
-              />
-            </div>
-            <div className="flex flex-none gap-4 ml-auto">
-              <TaskQueueControl setSamples={setSamples} />
-            </div>
+          <div className="z-30">
+            <DnDPreview />
           </div>
-        </StackFixed>
-        </ErrorBoundary>
-        <AlertWindow setMessages={setMessages} />
-        <ConfirmWindow setDialogs={setDialogs} />
-        {progressDialog && <ProgressWindow dialog={progressDialog}/>}
-        <PromptTooltip />
-      </div>
+          <ErrorBoundary
+            onErr={(error, errorInfo) => {
+              pushMessage(`${error.message}`);
+            }}
+          >
+            <FloatViewProvider>
+              <ContextMenuList />
+              <VerticalStack>
+                <StackFixed>
+                  <TobBar
+                    setCurSession={setCurSession}
+                    setSelectedPreset={setSelectedPreset}
+                  />
+                </StackFixed>
+                <StackGrow className="flex">
+                  {curSession && selectedPreset && (
+                    <>
+                      <StackGrow outerClassName="hidden md:block">
+                        <PreSetEditor
+                          type={curSession.presetMode}
+                          key={editorKey}
+                          middlePromptMode={false}
+                          selectedPreset={selectedPreset}
+                          setSelectedPreset={setSelectedPreset}
+                        />
+                      </StackGrow>
+                      <StackGrow>
+                        <TabComponent
+                          key={curSession.name}
+                          tabs={tabs}
+                          toggleView={
+                            <PreSetEditor
+                              type={curSession.presetMode}
+                              key={editorKey + '2'}
+                              globalMode
+                              selectedPreset={selectedPreset}
+                              middlePromptMode={false}
+                              setSelectedPreset={setSelectedPreset}
+                            />
+                          }
+                        />
+                      </StackGrow>
+                    </>
+                  )}
+                </StackGrow>
+              </VerticalStack>
+            </FloatViewProvider>
+            <StackFixed>
+              <div className="px-3 py-2 border-t flex gap-3 items-center line-color">
+                <div className="hidden md:block flex-1">
+                  <SessionSelect
+                    setCurSession={setCurSession}
+                    setSelectedPreset={setSelectedPreset}
+                  />
+                </div>
+                <div className="flex flex-none gap-4 ml-auto">
+                  <TaskQueueControl setSamples={setSamples} />
+                </div>
+              </div>
+            </StackFixed>
+          </ErrorBoundary>
+          <AlertWindow setMessages={setMessages} />
+          <ConfirmWindow setDialogs={setDialogs} />
+          {progressDialog && <ProgressWindow dialog={progressDialog} />}
+          <PromptTooltip />
+        </div>
       </DndProvider>
     </AppContext.Provider>
   );

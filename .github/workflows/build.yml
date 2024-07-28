@@ -19,12 +19,7 @@ jobs:
       - name: Build local AI and install dependencies
         run: |
           python3 -m pip install setuptools --break-system-packages
-          cd src/native
           npm install
-          cd ../..
-          npm install
-          npm install ./externals/capacitor-background-mode
-          npm run postinstall-electron
 
       - name: Build the application
         run: npm run package
@@ -96,8 +91,6 @@ jobs:
           npm rebuild --platform=darwin --arch=x64 tar-fs
           cd ../..
           npm install
-          npm install ./externals/capacitor-background-mode
-          npm run postinstall-electron
 
 
 
@@ -151,7 +144,6 @@ jobs:
         run: |
           cp capacitor.config.deploy.ts capacitor.config.ts
           npm install
-          npm install ./externals/capacitor-background-mode
 
       - name: Get version and commit hash
         id: get-version
