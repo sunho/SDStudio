@@ -18,8 +18,8 @@ import { useContextMenu } from 'react-contexify';
 import {
   CommonSetup,
   ContextMenuType,
-  NAIStylePreSet,
-  NAIStylePreSetShared,
+  StylePreSet,
+  StylePreSetShared,
   PreSet,
   PreSetMode,
   PromptNode,
@@ -652,7 +652,7 @@ const NAIPreSetEditor: React.FC<Props> = ({
 };
 
 interface StyleEditorProps {
-  selectedPreset?: NAIStylePreSet;
+  selectedPreset?: StylePreSet;
   onClose: () => void;
 }
 
@@ -663,7 +663,7 @@ const StyleEditor: React.FC<StyleEditorProps> = ({
   const { curSession, pushMessage } = useContext(AppContext)!;
   const [_, rerender] = useState<{}>({});
   const prompt = React.useRef<string>('');
-  const presetRef = React.useRef<NAIStylePreSet>(
+  const presetRef = React.useRef<StylePreSet>(
     selectedPreset ?? getDefaultStylePreset(),
   );
   const getPrompt = () => prompt.current;
@@ -814,12 +814,12 @@ const NAIStylePreSetEditor: React.FC<Props> = ({
   const [samplerSetting, setSamplerSetting] = useState(false);
   const [vibeSetting, setVibeSetting] = useState(false);
   const commonSetup = useCommonSetup();
-  const shared = commonSetup.shared as NAIStylePreSetShared;
+  const shared = commonSetup.shared as StylePreSetShared;
   const presets = curSession!.presets;
   const [showStyleEditor, setShowStyleEditor] = useState(false);
-  const stylePreset = selectedPreset as NAIStylePreSet;
+  const stylePreset = selectedPreset as StylePreSet;
   const [editingPreset, setEditingPreset] = useState<
-    NAIStylePreSet | undefined
+    StylePreSet | undefined
   >(undefined);
   const { show, hideAll } = useContextMenu({
     id: ContextMenuType.Style,

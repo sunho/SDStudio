@@ -16,6 +16,7 @@ export const StyleComponent = (classes: string) => {
 export const VerticalStack = StyleComponent(
   'w-full h-full flex flex-col overflow-hidden',
 );
+
 export const StackGrow = ({
   children,
   outerClassName,

@@ -10,7 +10,7 @@ import { ResourceSyncService } from './ResourceSyncService';
 import {
   GenericScene,
   InPaintScene,
-  NAIStylePreSet,
+  StylePreSet,
   PreSet,
   Scene,
   Session,
@@ -560,7 +560,7 @@ export async function importStyle(session: Session, base64: string) {
   if (!json.profile) {
     return undefined;
   }
-  const preset: NAIStylePreSet = json;
+  const preset: StylePreSet = json;
   const path = imageService.getVibesDir(session!) + '/' + v4() + '.png';
   await backend.writeDataFile(path, base64);
   preset.profile = path.split('/').pop()!;

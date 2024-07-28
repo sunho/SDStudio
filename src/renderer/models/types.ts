@@ -14,7 +14,7 @@ export interface CommonSetup {
   shared: PreSetShared;
 }
 
-export interface NAIPreSet {
+export interface RegularPreSet {
   type: 'preset';
   name: string;
   frontPrompt: string;
@@ -29,7 +29,7 @@ export interface NAIPreSet {
   noiseSchedule?: NoiseSchedule;
 }
 
-export interface NAIStylePreSet {
+export interface StylePreSet {
   type: 'style';
   name: string;
   frontPrompt: string;
@@ -45,13 +45,13 @@ export interface NAIStylePreSet {
   noiseSchedule?: NoiseSchedule;
 }
 
-export interface NAIPreSetShared {
+export interface RegularPreSetShared {
   type: 'preset';
   vibes: VibeItem[];
   seed?: number;
 }
 
-export interface NAIStylePreSetShared {
+export interface StylePreSetShared {
   type: 'style';
   vibes: VibeItem[];
   characterPrompt: string;
@@ -60,8 +60,8 @@ export interface NAIStylePreSetShared {
   seed?: number;
 }
 
-export type PreSet = NAIPreSet | NAIStylePreSet;
-export type PreSetShared = NAIPreSetShared | NAIStylePreSetShared;
+export type PreSet = RegularPreSet | StylePreSet;
+export type PreSetShared = RegularPreSetShared | StylePreSetShared;
 export type PreSetMode = 'preset' | 'style';
 
 export interface PieceLibrary {
@@ -185,7 +185,7 @@ export interface SceneContextAlt {
 
 export interface StyleContextAlt {
   type: 'style';
-  preset: NAIStylePreSet;
+  preset: StylePreSet;
   session: Session;
 }
 
