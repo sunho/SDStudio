@@ -20,8 +20,8 @@ import {
   BakedPreSet,
   GenericScene,
   InPaintScene,
-  NAIStylePreSet,
-  NAIStylePreSetShared,
+  StylePreSet,
+  StylePreSetShared,
   PreSet,
   PromptNode,
   Scene,
@@ -641,7 +641,7 @@ export const tasksHandlerMap = {
 
 export const queueDummyPrompt = (
   session: Session,
-  preset: NAIStylePreSet,
+  preset: StylePreSet,
   outPath: string,
   prompt: PromptNode,
   resolution: Resolution,
@@ -681,7 +681,7 @@ export const queueScenePrompt = (
   const shared = session.presetShareds[session.presetMode];
   let uc = toPARR(preset.uc);
   if (session.presetMode === 'style') {
-    uc = uc.concat(toPARR((shared as NAIStylePreSetShared).uc));
+    uc = uc.concat(toPARR((shared as StylePreSetShared).uc));
   }
   const params: GenerateImageTaskParams = {
     preset: {

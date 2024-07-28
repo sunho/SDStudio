@@ -3,9 +3,9 @@ import { Sampling } from '../backends/imageGen';
 import { ResourceSyncService } from './ResourceSyncService';
 import {
   InPaintScene,
-  NAIPreSet,
-  NAIStylePreSet,
-  NAIStylePreSetShared,
+  RegularPreSet,
+  StylePreSet,
+  StylePreSetShared,
   PARR,
   PieceLibrary,
   PreSet,
@@ -194,7 +194,7 @@ export const createPrompts = async (
     if (promptComb.length === scene.slots.length) {
       let front = toPARR(preset.frontPrompt);
       if (preset.type === 'style') {
-        const styleShared = shared as NAIStylePreSetShared;
+        const styleShared = shared as StylePreSetShared;
         front = front.concat(toPARR(styleShared.characterPrompt));
         const newFront = [];
         const rest = [];
@@ -254,7 +254,7 @@ export const createPrompts = async (
         right++;
       }
       if (preset.type === 'style') {
-        const styleShared = shared as NAIStylePreSetShared;
+        const styleShared = shared as StylePreSetShared;
         cur = cur.concat(toPARR(styleShared.backgroundPrompt));
       }
       cur = cur.concat(toPARR(preset.backPrompt));
@@ -493,7 +493,7 @@ export const defaultFPrompt = `1girl, {artist:ixy}`;
 export const defaultBPrompt = `{best quality, amazing quality, very aesthetic, highres, incredibly absurdres}`;
 export const defaultUC = `worst quality, bad quality, displeasing, very displeasing, lowres, bad anatomy, bad perspective, bad proportions, bad aspect ratio, bad face, long face, bad teeth, bad neck, long neck, bad arm, bad hands, bad ass, bad leg, bad feet, bad reflection, bad shadow, bad link, bad source, wrong hand, wrong feet, missing limb, missing eye, missing tooth, missing ear, missing finger, extra faces, extra eyes, extra eyebrows, extra mouth, extra tongue, extra teeth, extra ears, extra breasts, extra arms, extra hands, extra legs, extra digits, fewer digits, cropped head, cropped torso, cropped shoulders, cropped arms, cropped legs, mutation, deformed, disfigured, unfinished, chromatic aberration, text, error, jpeg artifacts, watermark, scan, scan artifacts`;
 
-export function getDefaultPreset(): NAIPreSet {
+export function getDefaultPreset(): RegularPreSet {
   return {
     name: '',
     type: 'preset',
@@ -506,7 +506,7 @@ export function getDefaultPreset(): NAIPreSet {
   };
 }
 
-export function getDefaultStylePreset(): NAIStylePreSet {
+export function getDefaultStylePreset(): StylePreSet {
   return {
     name: '',
     type: 'style',

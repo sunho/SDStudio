@@ -10,7 +10,6 @@ import {
 import {
   Config,
   ImageEditor,
-  ModelType,
   RemoveBgQuality,
 } from '../main/config';
 import { AppContext } from './App';
