@@ -10,6 +10,10 @@ import PromptEditTextArea from './PromptEditTextArea';
 import { Resolution, resolutionMap } from './backends/imageGen';
 import { FaArrowsAlt, FaBrush, FaPaintBrush, FaUndo } from 'react-icons/fa';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { isMobile, imageService, sessionService, backend } from './models';
+import { dataUriToBase64 } from './models/ImageService';
+import { InPaintScene } from './models/types';
+import { extractPromptDataFromBase64 } from './models/util';
 
 interface Props {
   editingScene: InPaintScene;
