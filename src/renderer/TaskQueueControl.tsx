@@ -1,22 +1,15 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { AppContext } from './App';
-import {
-  Scene,
-  imageService,
-  promptService,
-  queueScene,
-  sessionService,
-  taskQueueService,
-  Task,
-  toPARR,
-  getSceneKey,
-  GenerateImageTaskParams,
-  RemoveBgTaskParams,
-} from './models';
 import { FaSpinner } from 'react-icons/fa';
 import { FaPlay, FaRegCalendarTimes, FaStop } from 'react-icons/fa';
 import { FaTimes } from 'react-icons/fa';
 import { FaRegClock } from 'react-icons/fa';
+import { taskQueueService } from './models';
+import {
+  GenerateImageTaskParams,
+  RemoveBgTaskParams,
+  Task,
+} from './models/TaskQueueService';
 
 interface Props {
   setSamples: (nw: number) => void;
@@ -31,9 +24,12 @@ interface ProgressBarProps {
 
 const ProgressBar = ({ duration, isError, text, key }: ProgressBarProps) => {
   return (
-    <div key={key} className="relative w-40 md:w-52 bg-gray-200 dark:bg-slate-700 rounded-full h-8">
+    <div
+      key={key}
+      className="relative w-40 md:w-52 bg-gray-200 dark:bg-slate-700 rounded-full h-8"
+    >
       <div className="top-0 left-0 w-40 md:w-52 h-8 absolute flex items-center justify-center text-gray-600 dark:text-white gap-2">
-        <FaRegClock size={20}/>
+        <FaRegClock size={20} />
         <div className="w-28 md:w-40 text-xs md:text-sm text-center overflow-hidden text-nowrap">
           {text}
         </div>
@@ -49,7 +45,7 @@ const ProgressBar = ({ duration, isError, text, key }: ProgressBarProps) => {
         className="top-0 left-0 w-40 md:w-52 h-8 absolute flex items-center justify-center text-white gap-2 progress-clip-animation"
         style={{ animationDuration: `${duration}s` }}
       >
-        <FaRegClock size={20}/>
+        <FaRegClock size={20} />
         <div className="w-28 md:w-40 text-xs md:text-sm text-center overflow-hidden text-nowrap">
           {text}
         </div>
@@ -61,7 +57,7 @@ const ProgressBar = ({ duration, isError, text, key }: ProgressBarProps) => {
 interface TaskProgressBarProps {
   fast?: boolean;
 }
-export const TaskProgressBar = ({fast}: TaskProgressBarProps) => {
+export const TaskProgressBar = ({ fast }: TaskProgressBarProps) => {
   const { pushMessage } = useContext(AppContext)!;
   const key = useRef<number>(0);
   const [duration, setDuration] = useState(0);
@@ -121,7 +117,7 @@ export const TaskProgressBar = ({fast}: TaskProgressBarProps) => {
         setDuration(0);
       }
     };
-    const onError = (e:any) => {
+    const onError = (e: any) => {
       if (e.detail.task.type === 'remove-bg') {
         pushMessage('Error: ' + e.detail.error);
       }
@@ -142,7 +138,8 @@ export const TaskProgressBar = ({fast}: TaskProgressBarProps) => {
     };
   }, []);
 
-  return <div
+  return (
+    <div
       onClick={() => {
         if (error !== '') {
           pushMessage('Error: ' + error);
@@ -156,10 +153,10 @@ export const TaskProgressBar = ({fast}: TaskProgressBarProps) => {
         text={getProgressText()}
       />
     </div>
-}
+  );
+};
 
-
-const TaskQueueList = ({onClose}: {onClose?: () => void}) => {
+const TaskQueueList = ({ onClose }: { onClose?: () => void }) => {
   const [tasks, setTasks] = useState<any[]>([]);
   useEffect(() => {
     const onChange = () => {
@@ -191,7 +188,11 @@ const TaskQueueList = ({onClose}: {onClose?: () => void}) => {
   };
 
   const getTaskText = (task: Task) => {
-    if (task.type === 'generate' || task.type === 'generate-fast' || task.type === 'inpaint') {
+    if (
+      task.type === 'generate' ||
+      task.type === 'generate-fast' ||
+      task.type === 'inpaint'
+    ) {
       const params: GenerateImageTaskParams = task.params;
       return params.scene;
     } else if (task.type === 'remove-bg') {
@@ -200,29 +201,36 @@ const TaskQueueList = ({onClose}: {onClose?: () => void}) => {
     }
   };
 
-  return <div className="absolute bottom-0 mb-14 md:mb-20 bg-white dark:bg-slate-700 w-60 md:w-96 z-20 shadow-lg prog-list flex flex-col overflow-hidden">
-    <button
-      className="ml-auto mt-2 mr-2 text-gray-500 hover:text-gray-700 flex-none"
-      onClick={() => {
-        onClose?.();
-      }}
+  return (
+    <div className="absolute bottom-0 mb-14 md:mb-20 bg-white dark:bg-slate-700 w-60 md:w-96 z-20 shadow-lg prog-list flex flex-col overflow-hidden">
+      <button
+        className="ml-auto mt-2 mr-2 text-gray-500 hover:text-gray-700 flex-none"
+        onClick={() => {
+          onClose?.();
+        }}
       >
-      <FaTimes size={20} />
-    </button>
-    <div className="flex-1 overflow-hidden pb-2">
-      <div className="h-full overflow-auto">
-        {tasks.map((task, i) => (
-          <div key={i} className="flex mt-2 items-center gap-2 p-2 border-gray-300 dark:border-slate-500 border mx-2 rounded-lg">
-            <div className="flex-none ">
-              {getEmoji(task)}
+        <FaTimes size={20} />
+      </button>
+      <div className="flex-1 overflow-hidden pb-2">
+        <div className="h-full overflow-auto">
+          {tasks.map((task, i) => (
+            <div
+              key={i}
+              className="flex mt-2 items-center gap-2 p-2 border-gray-300 dark:border-slate-500 border mx-2 rounded-lg"
+            >
+              <div className="flex-none ">{getEmoji(task)}</div>
+              <div className="flex-1 truncate text-default">
+                {getTaskText(task)}
+              </div>
+              <div className="flex-none ml-auto p-2 bg-gray-300 dark:bg-slate-500 dark:text-white rounded-lg font-medium text-sm text-gray-500">
+                {task!.done}/{task!.total}
+              </div>
             </div>
-            <div className="flex-1 truncate text-default">{getTaskText(task)}</div>
-            <div className="flex-none ml-auto p-2 bg-gray-300 dark:bg-slate-500 dark:text-white rounded-lg font-medium text-sm text-gray-500">{task!.done}/{task!.total}</div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
-  </div>
+  );
 };
 
 const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
@@ -249,15 +257,15 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
 
   return (
     <div className="flex gap-2 md:gap-4 items-center">
-      {showList && <TaskQueueList
-        onClose={() => {
-          setShowList(false);
-        }}
-      />}
+      {showList && (
+        <TaskQueueList
+          onClose={() => {
+            setShowList(false);
+          }}
+        />
+      )}
       <div className="whitespace-nowrap">
-        <span className="whitespace-nowrap text-default">
-        개수:
-        </span>
+        <span className="whitespace-nowrap text-default">개수:</span>
         <input
           min={1}
           max={99}
@@ -276,10 +284,11 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
       </div>
       <div
         className="relative cursor-pointer hover:brightness-95 active:brightness-90"
-        onClick={()=>{
-        setShowList(!showList);
-      }}>
-      <TaskProgressBar />
+        onClick={() => {
+          setShowList(!showList);
+        }}
+      >
+        <TaskProgressBar />
       </div>
       <button
         className={`round-button back-gray px-2 h-8 md:px-6`}
@@ -287,7 +296,7 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
           taskQueueService.removeAllTasks();
         }}
       >
-        <FaRegCalendarTimes size={18}/>
+        <FaRegCalendarTimes size={18} />
       </button>
       {!taskQueueService.isRunning() ? (
         <button

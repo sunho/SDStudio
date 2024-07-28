@@ -32,6 +32,8 @@ npm-debug.log.*
 
 build
 
+package-lock.json
+
 .venv
 venv
 

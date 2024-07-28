@@ -2,7 +2,12 @@ export type ImageEditor = 'photoshop' | 'gimp' | 'mspaint';
 
 export type ModelType = 'fast' | 'quality';
 
-export type RemoveBgQuality = 'low' | 'normal' | 'high' | 'veryhigh' | 'veryveryhigh';
+export type RemoveBgQuality =
+  | 'low'
+  | 'normal'
+  | 'high'
+  | 'veryhigh'
+  | 'veryveryhigh';
 
 export interface Config {
   imageEditor?: ImageEditor;

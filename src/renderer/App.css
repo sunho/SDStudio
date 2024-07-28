@@ -5,11 +5,17 @@
 @tailwind components;
 @tailwind utilities;
 
-body { font-size: 16px; }
-@media screen and (max-width: 768px) { body { font-size: 14px; }}
+body {
+  font-size: 16px;
+}
+@media screen and (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+}
 
 body {
-  font-family: "Noto Sans KR", sans-serif;
+  font-family: 'Noto Sans KR', sans-serif;
 }
 
 .line-color {
@@ -132,10 +138,12 @@ body {
   top: 20vh;
 }
 
-@media screen and (max-width: 768px) { .prompt-full {
-  width: 90vw;
-  left: 0;
-}}
+@media screen and (max-width: 768px) {
+  .prompt-full {
+    width: 90vw;
+    left: 0;
+  }
+}
 
 .prog-list {
   height: 50vh;
@@ -246,7 +254,6 @@ body {
   border-radius: 4px;
 }
 
-
 .imageSmall {
   object-fit: scale-down;
   max-width: 100%;
@@ -282,7 +289,7 @@ input[type='number']::-webkit-outer-spin-button {
   opacity: 1;
 }
 
-.no-scrollbars{
+.no-scrollbars {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
 
@@ -300,7 +307,7 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 .no-scrollbars::-webkit-scrollbar {
-  display: none;  /* Safari and Chrome */
+  display: none; /* Safari and Chrome */
 }
 
 .image-cell {
@@ -416,15 +423,13 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 .bg-checkboard {
-  background:
-      repeating-conic-gradient(#e0e0e0 0% 25%, transparent 0% 50%)
-        50% / 10px 10px
+  background: repeating-conic-gradient(#e0e0e0 0% 25%, transparent 0% 50%) 50% /
+    10px 10px;
 }
 
-.dark .bg-checkboard{
-  background:
-      repeating-conic-gradient(#e0e0e03c 0% 25%, transparent 0% 50%)
-        50% / 10px 10px
+.dark .bg-checkboard {
+  background: repeating-conic-gradient(#e0e0e03c 0% 25%, transparent 0% 50%) 50% /
+    10px 10px;
 }
 
 .text-glow {
@@ -470,8 +475,8 @@ input[type='number']::-webkit-outer-spin-button {
 
 .always-show-scroll::-webkit-scrollbar-thumb {
   border-radius: 4px;
-  background-color: rgba(0, 0, 0, .5);
-  box-shadow: 0 0 1px rgba(255, 255, 255, .5);
+  background-color: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
 }
 
 .native-text-area-container {

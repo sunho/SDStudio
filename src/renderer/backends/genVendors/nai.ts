@@ -39,13 +39,13 @@ export class NovelAiImageGenService implements ImageGenService {
     const resolutionMap = {
       small_landscape: { height: 512, width: 768 },
       small_portrait: { height: 768, width: 512 },
-      small_square: { height: 640, width: 640},
+      small_square: { height: 640, width: 640 },
       landscape: { height: 832, width: 1216 },
       portrait: { height: 1216, width: 832 },
       square: { height: 1024, width: 1024 },
       large_landscape: { height: 1024, width: 1536 },
       large_portrait: { height: 1536, width: 1024 },
-      large_square: { height: 1472, width: 1472},
+      large_square: { height: 1472, width: 1472 },
       wallpaper_portrait: { height: 1088, width: 1920 },
       wallpaper_landscape: { height: 1920, width: 1088 },
     } as const;
@@ -93,16 +93,13 @@ export class NovelAiImageGenService implements ImageGenService {
         'base64',
       ).slice(0, 64);
       const url = this.apiEndpoint;
-      const reponse =  await fetch(
-        url + '/user/login',
-        {
-          method: 'POST',
-          headers: this.headers,
-          body: JSON.stringify({
-            key: token,
-          }),
-        },
-      );
+      const reponse = await fetch(url + '/user/login', {
+        method: 'POST',
+        headers: this.headers,
+        body: JSON.stringify({
+          key: token,
+        }),
+      });
       if (!reponse.ok) {
         throw new Error('HTTP error:' + reponse.status);
       }
@@ -153,9 +150,14 @@ export class NovelAiImageGenService implements ImageGenService {
       },
     };
     if (params.vibes.length) {
-      body.parameters.reference_image_multiple = params.vibes.map((v) => v.image);
-      body.parameters.reference_information_extracted_multiple = params.vibes.map((v) => v.info);
-      body.parameters.reference_strength_multiple = params.vibes.map((v) => v.strength);
+      body.parameters.reference_image_multiple = params.vibes.map(
+        (v) => v.image,
+      );
+      body.parameters.reference_information_extracted_multiple =
+        params.vibes.map((v) => v.info);
+      body.parameters.reference_strength_multiple = params.vibes.map(
+        (v) => v.strength,
+      );
     }
     if (params.image) {
       body.parameters.image = params.image;
@@ -163,11 +165,15 @@ export class NovelAiImageGenService implements ImageGenService {
     }
 
     const headers = {
-      'Authorization': `Bearer ${authorization}`,
+      Authorization: `Bearer ${authorization}`,
       'Content-Type': 'application/json',
     };
 
-    const arrayBuffer = await this.fetcher.fetchArrayBuffer(url + '/ai/generate-image', body, headers);
+    const arrayBuffer = await this.fetcher.fetchArrayBuffer(
+      url + '/ai/generate-image',
+      body,
+      headers,
+    );
     const zip = await JSZip.loadAsync(Buffer.from(arrayBuffer));
     const zipEntries = Object.keys(zip.files);
     if (zipEntries.length === 0) {
@@ -181,21 +187,18 @@ export class NovelAiImageGenService implements ImageGenService {
   async getRemainCredits(token: string) {
     const url = this.apiEndpoint;
     const headers = {
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     };
-    const reponse =  await fetch(
-      url + '/user/data',
-      {
-        method: 'GET',
-        headers: headers,
-      },
-    );
+    const reponse = await fetch(url + '/user/data', {
+      method: 'GET',
+      headers: headers,
+    });
     if (!reponse.ok) {
       throw new Error('HTTP error:' + reponse.status);
     }
     const res = await reponse.json();
-    const steps = res["subscription"]["trainingStepsLeft"]
-    return steps["fixedTrainingStepsLeft"] + steps["purchasedTrainingSteps"];
+    const steps = res['subscription']['trainingStepsLeft'];
+    return steps['fixedTrainingStepsLeft'] + steps['purchasedTrainingSteps'];
   }
 }

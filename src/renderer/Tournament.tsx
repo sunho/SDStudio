@@ -1,17 +1,9 @@
 import { useContext, useEffect, useRef, useState } from 'react';
-import {
-  Scene,
-  InPaintScene,
-  imageService,
-  gameService,
-  sessionService,
-  shuffleArray,
-  encodeContextAlt,
-  backend,
-  ContextMenuType,
-} from './models';
 import { AppContext } from './App';
 import { useContextMenu } from 'react-contexify';
+import { gameService, sessionService, backend, imageService } from './models';
+import { shuffleArray } from './models/GameService';
+import { Scene, InPaintScene, ContextMenuType } from './models/types';
 
 interface TournamentProps {
   scene: Scene | InPaintScene;
@@ -26,8 +18,8 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
   const lock = useRef(false);
   const [finalRank, setFinalRank] = useState(-1);
   const { show } = useContextMenu({
-    id: ContextMenuType.Image
-  })
+    id: ContextMenuType.Image,
+  });
   const loadRoundInitial = () => {
     const [finalizedRank, newRound] = gameService.nextRound(scene.game!);
     if (!scene.round) {
@@ -36,7 +28,10 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
     }
     if (newRound) {
       const round = scene.round!;
-      setPlayers([round.players[round.curPlayer].path, round.players[round.curPlayer+1].path]);
+      setPlayers([
+        round.players[round.curPlayer].path,
+        round.players[round.curPlayer + 1].path,
+      ]);
     }
     setFinalRank(finalizedRank);
   };
@@ -70,8 +65,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
     gameUpdated();
   };
   const nextMatch = () => {
-    if (lock.current)
-      return;
+    if (lock.current) return;
     setPlayers([]);
     lock.current = true;
     const round = scene.round!;
@@ -88,7 +82,10 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
       lock.current = false;
       return;
     }
-    setPlayers([round.players[round.curPlayer].path, round.players[round.curPlayer+1].path]);
+    setPlayers([
+      round.players[round.curPlayer].path,
+      round.players[round.curPlayer + 1].path,
+    ]);
     sessionUpdated();
     lock.current = false;
   };
@@ -127,8 +124,12 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
     if (players.length) {
       (async () => {
         try {
-          const p0 = (await imageService.fetchImage(imageService.getOutputDir(curSession!, scene)+'/'+players[0]))!;
-          const p1 = (await imageService.fetchImage(imageService.getOutputDir(curSession!, scene)+'/'+players[1]))!;
+          const p0 = (await imageService.fetchImage(
+            imageService.getOutputDir(curSession!, scene) + '/' + players[0],
+          ))!;
+          const p1 = (await imageService.fetchImage(
+            imageService.getOutputDir(curSession!, scene) + '/' + players[1],
+          ))!;
           setImages([p0, p1]);
         } catch (e: any) {
           pushMessage('Image load error: ' + e.message);
@@ -140,7 +141,9 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
       if (first) {
         (async () => {
           try {
-            const p0 = (await imageService.fetchImage(imageService.getOutputDir(curSession!, scene)+'/'+first.path))!;
+            const p0 = (await imageService.fetchImage(
+              imageService.getOutputDir(curSession!, scene) + '/' + first.path,
+            ))!;
             setImages([p0]);
           } catch (e: any) {
             pushMessage('Image load error: ' + e.message);
@@ -180,7 +183,10 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
     const items = round.players.slice(round.curPlayer);
     shuffleArray(items);
     round.players = round.players.slice(0, round.curPlayer).concat(items);
-    setPlayers([round.players[round.curPlayer].path, round.players[round.curPlayer+1].path]);
+    setPlayers([
+      round.players[round.curPlayer].path,
+      round.players[round.curPlayer + 1].path,
+    ]);
     sessionUpdated();
   };
   const getCurWinRank = () => {
@@ -191,7 +197,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
     if (round.players.length <= 5) {
       return '준결승전';
     }
-    return `${Math.floor(round.players.length/2)}강`;
+    return `${Math.floor(round.players.length / 2)}강`;
   };
   const showFolder = async () => {
     await backend.showFile(path);
@@ -202,8 +208,9 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
       <div className="p-2 md:p-4 flex flex-none gap-2 items-center text-default">
         {!!players.length ? (
           <span className="font-bold text-xl">
-            {finalRank + 1}위 결정 이상형 월드컵 {getCurWinRank()} ({Math.floor(round.curPlayer/2) + 1}/
-            {Math.floor(round.players.length/2)})
+            {finalRank + 1}위 결정 이상형 월드컵 {getCurWinRank()} (
+            {Math.floor(round.curPlayer / 2) + 1}/
+            {Math.floor(round.players.length / 2)})
           </span>
         ) : (
           <span className="font-bold text-xl">모든 순위가 확정되었습니다</span>
@@ -221,7 +228,10 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
             if (players.length && !lock.current && round.curPlayer !== 0) {
               setPlayers([]);
               round.curPlayer -= 2;
-              setPlayers([round.players[round.curPlayer].path, round.players[round.curPlayer+1].path]);
+              setPlayers([
+                round.players[round.curPlayer].path,
+                round.players[round.curPlayer + 1].path,
+              ]);
             }
           }}
           className={`round-button back-gray`}
@@ -231,22 +241,28 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
         <button className={`round-button back-orange`} onClick={reroll}>
           대진 리롤
         </button>
-        <button className={`round-button back-orange`} onClick={() => {
-          if (players.length && !lock.current){
-            round.winMask[round.curPlayer] = false;
-            round.winMask[round.curPlayer+1] = false;
-            nextMatch();
-          }
-        }}>
+        <button
+          className={`round-button back-orange`}
+          onClick={() => {
+            if (players.length && !lock.current) {
+              round.winMask[round.curPlayer] = false;
+              round.winMask[round.curPlayer + 1] = false;
+              nextMatch();
+            }
+          }}
+        >
           둘다 패배 처리
         </button>
-        <button className={`round-button back-orange`} onClick={() => {
-          if (players.length && !lock.current){
-            round.winMask[round.curPlayer] = true;
-            round.winMask[round.curPlayer+1] = true;
-            nextMatch();
-          }
-        }}>
+        <button
+          className={`round-button back-orange`}
+          onClick={() => {
+            if (players.length && !lock.current) {
+              round.winMask[round.curPlayer] = true;
+              round.winMask[round.curPlayer + 1] = true;
+              nextMatch();
+            }
+          }}
+        >
           둘다 승리 처리
         </button>
       </div>
@@ -256,9 +272,9 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
             <div className="flex-1 justify-center items-center flex overflow-hidden">
               <img
                 onClick={() => {
-                  if (!lock.current){
+                  if (!lock.current) {
                     round.winMask[round.curPlayer] = true;
-                    round.winMask[round.curPlayer+1] = false;
+                    round.winMask[round.curPlayer + 1] = false;
                     nextMatch();
                   }
                 }}
@@ -272,10 +288,10 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
                     props: {
                       ctx: {
                         type: 'image',
-                        path: players[0]
-                      }
-                    }
-                  })
+                        path: players[0],
+                      },
+                    },
+                  });
                 }}
               />
             </div>
@@ -283,9 +299,9 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
             <div className="flex-1 justify-center items-center flex overflow-hidden">
               <img
                 onClick={() => {
-                  if (!lock.current){
+                  if (!lock.current) {
                     round.winMask[round.curPlayer] = false;
-                    round.winMask[round.curPlayer+1] = true;
+                    round.winMask[round.curPlayer + 1] = true;
                     nextMatch();
                   }
                 }}
@@ -299,10 +315,10 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
                     props: {
                       ctx: {
                         type: 'image',
-                        path: players[1]
-                      }
-                    }
-                  })
+                        path: players[1],
+                      },
+                    },
+                  });
                 }}
               />
             </div>
@@ -315,10 +331,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
           images.length
         ) && (
           <div className="h-full w-full">
-            <img
-              className="imageSmall"
-              src={images[0]}
-            />
+            <img className="imageSmall" src={images[0]} />
           </div>
         )}
       </div>

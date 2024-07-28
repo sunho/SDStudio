@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useState, memo, useEffect, ReactNode, useRef } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  memo,
+  useEffect,
+  ReactNode,
+  useRef,
+} from 'react';
 import { FaTimes } from 'react-icons/fa';
 import { App as CapacitorApp } from '@capacitor/app';
 import { isMobile } from './models';
@@ -16,7 +24,9 @@ interface FloatViewContextProps {
   unregisterView: (id: number) => void;
 }
 
-const FloatViewContext = createContext<FloatViewContextProps | undefined>(undefined);
+const FloatViewContext = createContext<FloatViewContextProps | undefined>(
+  undefined,
+);
 
 export const useFloatView = (): FloatViewContextProps => {
   const context = useContext(FloatViewContext);
@@ -30,7 +40,9 @@ interface FloatViewProviderProps {
   children: ReactNode;
 }
 
-export const FloatViewProvider: React.FC<FloatViewProviderProps> = ({ children }) => {
+export const FloatViewProvider: React.FC<FloatViewProviderProps> = ({
+  children,
+}) => {
   const [views, setViews] = useState<FloatView[]>([]);
 
   const registerView = (view: FloatView) => {
@@ -64,38 +76,48 @@ export const FloatViewProvider: React.FC<FloatViewProviderProps> = ({ children }
 
   useEffect(() => {
     document.addEventListener('keydown', handleEscape);
-    if (isMobile)
-      CapacitorApp.addListener('backButton', handleBackButton);
+    if (isMobile) CapacitorApp.addListener('backButton', handleBackButton);
     return () => {
       document.removeEventListener('keydown', handleEscape);
-      if (isMobile)
-        CapacitorApp.removeAllListeners();
+      if (isMobile) CapacitorApp.removeAllListeners();
     };
   }, [views]);
 
   return (
     <FloatViewContext.Provider value={{ registerView, unregisterView }}>
       {children}
-      {!!views.length && <div className={"top-0 absolute w-full z-10 float-view " + (views[0].showToolbar ? 'show-toolbar' : 'h-full')}>
-      {views.map((view) => (
-        <div key={view.id} className="bg-white dark:bg-slate-900 h-full w-full" style={{ position: 'absolute', zIndex: view.id }}>
-        <div className="flex flex-col h-full w-full">
-            <div className="flex-none border-b line-color">
-              <button className="text-default button" onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  closeTopView();
-                }}>
-                <FaTimes size={20} />
-              </button>
+      {!!views.length && (
+        <div
+          className={
+            'top-0 absolute w-full z-10 float-view ' +
+            (views[0].showToolbar ? 'show-toolbar' : 'h-full')
+          }
+        >
+          {views.map((view) => (
+            <div
+              key={view.id}
+              className="bg-white dark:bg-slate-900 h-full w-full"
+              style={{ position: 'absolute', zIndex: view.id }}
+            >
+              <div className="flex flex-col h-full w-full">
+                <div className="flex-none border-b line-color">
+                  <button
+                    className="text-default button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      closeTopView();
+                    }}
+                  >
+                    <FaTimes size={20} />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-hidden">{view.component}</div>
+              </div>
             </div>
-            <div className="flex-1 overflow-hidden">
-              {view.component}
-            </div>
-          </div>
+          ))}
         </div>
-      ))}
-      </div>}
+      )}
     </FloatViewContext.Provider>
   );
 };
@@ -109,17 +131,23 @@ interface FloatViewProps {
 
 let viewId = 0;
 
-export const FloatView: React.FC<FloatViewProps> = memo(({ children, priority, showToolbar, onEscape }) => {
-  const { registerView, unregisterView } = useFloatView();
-  const id = useRef(++viewId);
+export const FloatView: React.FC<FloatViewProps> = memo(
+  ({ children, priority, showToolbar, onEscape }) => {
+    const { registerView, unregisterView } = useFloatView();
+    const id = useRef(++viewId);
 
-  useEffect(() => {
-    const view = { id: id.current, component: children, priority, onEscape, showToolbar };
-    registerView(view);
-    return () => unregisterView(id.current);
-  }, []);
+    useEffect(() => {
+      const view = {
+        id: id.current,
+        component: children,
+        priority,
+        onEscape,
+        showToolbar,
+      };
+      registerView(view);
+      return () => unregisterView(id.current);
+    }, []);
 
-  return null;
-});
-
-
+    return null;
+  },
+);

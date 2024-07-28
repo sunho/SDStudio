@@ -4,7 +4,9 @@ import { DropdownSelect } from './UtilComponents';
 
 export interface Dialog {
   text: string;
-  callback?: ((value?: string, text?: string) => void) | ((value?: string, text?:string) => Promise<void>);
+  callback?:
+    | ((value?: string, text?: string) => void)
+    | ((value?: string, text?: string) => Promise<void>);
   onCancel?: () => void;
   type: 'confirm' | 'yes-only' | 'input-confirm' | 'select' | 'dropdown';
   inputValue?: string;
@@ -26,8 +28,11 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
     setDialogs(dialogs.slice(0, dialogs.length - 1));
     if (currentDialog && currentDialog.callback) {
       currentDialog.callback(
-        (currentDialog.type === 'input-confirm' || currentDialog.type === 'dropdown') ? inputValue : undefined,
-        currentDialog.text
+        currentDialog.type === 'input-confirm' ||
+          currentDialog.type === 'dropdown'
+          ? inputValue
+          : undefined,
+        currentDialog.text,
       );
     }
     setInputValue('');
@@ -37,8 +42,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Enter') {
-        if (curDialog)
-          e.preventDefault();
+        if (curDialog) e.preventDefault();
         handleConfirm();
       }
     };
@@ -64,11 +68,21 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                 className={`gray-input mt-4 mb-4`}
               />
             )}
-            <div className={"justify-end mt-4 " + ((curDialog.type === 'select' || curDialog.type === 'dropdown') ? 'flex flex-col gap-2' : 'flex')}>
+            <div
+              className={
+                'justify-end mt-4 ' +
+                (curDialog.type === 'select' || curDialog.type === 'dropdown'
+                  ? 'flex flex-col gap-2'
+                  : 'flex')
+              }
+            >
               {curDialog.type === 'confirm' && (
                 <>
                   <button
-                    className={"mr-2 px-4 py-2 rounded clickable " + (curDialog.green ? "back-sky" : "back-red")}
+                    className={
+                      'mr-2 px-4 py-2 rounded clickable ' +
+                      (curDialog.green ? 'back-sky' : 'back-red')
+                    }
                     onClick={handleConfirm}
                   >
                     확인
@@ -76,8 +90,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                   <button
                     className="px-4 py-2 rounded back-gray clickable "
                     onClick={() => {
-                      if (curDialog.onCancel)
-                        curDialog.onCancel();
+                      if (curDialog.onCancel) curDialog.onCancel();
                       setDialogs(dialogs.slice(0, dialogs.length - 1));
                       setInputValue('');
                     }}
@@ -105,8 +118,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                   <button
                     className="px-4 py-2 rounded back-gray clickable"
                     onClick={() => {
-                      if (curDialog.onCancel)
-                        curDialog.onCancel();
+                      if (curDialog.onCancel) curDialog.onCancel();
                       setDialogs(dialogs.slice(0, dialogs.length - 1));
                       setInputValue('');
                     }}
@@ -120,7 +132,10 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                   {curDialog.items!.map((item, idx) => (
                     <button
                       key={idx}
-                      className={"w-full px-4 py-2 rounded mr-2 clickable " + (curDialog.graySelect?"back-lgray":"back-sky")}
+                      className={
+                        'w-full px-4 py-2 rounded mr-2 clickable ' +
+                        (curDialog.graySelect ? 'back-lgray' : 'back-sky')
+                      }
                       onClick={() => {
                         setDialogs(dialogs.slice(0, dialogs.length - 1));
                         if (curDialog.callback) {
@@ -134,8 +149,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                   <button
                     className="w-full px-4 py-2 clickable rounded back-gray"
                     onClick={() => {
-                      if (curDialog.onCancel)
-                        curDialog.onCancel();
+                      if (curDialog.onCancel) curDialog.onCancel();
                       setDialogs(dialogs.slice(0, dialogs.length - 1));
                     }}
                   >
@@ -146,18 +160,20 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
               {curDialog.type === 'dropdown' && (
                 <>
                   <div className="w-full mt-4">
-                  <DropdownSelect
-                    className="z-20 w-full"
-                    selectedOption={curDialog.items!.find((item) => item.value === inputValue)}
-                    menuPlacement="bottom"
-                    options={curDialog.items!.map((item: any) => ({
-                      label: item.text,
-                      value: item.value,
-                    }))}
-                    onSelect={(opt: any) => {
-                      setInputValue(opt.value);
-                    }}
-                  />
+                    <DropdownSelect
+                      className="z-20 w-full"
+                      selectedOption={curDialog.items!.find(
+                        (item) => item.value === inputValue,
+                      )}
+                      menuPlacement="bottom"
+                      options={curDialog.items!.map((item: any) => ({
+                        label: item.text,
+                        value: item.value,
+                      }))}
+                      onSelect={(opt: any) => {
+                        setInputValue(opt.value);
+                      }}
+                    />
                   </div>
                   <div className="flex gap-2 ml-auto mt-5">
                     <button
@@ -169,8 +185,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                     <button
                       className="flex-1 px-4 py-2 block rounded back-gray clickable"
                       onClick={() => {
-                        if (curDialog.onCancel)
-                          curDialog.onCancel();
+                        if (curDialog.onCancel) curDialog.onCancel();
                         setDialogs(dialogs.slice(0, dialogs.length - 1));
                         setInputValue('');
                       }}

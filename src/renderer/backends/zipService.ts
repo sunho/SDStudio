@@ -1,4 +1,4 @@
-import { registerPlugin } from "@capacitor/core";
+import { registerPlugin } from '@capacitor/core';
 
 export interface FileEntry {
   name: string;

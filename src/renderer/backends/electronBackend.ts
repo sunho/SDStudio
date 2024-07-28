@@ -1,13 +1,17 @@
-import { Config } from "../../main/config";
-import { ImageGenInput, ImageGenService } from "./imageGen";
-import { Backend, FileEntry, ResizeImageInput } from "../backend";
-import { SceneContextAlt, ContextAlt, ImageContextAlt } from "../models";
-import { NovelAiFetcher, NovelAiImageGenService } from "./genVendors/nai";
+import { Config } from '../../main/config';
+import { ImageGenInput, ImageGenService } from './imageGen';
+import { Backend, FileEntry, ResizeImageInput } from '../backend';
+import { NovelAiFetcher, NovelAiImageGenService } from './genVendors/nai';
+import { ImageContextAlt, SceneContextAlt } from '../models/types';
 
 const invoke = window.electron?.ipcRenderer?.invoke;
 
 class ElectronFetcher implements NovelAiFetcher {
-  async fetchArrayBuffer(url: string, body: any, headers: any): Promise<Uint8Array> {
+  async fetchArrayBuffer(
+    url: string,
+    body: any,
+    headers: any,
+  ): Promise<Uint8Array> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       controller.abort();
@@ -30,7 +34,7 @@ export class ElectornBackend extends Backend {
   private imageGenService: ImageGenService;
   constructor() {
     super();
-    this.imageGenService = new NovelAiImageGenService(new ElectronFetcher);
+    this.imageGenService = new NovelAiImageGenService(new ElectronFetcher());
   }
 
   async getConfig(): Promise<Config> {
@@ -193,19 +197,26 @@ export class ElectornBackend extends Backend {
     return await invoke('select-file');
   }
 
-  async removeBackground(inputImageBase64: string, outputPath: string): Promise<void> {
+  async removeBackground(
+    inputImageBase64: string,
+    outputPath: string,
+  ): Promise<void> {
     await invoke('remove-bg', inputImageBase64, outputPath);
   }
 
-  onDownloadProgress(callback: (progress: any) => void | Promise<void>): () => void{
+  onDownloadProgress(
+    callback: (progress: any) => void | Promise<void>,
+  ): () => void {
     return window.electron.ipcRenderer.on('download-progress', callback);
   }
 
-  onZipProgress(callback: (progress: any) => void | Promise<void>): () => void{
+  onZipProgress(callback: (progress: any) => void | Promise<void>): () => void {
     return window.electron.ipcRenderer.on('zip-progress', callback);
   }
 
-  onDuplicateScene(callback: (ctx: SceneContextAlt) => void | Promise<void>): () => void {
+  onDuplicateScene(
+    callback: (ctx: SceneContextAlt) => void | Promise<void>,
+  ): () => void {
     return window.electron.ipcRenderer.on('duplicate-scene', callback);
   }
 
@@ -213,19 +224,27 @@ export class ElectornBackend extends Backend {
     return window.electron.ipcRenderer.on('image-changed', callback);
   }
 
-  onDuplicateImage(callback: (ctx: ImageContextAlt) => void | Promise<void>): () => void {
+  onDuplicateImage(
+    callback: (ctx: ImageContextAlt) => void | Promise<void>,
+  ): () => void {
     return window.electron.ipcRenderer.on('duplicate-image', callback);
   }
 
-  onCopyImage(callback: (ctx: ImageContextAlt) => void | Promise<void>): () => void {
+  onCopyImage(
+    callback: (ctx: ImageContextAlt) => void | Promise<void>,
+  ): () => void {
     return window.electron.ipcRenderer.on('copy-image', callback);
   }
 
-  onMoveSceneFront(callback: (ctx: SceneContextAlt) => void | Promise<void>): () => void {
+  onMoveSceneFront(
+    callback: (ctx: SceneContextAlt) => void | Promise<void>,
+  ): () => void {
     return window.electron.ipcRenderer.on('move-scene-front', callback);
   }
 
-  onMoveSceneBack(callback: (ctx: SceneContextAlt) => void | Promise<void>): () => void {
+  onMoveSceneBack(
+    callback: (ctx: SceneContextAlt) => void | Promise<void>,
+  ): () => void {
     return window.electron.ipcRenderer.on('move-scene-back', callback);
   }
 

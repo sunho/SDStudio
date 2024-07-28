@@ -55,8 +55,7 @@ export default class MenuBuilder {
   buildDarwinTemplate(): MenuItemConstructorOptions[] {
     const subMenuAbout: DarwinMenuItemConstructorOptions = {
       label: 'SDStudio',
-      submenu: [
-      ],
+      submenu: [],
     };
     const subMenuEdit: DarwinMenuItemConstructorOptions = {
       label: 'Edit',

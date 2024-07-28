@@ -1,1 +1,1 @@
-module.exports = require("bindings")("sdnative");
+module.exports = require('bindings')('sdnative');

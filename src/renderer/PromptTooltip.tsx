@@ -51,7 +51,11 @@ const Tooltip = ({ text, x, y }: Props) => {
   }, [text, x, y]);
 
   return text ? (
-    <div ref={tooltipRef} style={tooltipStyle} className="text-white p-1 w-68 whitespace-pre-wrap max-h-screen">
+    <div
+      ref={tooltipRef}
+      style={tooltipStyle}
+      className="text-white p-1 w-68 whitespace-pre-wrap max-h-screen"
+    >
       {text}
     </div>
   ) : (
