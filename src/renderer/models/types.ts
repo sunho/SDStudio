@@ -36,331 +36,50 @@ export interface ModelBackend {
   model?: string;
 }
 
-export interface IAbstractPreset {
-  name: string;
-  profile?: string;
+export interface AbstractJob {
 }
 
-export class AbstractPreset implements IAbstractPreset {
-  @observable accessor name: string = '';
-  @observable accessor profile: string | undefined = undefined;
-
-  static fromJSON(json: IAbstractPreset): AbstractPreset {
-    const preset = new AbstractPreset();
-    Object.assign(preset, json);
-    return preset;
-  }
-
-  toJSON(): IAbstractPreset {
-    return {
-      name: this.name,
-      profile: this.profile,
-    };
-  }
-}
-
-export interface ISDAbstractPreset extends IAbstractPreset {
+export interface SDAbstractJob extends AbstractJob {
   cfgRescale: number;
   steps: number;
   promptGuidance: number;
   smea: boolean;
   dyn: boolean;
   sampling: string;
+  prompt: PromptNode;
   uc: string;
   noiseSchedule: string;
   backend: ModelBackend;
+  vibes: IVibeItem[];
+  seed?: number;
 }
 
-export class SDAbstractPreset extends AbstractPreset implements ISDAbstractPreset {
-  @observable accessor cfgRescale: number = 0;
-  @observable accessor steps: number = 0;
-  @observable accessor promptGuidance: number = 0;
-  @observable accessor smea: boolean = false;
-  @observable accessor dyn: boolean = false;
-  @observable accessor sampling: string = '';
-  @observable accessor noiseSchedule: string = '';
-  @observable accessor backend: ModelBackend = { type: 'NAI' };
-  @observable accessor uc: string = '';
-
-  static fromJSON(json: ISDAbstractPreset): SDAbstractPreset {
-    const preset = new SDAbstractPreset();
-    Object.assign(preset, json);
-    return preset;
-  }
-
-  toJSON(): ISDAbstractPreset {
-    return {
-      ...super.toJSON(),
-      cfgRescale: this.cfgRescale,
-      steps: this.steps,
-      promptGuidance: this.promptGuidance,
-      smea: this.smea,
-      dyn: this.dyn,
-      sampling: this.sampling,
-      noiseSchedule: this.noiseSchedule,
-      backend: this.backend,
-      uc: this.uc,
-    };
-  }
-}
-
-export interface ISDPreset extends ISDAbstractPreset {
+export interface SDJob extends SDAbstractJob {
   type: 'sd';
-  frontPrompt: string;
-  backPrompt: string;
 }
 
-export class SDPreset extends SDAbstractPreset implements ISDPreset {
-  type: 'sd' = 'sd';
-  @observable accessor frontPrompt: string = '';
-  @observable accessor backPrompt: string = '';
-
-  static fromJSON(json: ISDPreset): SDPreset {
-    const preset = new SDPreset();
-    Object.assign(preset, json);
-    return preset;
-  }
-
-  toJSON(): ISDPreset {
-    return {
-      ...super.toJSON(),
-      type: this.type,
-      frontPrompt: this.frontPrompt,
-      backPrompt: this.backPrompt,
-    };
-  }
-}
-
-export interface ISDInpaintPreset extends ISDAbstractPreset {
+export interface SDInpaintJob extends SDAbstractJob {
   type: 'sd_inpaint';
-  prompt: string;
   mask: string;
+  image: string;
   strength: number;
   originalImage?: boolean;
 }
 
-export class SDInpaintPreset extends SDAbstractPreset implements ISDInpaintPreset {
-  type: 'sd_inpaint' = 'sd_inpaint';
-  @observable accessor prompt: string = '';
-  @observable accessor mask: string = '';
-  @observable accessor strength: number = 0.7;
-  @observable accessor originalImage: boolean | undefined = undefined;
-
-  constructor() {
-    super();
-  }
-
-  static fromJSON(json: ISDInpaintPreset): SDInpaintPreset {
-    const preset = new SDInpaintPreset();
-    Object.assign(preset, json);
-    return preset;
-  }
-
-  toJSON(): ISDInpaintPreset {
-    return {
-      ...super.toJSON(),
-      type: this.type,
-      prompt: this.prompt,
-      mask: this.mask,
-      originalImage: this.originalImage,
-      strength: this.strength,
-    };
-  }
-}
-
-export interface IAugmentPreset extends IAbstractPreset {
+export interface AugmentJob extends AbstractJob {
   type: 'augment';
+  image: string;
   method: string;
   prompt: string;
   weaken: number;
   backend: ModelBackend;
 }
 
-export class AugmentPreset extends AbstractPreset implements IAugmentPreset {
-  type: 'augment' = 'augment';
-  @observable accessor method: string = '';
-  @observable accessor prompt: string = '';
-  @observable accessor weaken: number = 0;
-  @observable accessor backend: ModelBackend = { type: 'NAI' };
-
-  constructor() {
-    super();
-  }
-
-  static fromJSON(json: IAugmentPreset): AugmentPreset {
-    const preset = new AugmentPreset();
-    Object.assign(preset, json);
-    return preset;
-  }
-
-  toJSON(): IAugmentPreset {
-    return {
-      ...super.toJSON(),
-      type: this.type,
-      method: this.method,
-      prompt: this.prompt,
-      weaken: this.weaken,
-      backend: this.backend,
-    };
-  }
-}
-
-export interface ISDAbstractShared {
-  vibes: IVibeItem[];
-  seed?: number;
-}
-
-export class SDAbstractShared implements ISDAbstractShared {
-  @observable accessor vibes: VibeItem[] = [];
-  @observable accessor seed: number | undefined = undefined;
-
-  static fromJSON(json: ISDAbstractShared): SDAbstractShared {
-    const shared = new SDAbstractShared();
-    Object.assign(shared, json);
-    shared.vibes = json.vibes.map(VibeItem.fromJSON);
-    return shared;
-  }
-
-  toJSON(): ISDAbstractShared {
-    return {
-      vibes: this.vibes.map(vibe => vibe.toJSON()),
-      seed: this.seed,
-    };
-  }
-}
-
-export interface ISDShared extends ISDAbstractShared {
-  type: 'sd';
-}
-
-export class SDShared extends SDAbstractShared implements ISDShared {
-  type: 'sd' = 'sd';
-
-  static fromJSON(json: ISDShared): SDShared {
-    const shared = new SDShared();
-    Object.assign(shared, json);
-    shared.vibes = json.vibes.map(VibeItem.fromJSON);
-    return shared;
-  }
-
-  toJSON(): ISDShared {
-    return {
-      ...super.toJSON(),
-      type: this.type,
-    };
-  }
-}
-
-export interface ISDInpaintShared extends ISDAbstractShared {
-  type: 'sd_inpaint';
-  image?: string;
-}
-
-export class SDInpaintShared extends SDAbstractShared implements ISDInpaintShared {
-  type: 'sd_inpaint' = 'sd_inpaint';
-  @observable accessor vibes: IVibeItem[] = [];
-  @observable accessor image: string | undefined = undefined;
-  @observable accessor seed: number | undefined = undefined;
-
-  static fromJSON(json: ISDInpaintShared): SDInpaintShared {
-    const shared = new SDInpaintShared();
-    Object.assign(shared, json);
-    shared.vibes = json.vibes.map(VibeItem.fromJSON);
-    return shared;
-  }
-
-  toJSON(): ISDInpaintShared {
-    return {
-      ...super.toJSON(),
-      type: this.type,
-      image: this.image,
-    };
-  }
-}
-
-export interface ISDStyleShared extends ISDAbstractShared {
-  type: 'sd_style';
-  characterPrompt: string;
-  backgroundPrompt: string;
-  uc: string;
-}
-
-export class SDStyleShared extends SDAbstractShared implements ISDStyleShared {
-  type: 'sd_style' = 'sd_style';
-  @observable accessor characterPrompt: string = '';
-  @observable accessor backgroundPrompt: string = '';
-  @observable accessor uc: string = '';
-
-  static fromJSON(json: ISDStyleShared): SDStyleShared {
-    const styleShared = new SDStyleShared();
-    Object.assign(styleShared, json);
-    styleShared.vibes = json.vibes.map(VibeItem.fromJSON);
-    return styleShared;
-  }
-
-  toJSON(): ISDStyleShared {
-    return {
-      ...super.toJSON(),
-      type: this.type,
-      characterPrompt: this.characterPrompt,
-      backgroundPrompt: this.backgroundPrompt,
-      uc: this.uc,
-    };
-  }
-}
-
-export interface IAugmentShared {
-  type: 'augment';
-  image?: string;
-}
-
-export class AugmentShared implements IAugmentShared {
-  type: 'augment' = 'augment';
-  @observable accessor image: string | undefined = undefined;
-
-  static fromJSON(json: IAugmentShared): AugmentShared {
-    const augmentShared = new AugmentShared();
-    Object.assign(augmentShared, json);
-    return augmentShared;
-  }
-
-  toJSON(): IAugmentShared {
-    return {
-      type: this.type,
-      image: this.image,
-    };
-  }
-}
-
-export type IPreSetShared = ISDShared | ISDInpaintShared | ISDStyleShared | IAugmentShared;
-export type PreSetShared = SDShared | SDInpaintShared | SDStyleShared | AugmentShared;
-
-export interface IUpscalePreset extends IAbstractPreset {
+export interface UpscaleJob extends AbstractJob {
   type: 'upscale';
+  image: string;
   resolution: string;
 }
-
-export class UpscalePreset extends AbstractPreset implements IUpscalePreset {
-  type: 'upscale' = 'upscale';
-  @observable accessor resolution: string = '';
-
-  static fromJSON(json: IUpscalePreset): UpscalePreset {
-    const preset = new UpscalePreset();
-    Object.assign(preset, json);
-    return preset;
-  }
-
-  toJSON(): IUpscalePreset {
-    return {
-      ...super.toJSON(),
-      type: this.type,
-      resolution: this.resolution,
-    };
-  }
-}
-
-export type IPreset = ISDPreset | ISDInpaintPreset | IUpscalePreset | IAugmentPreset;
-export type Preset = SDPreset | SDInpaintPreset | UpscalePreset | AugmentPreset;
 
 export interface IPiece {
   name: string;

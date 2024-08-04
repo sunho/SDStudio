@@ -1,10 +1,29 @@
-export interface WorkFlowDef {
+import { action, observable, makeAutoObservable } from 'mobx';
+import { GenericScene, ModelBackend, Session, VibeItem } from '../types';
 
+export type WFBackendType = 'image' | 'none';
+
+export interface WorkFlowDef {
+  type: string;
+  presetVars: WFVar[];
+  sharedVars: WFVar[];
+  backendType: WFBackendType;
+  editor: WFIElement;
+  i2i: boolean;
+  handler: WFHandler;
+  testHandler?: WFTestHandler;
 }
+
+export type WFHandler = (session: Session, scene: GenericScene, preset: any, shared: any, samples: number, onComplete?: (img: string) => void) => void;
+export type WFTestHandler = (session: Session,  preset: any, shared: any, scene?: GenericScene, onComplete?: (img: string) => void) => void;
 
 export interface WFAbstractVar {
   name: string;
-  description: string;
+}
+
+export interface WFBackendVar extends WFAbstractVar {
+  type: 'backend';
+  default: ModelBackend;
 }
 
 export interface WFIntVar extends WFAbstractVar {
@@ -13,6 +32,10 @@ export interface WFIntVar extends WFAbstractVar {
   max: number;
   step: number;
   default: number;
+}
+
+export interface WFNullIntVar extends WFAbstractVar {
+  type: 'nullInt';
 }
 
 export interface WFVibeSetVar extends WFAbstractVar {
@@ -48,35 +71,332 @@ export interface WFMaskVar extends WFAbstractVar {
   imageRef: string;
 }
 
-export class SDAbstractPreset extends AbstractPreset implements ISDAbstractPreset {
-  @observable accessor cfgRescale: number = 0;
-  @observable accessor steps: number = 0;
-  @observable accessor promptGuidance: number = 0;
-  @observable accessor smea: boolean = false;
-  @observable accessor dyn: boolean = false;
-  @observable accessor sampling: string = '';
-  @observable accessor noiseSchedule: string = '';
-  @observable accessor backend: ModelBackend = { type: 'NAI' };
-  @observable accessor uc: string = '';
+export type WFVar = WFIntVar | WFVibeSetVar | WFSamplingVar | WFNoiseScheduleVar | WFBoolVar | WFPromptVar | WFImageVar | WFMaskVar | WFBackendVar | WFNullIntVar;
 
-  static fromJSON(json: ISDAbstractPreset): SDAbstractPreset {
-    const preset = new SDAbstractPreset();
-    Object.assign(preset, json);
+export type WFIFlex = 'flex-1' | 'flex-2' | 'flex-none';
+
+export interface WFIAbstract {
+}
+
+export interface WFIPresetSelect extends WFIAbstract {
+  type: 'presetSelect';
+}
+
+export interface WFIProfilePresetSelect extends WFIAbstract {
+  type: 'profilePresetSelect';
+  editor: WFIElement;
+}
+
+export interface WFIStack extends WFIAbstract {
+  type: 'stack';
+  inputs: WFIElement[];
+}
+
+export interface WFIInlineInput extends WFIAbstract {
+  type: 'inline';
+  label: string;
+  field: string;
+  preset: boolean;
+  flex: WFIFlex;
+}
+
+export interface WFIGroup extends WFIAbstract {
+  type: 'group';
+  label: string;
+  inputs: WFIElement[];
+}
+
+export interface WFIMiddlePlaceholderInput extends WFIAbstract {
+  type: 'middlePlaceholder';
+  label: string;
+}
+
+export type WFIElement = WFIProfilePresetSelect | WFIPresetSelect | WFIStack | WFIInlineInput | WFIGroup | WFIMiddlePlaceholderInput;
+
+function createDefaultValue(varObj: WFVar) {
+  switch (varObj.type) {
+    case 'int':
+      return (varObj as WFIntVar).default;
+    case 'vibeSet':
+      return [];
+    case 'sampling':
+      return (varObj as WFSamplingVar).default;
+    case 'noiseSchedule':
+      return (varObj as WFNoiseScheduleVar).default;
+    case 'bool':
+      return (varObj as WFBoolVar).default;
+    case 'prompt':
+      return (varObj as WFPromptVar).default;
+    case 'image':
+      return '';
+    case 'mask':
+      return '';
+    case 'backend':
+      return (varObj as WFBackendVar).default;
+    case 'nullInt':
+      return null;
+    default:
+      throw new Error('Unknown type');
+  }
+}
+
+function createMobxObject(vars: WFVar[]) {
+  const obj: any = {};
+  vars.forEach(varObj => {
+    obj[varObj.name] = createDefaultValue(varObj);
+  });
+  return makeAutoObservable(obj);
+}
+
+function materializeWFObj(type: string, vars: WFVar[]) {
+  const obj = createMobxObject(vars);
+  obj['type'] = type;
+  const params: { [key: string]: WFVar } = {};
+  for (const varObj of vars) {
+    params[varObj.name] = varObj;
+  }
+
+  obj.fromJSON = (json: any) => {
+    Object.keys(params).forEach(key => {
+      if (params[key].type === 'vibeSet') {
+        obj[key] = json[key].map((x:any)=>VibeItem.fromJSON(x));
+      } else {
+        obj[key] = json[key];
+      }
+    });
+  };
+
+  obj.toJSON = () => {
+    const json: any = {};
+    json['type'] = type;
+    Object.keys(params).forEach(key => {
+      if (params[key].type === 'vibeSet') {
+        json[key] = obj[key].map((x:VibeItem)=>x.toJSON());
+      } else {
+        json[key] = obj[key];
+      }
+    });
+    return json;
+  };
+
+  return obj;
+}
+
+export class WFVarBuilder {
+  private vars: WFVar[] = [];
+
+  clone() {
+    const newBuilder = new WFVarBuilder();
+    newBuilder.vars = this.vars.slice();
+    return newBuilder;
+  }
+
+  addIntVar(name: string, min: number, max: number, step: number, defaultValue: number): this {
+    this.vars.push({
+      type: 'int',
+      name,
+      min,
+      max,
+      step,
+      default: defaultValue
+    });
+    return this;
+  }
+
+  addNullIntVar(name: string): this {
+    this.vars.push({
+      type: 'nullInt',
+      name,
+    });
+    return this;
+  }
+
+  addVibeSetVar(name: string): this {
+    this.vars.push({
+      type: 'vibeSet',
+      name
+    });
+    return this;
+  }
+
+  addSamplingVar(name: string, defaultValue: string): this {
+    this.vars.push({
+      type: 'sampling',
+      name,
+      default: defaultValue
+    });
+    return this;
+  }
+
+  addNoiseScheduleVar(name: string, defaultValue: string): this {
+    this.vars.push({
+      type: 'noiseSchedule',
+      name,
+      default: defaultValue
+    });
+    return this;
+  }
+
+  addBoolVar(name: string, defaultValue: boolean): this {
+    this.vars.push({
+      type: 'bool',
+      name,
+      default: defaultValue
+    });
+    return this;
+  }
+
+  addPromptVar(name: string, defaultValue: string): this {
+    this.vars.push({
+      type: 'prompt',
+      name,
+      default: defaultValue
+    });
+    return this;
+  }
+
+  addImageVar(name: string): this {
+    this.vars.push({
+      type: 'image',
+      name
+    });
+    return this;
+  }
+
+  addMaskVar(name: string, imageRef: string): this {
+    this.vars.push({
+      type: 'mask',
+      name,
+      imageRef
+    });
+    return this;
+  }
+
+  addBackendVar(name: string, defaultValue: ModelBackend): this {
+    this.vars.push({
+      type: 'backend',
+      name,
+      default: defaultValue
+    });
+    return this;
+  }
+
+  build(): WFVar[] {
+    return this.vars;
+  }
+}
+
+export class WFWorkFlow {
+  def: WorkFlowDef;
+  constructor(def: WorkFlowDef) {
+    this.def = def;
+  }
+
+  getType() {
+    return this.def.type;
+  }
+
+  buildShared() {
+    return materializeWFObj(this.def.type, this.def.sharedVars);
+  }
+
+  buildPreset() {
+    if (this.def.backendType === 'none') {
+      return materializeWFObj(this.def.type, this.def.presetVars);
+    } else {
+      const newVars = this.def.presetVars.concat([{ type: 'backend', name: 'backend', default: { type: 'NAI' } }])
+      return materializeWFObj(this.def.type, newVars);
+    }
+  }
+
+  presetFromJSON(json: any) {
+    const preset = this.buildPreset();
+    preset.fromJSON(json);
     return preset;
   }
 
-  toJSON(): ISDAbstractPreset {
-    return {
-      ...super.toJSON(),
-      cfgRescale: this.cfgRescale,
-      steps: this.steps,
-      promptGuidance: this.promptGuidance,
-      smea: this.smea,
-      dyn: this.dyn,
-      sampling: this.sampling,
-      noiseSchedule: this.noiseSchedule,
-      backend: this.backend,
-      uc: this.uc,
+  sharedFromJSON(json: any) {
+    const shared = this.buildShared();
+    shared.fromJSON(json);
+    return shared;
+  }
+}
+
+export function wfiPresetSelect(): WFIPresetSelect {
+  return { type: 'presetSelect' };
+}
+
+export function wfiProfilePresetSelect(editor: WFIElement): WFIProfilePresetSelect {
+  return { type: 'profilePresetSelect', editor };
+}
+
+export function wfiStack(inputs: WFIElement[]): WFIStack {
+  return { type: 'stack', inputs };
+}
+
+export function wfiInlineInput(label: string, field: string, preset: boolean, flex: WFIFlex): WFIInlineInput {
+  return { type: 'inline', label, field, preset, flex };
+}
+
+export function wfiGroup(label: string, inputs: WFIElement[]): WFIGroup {
+  return { type: 'group', label, inputs };
+}
+
+export function wfiMiddlePlaceholderInput(label: string): WFIMiddlePlaceholderInput {
+  return { type: 'middlePlaceholder', label };
+}
+
+export class WFDefBuilder {
+  private workflowDef: WorkFlowDef;
+
+  constructor(type: string) {
+    this.workflowDef = {
+      type,
+      presetVars: [],
+      sharedVars: [],
+      backendType: 'none',
+      editor: null as any,
+      i2i: false,
+      handler: () => {}
     };
+  }
+
+  setPresetVars(presetVars: WFVar[]): this {
+    this.workflowDef.presetVars = presetVars;
+    return this;
+  }
+
+  setSharedVars(sharedVars: WFVar[]): this {
+    this.workflowDef.sharedVars = sharedVars;
+    return this;
+  }
+
+  setBackendType(backendType: WFBackendType): this {
+    this.workflowDef.backendType = backendType;
+    return this;
+  }
+
+  setEditor(editor: WFIElement): this {
+    this.workflowDef.editor = editor;
+    return this;
+  }
+
+  setI2I(i2i: boolean): this {
+    this.workflowDef.i2i = i2i;
+    return this;
+  }
+
+  setHandler(handler: WFHandler): this {
+    this.workflowDef.handler = handler;
+    return this;
+  }
+
+  setTestHandler(testHandler: WFTestHandler): this {
+    this.workflowDef.testHandler = testHandler;
+    return this;
+  }
+
+  build(): WorkFlowDef {
+    return this.workflowDef;
   }
 }
