@@ -4,6 +4,7 @@ import {
   Sampling,
   ImageGenInput,
   ImageGenService,
+  ImageAugmentInput,
 } from '../imageGen';
 
 import JSZip from 'jszip';
@@ -200,5 +201,37 @@ export class NovelAiImageGenService implements ImageGenService {
     const res = await reponse.json();
     const steps = res['subscription']['trainingStepsLeft'];
     return steps['fixedTrainingStepsLeft'] + steps['purchasedTrainingSteps'];
+  }
+
+  async augmentImage(authorization: string, params: ImageAugmentInput) {
+    const url = this.apiEndpoint;
+    const resolutionValue = this.translateResolution(params.resolution);
+    const body: any = {
+      image: params.image,
+      prompt: params.prompt,
+      defry: params.weaken,
+      req_type: 'emotion',
+      width: resolutionValue.width,
+      height: resolutionValue.height,
+    };
+
+    const headers = {
+      Authorization: `Bearer ${authorization}`,
+      'Content-Type': 'application/json',
+    };
+
+    const arrayBuffer = await this.fetcher.fetchArrayBuffer(
+      url + '/ai/augment-image',
+      body,
+      headers,
+    );
+    const zip = await JSZip.loadAsync(Buffer.from(arrayBuffer));
+    const zipEntries = Object.keys(zip.files);
+    if (zipEntries.length === 0) {
+      throw new Error('No entries found in the ZIP file');
+    }
+
+    const imageEntry = zip.file(zipEntries[0])!;
+    return await imageEntry.async('base64');
   }
 }

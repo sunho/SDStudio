@@ -74,8 +74,16 @@ export interface ImageGenInput {
   originalImage?: boolean;
 }
 
+export interface ImageAugmentInput {
+  prompt: string;
+  image: string;
+  weaken: number;
+  resolution: Resolution;
+}
+
 export interface ImageGenService {
   login(email: string, password: string): Promise<{ accessToken: string }>;
   generateImage(token: string, params: ImageGenInput): Promise<string>;
+  augmentImage(token: string, params: ImageAugmentInput): Promise<string>;
   getRemainCredits(token: string): Promise<number>;
 }

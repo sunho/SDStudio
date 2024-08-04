@@ -8,15 +8,18 @@ import { dataUriToBase64 } from './ImageService';
 import { getDefaultPreset, defaultUC } from './PromptService';
 import { ResourceSyncService } from './ResourceSyncService';
 import {
+  PromptPieceSlot,
+  SDPreset,
   GenericScene,
-  InPaintScene,
-  StylePreSet,
-  PreSet,
+  InpaintScene,
   Scene,
+  SDShared,
   Session,
+  Preset,
 } from './types';
 import { extractPromptDataFromBase64 } from './util';
 import * as PngChunk from 'png-chunk-text';
+import { cast, getSnapshot, onSnapshot } from 'mobx-state-tree';
 
 const SESSION_SERVICE_INTERVAL = 5000;
 
@@ -27,86 +30,52 @@ export class SessionService extends ResourceSyncService<Session> {
 
   async getHook(rc: Session, name: string) {
     rc.name = name;
-    await this.migrateSession(rc);
-    for (const scene of Object.values(rc.scenes)) {
-      this.reconnectRound(rc, scene);
-    }
-    for (const inpaint of Object.values(rc.inpaints)) {
-      this.reconnectRound(rc, inpaint);
-    }
-  }
-
-  reconnectRound(session: Session, scene: GenericScene) {
-    if (scene.game && scene.round) {
-      const players = scene.game;
-      const playersMap: any = {};
-      for (const player of players) {
-        playersMap[player.path] = player;
-      }
-      for (let i = 0; i < scene.round.players.length; i++) {
-        scene.round.players[i] = playersMap[scene.round.players[i].path];
-      }
-    }
+    //await this.migrateSession(rc);
   }
 
   async createDefault(name: string) {
     const preset = getDefaultPreset();
     preset.name = 'default';
-    const newSession: Session = {
+    const newSession = Session.fromJSON({
       name: name,
-      presets: [preset],
-      presetMode: 'style',
+      presets: Object.fromEntries([['sdimagegen', [preset]]]),
       inpaints: {},
-      scenes: {
-        default: {
+      scenes: Object.fromEntries([['default', {
           type: 'scene',
           name: 'default',
           resolution: 'portrait',
-          locked: false,
-          slots: [[{ prompt: 'smile', enabled: true }]],
+          slots: [[{prompt:'', id: v4()}]],
           game: undefined,
           round: undefined,
           imageMap: [],
           mains: [],
-        },
-      },
+      }]]),
       library: {},
-      presetShareds: {
-        preset: {
-          type: 'preset',
-          vibes: [],
-        },
-        style: {
-          type: 'style',
-          backgroundPrompt: 'bed',
-          characterPrompt:
-            '1girl, maid, black hair, medium hair, large breasts, lying',
-          uc: '',
-          vibes: [],
-        },
-      },
-    };
-    await importDefaultPresets(newSession);
+      presetShareds: Object.fromEntries([[ 'sdimagegen', {
+        type: 'sd',
+        vibes: []
+      }]]),
+    });
+    // await importDefaultPresets(newSession);
     return newSession;
   }
 
-  getInpaintOrgPath(session: Session, inpaint: InPaintScene) {
+  getInpaintOrgPath(session: Session, inpaint: InpaintScene) {
     return 'inpaint_orgs/' + session.name + '/' + inpaint.name + '.png';
   }
 
-  getInpaintMaskPath(session: Session, inpaint: InPaintScene) {
+  getInpaintMaskPath(session: Session, inpaint: InpaintScene) {
     return 'inpaint_masks/' + session.name + '/' + inpaint.name + '.png';
   }
 
   async exportSessionShallow(session: Session) {
-    const sess: Session = JSON.parse(JSON.stringify(session));
-    sess.presetShareds['preset'].vibes = [];
-    sess.presetShareds['style'].vibes = [];
+    const sess: Session = Session.fromJSON(session.toJSON());
+    (sess.presetShareds.get('sdimagegen') as SDShared).vibes = [];
     for (const scene of Object.values(sess.scenes)) {
       scene.game = undefined;
       scene.round = undefined;
-      scene.imageMap = [];
-      scene.mains = [];
+      scene.imageMap = cast([]);
+      scene.mains = cast([]);
     }
 
     for (const scene of Object.values(sess.inpaints)) {
@@ -264,7 +233,7 @@ export class SessionService extends ResourceSyncService<Session> {
     await this.createFrom(name, session);
   }
 
-  async migrateSession(session: Session) {
+  async migrateSession(session: any) {
     if (!Array.isArray(session.presets)) {
       for (const preset of Object.values(session.presets)) {
         if ((preset as any).vibe) {
@@ -323,7 +292,7 @@ export class SessionService extends ResourceSyncService<Session> {
       session.presetMode = 'preset';
     }
 
-    for (const inpaint of Object.values(session.inpaints)) {
+    for (const inpaint of Object.values(session.inpaints) as any) {
       if (inpaint.image) {
         try {
           const path =
@@ -377,7 +346,7 @@ export class SessionService extends ResourceSyncService<Session> {
       }
     }
 
-    for (const scene of Object.values(session.scenes)) {
+    for (const scene of Object.values(session.scenes) as any) {
       if (scene.landscape != null) {
         if (scene.landscape) {
           scene.resolution = 'landscape';
@@ -393,7 +362,7 @@ export class SessionService extends ResourceSyncService<Session> {
       scene.mains = scene.mains ?? [];
     }
 
-    for (const inpaint of Object.values(session.inpaints)) {
+    for (const inpaint of Object.values(session.inpaints) as any) {
       if (inpaint.landscape != null) {
         if (inpaint.landscape) {
           inpaint.resolution = 'landscape';
@@ -404,23 +373,23 @@ export class SessionService extends ResourceSyncService<Session> {
       }
     }
 
-    for (const library of Object.values(session.library)) {
+    for (const library of Object.values(session.library) as any) {
       if (!library.multi) {
         library.multi = {};
       }
     }
 
-    for (const scene of Object.values(session.scenes)) {
+    for (const scene of Object.values(session.scenes) as any) {
       if (!scene.imageMap) {
-        scene.imageMap = [];
+        scene.imageMap = cast([]);
         if (scene.game) {
-          scene.game = scene.game.map((x) => ({
+          scene.game = cast(scene.game.map((x: any) => ({
             rank: x.rank,
             path: x.path.split('/').pop()!,
-          }));
+          })));
         }
         if (scene.round) {
-          scene.round.players = scene.round.players.map((x) => ({
+          scene.round.players = scene.round.players.map((x: any) => ({
             rank: x.rank,
             path: x.path.split('/').pop()!,
           }));
@@ -428,17 +397,17 @@ export class SessionService extends ResourceSyncService<Session> {
       }
     }
 
-    for (const inpaint of Object.values(session.inpaints)) {
+    for (const inpaint of Object.values(session.inpaints) as any) {
       if (!inpaint.imageMap) {
         inpaint.imageMap = [];
         if (inpaint.game) {
-          inpaint.game = inpaint.game.map((x) => ({
+          inpaint.game = inpaint.game.map((x: any) => ({
             rank: x.rank,
             path: x.path.split('/').pop()!,
           }));
         }
         if (inpaint.round) {
-          inpaint.round.players = inpaint.round.players.map((x) => ({
+          inpaint.round.players = inpaint.round.players.map((x: any) => ({
             rank: x.rank,
             path: x.path.split('/').pop()!,
           }));
@@ -449,7 +418,7 @@ export class SessionService extends ResourceSyncService<Session> {
 
   async saveInpaintImages(
     seesion: Session,
-    inpaint: InPaintScene,
+    inpaint: InpaintScene,
     image: string,
     mask: string,
   ) {
@@ -485,7 +454,7 @@ export class SessionService extends ResourceSyncService<Session> {
     this.dispatchEvent(new CustomEvent('scene-order-changed', {}));
   }
 
-  styleEditStart(preset: PreSet): void {
+  styleEditStart(preset: Preset): void {
     this.dispatchEvent(
       new CustomEvent('style-edit-start', { detail: { preset } }),
     );
@@ -497,9 +466,9 @@ export class SessionService extends ResourceSyncService<Session> {
 
   async reloadPieceLibraryDB(session: Session) {
     const res = [];
-    for (const [k, v] of Object.entries(session.library)) {
-      for (const piece of Object.keys(v.pieces)) {
-        res.push(k + '.' + piece);
+    for (const [k, v] of session.library.entries()) {
+      for (const piece of v.pieces) {
+        res.push(k + '.' + piece.name);
       }
     }
     await backend.loadPiecesDB(res);
@@ -580,25 +549,6 @@ export const getResultDirectory = (session: Session, scene: GenericScene) => {
     return imageService.getImageDir(session, scene);
   }
   return imageService.getInPaintDir(session, scene);
-};
-
-export const getCollection = (session: Session, type: 'scene' | 'inpaint') => {
-  if (type === 'scene') {
-    return session.scenes;
-  }
-  return session.inpaints;
-};
-
-export const setCollection = (
-  session: Session,
-  type: 'scene' | 'inpaint',
-  collection: { [key: string]: Scene | InPaintScene },
-) => {
-  if (type === 'scene') {
-    session.scenes = collection as { [key: string]: Scene };
-  } else {
-    session.inpaints = collection as { [key: string]: InPaintScene };
-  }
 };
 
 export const renameScene = async (

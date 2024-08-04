@@ -5,18 +5,17 @@ import BrushTool, {
   getImageDimensions,
 } from './BrushTool';
 import { DropdownSelect, FileUploadBase64 } from './UtilComponents';
-import { AppContext } from './App';
 import PromptEditTextArea from './PromptEditTextArea';
-import { Resolution, resolutionMap } from './backends/imageGen';
+import { Resolution, resolutionMap } from '../backends/imageGen';
 import { FaArrowsAlt, FaBrush, FaPaintBrush, FaUndo } from 'react-icons/fa';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
-import { isMobile, imageService, sessionService, backend } from './models';
-import { dataUriToBase64 } from './models/ImageService';
-import { InPaintScene } from './models/types';
-import { extractPromptDataFromBase64 } from './models/util';
+import { isMobile, imageService, sessionService, backend } from '../models';
+import { dataUriToBase64 } from '../models/ImageService';
+import { InpaintScene } from '../models/types';
+import { extractPromptDataFromBase64 } from '../models/util';
 
 interface Props {
-  editingScene: InPaintScene;
+  editingScene: InpaintScene;
   onConfirm: () => void;
   onDelete: () => void;
 }
@@ -158,7 +157,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
         return;
       }
 
-      const newScene: InPaintScene = {
+      const newScene: InpaintScene = {
         type: 'inpaint',
         name: taskName,
         prompt: currentPrompt,
@@ -227,7 +226,7 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
                 onClick={() => {
                   const path = sessionService.getInpaintOrgPath(
                     curSession!,
-                    editingScene as InPaintScene,
+                    editingScene as InpaintScene,
                   );
                   backend.openImageEditor(path);
                   backend.watchImage(path);

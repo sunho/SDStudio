@@ -50,8 +50,8 @@ export function isValidDenDenDataFormat(data: any): data is DenDenDataFormat {
 export function convertDenDenData(
   name: string,
   data: DenDenDataFormat,
-): Session {
-  const scenes: { [name: string]: Scene } = {};
+): any {
+  const scenes: { [name: string]: any } = {};
   const preset = getDefaultPreset();
   for (const pre of data.prePrompts) {
     if (pre.name === 'After_default') {
@@ -63,7 +63,7 @@ export function convertDenDenData(
   }
 
   for (const preset of data.presets) {
-    const scene: Scene = {
+    const scene: any = {
       type: 'scene',
       name: preset.name,
       landscape: false,

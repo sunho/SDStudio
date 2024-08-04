@@ -16,7 +16,6 @@ import {
   areEqual,
 } from 'react-window';
 import ResizeObserver from 'resize-observer-polyfill';
-import { AppContext } from './App';
 import { userInfo } from 'os';
 import { CustomScrollbars } from './UtilComponents';
 import Tournament from './Tournament';
@@ -38,12 +37,13 @@ import { FaPlus } from 'react-icons/fa6';
 import { useContextMenu } from 'react-contexify';
 import { useDrag, useDrop } from 'react-dnd';
 import { getEmptyImage } from 'react-dnd-html5-backend';
-import { ContextMenuType, GenericScene, Scene } from './models/types';
-import { imageService, sessionService, isMobile, gameService, backend } from './models';
-import { dataUriToBase64, deleteImageFiles } from './models/ImageService';
-import { getResultDirectory } from './models/SessionService';
-import { queueGenericScene, removeTaskFromGenericScene } from './models/TaskQueueService';
-import { extractPromptDataFromBase64 } from './models/util';
+import { ContextMenuType, GenericScene, Scene } from '../models/types';
+import { imageService, sessionService, isMobile, gameService, backend } from '../models';
+import { dataUriToBase64, deleteImageFiles } from '../models/ImageService';
+import { getResultDirectory } from '../models/SessionService';
+import { queueGenericScene, removeTaskFromGenericScene } from '../models/TaskQueueService';
+import { extractPromptDataFromBase64 } from '../models/util';
+import { appState } from '../models/AppService';
 
 interface ImageGalleryProps {
   scene: GenericScene;
@@ -116,7 +116,7 @@ const Cell = memo(
       imageSize,
     } = data as any;
 
-    const { curSession } = useContext(AppContext)!;
+    const { curSession } = appState;
     const index = rowIndex * columnCount + columnIndex;
     const path = filePaths[index];
 
@@ -361,7 +361,7 @@ const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
     },
     ref,
   ) => {
-    const { curSession } = useContext(AppContext)!;
+    const { curSession } = appState;
     const [containerWidth, setContainerWidth] = useState(0);
     const [containerHeight, setContainerHeight] = useState(0);
     const refreshImageFuncs = useRef(new Map<string, () => void>());
@@ -454,7 +454,7 @@ const ResultDetailView = ({
   initialSelectedIndex,
   onClose,
 }: ResultDetailViewProps) => {
-  const { curSession, selectedPreset, pushDialog } = useContext(AppContext)!;
+  const { curSession, pushDialog } = appState;
   const [selectedIndex, setSelectedIndex] =
     useState<number>(initialSelectedIndex);
   const [paths, setPaths] = useState<string[]>(getPaths());
@@ -741,8 +741,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
     }: ResultViewerProps,
     ref,
   ) => {
-    const { curSession, selectedPreset, samples, pushDialog } =
-      useContext(AppContext)!;
+    const { curSession, samples, pushDialog } = appState;
     const [_, forceUpdate] = useState<{}>({});
     const [tournament, setTournament] = useState<boolean>(false);
     const [selectedImageIndex, setSelectedImageIndex] = useState<

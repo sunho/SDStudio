@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { FaObjectGroup } from 'react-icons/fa';
-import { Scene, GenericScene } from './models/types';
+import { Scene, GenericScene } from '../models/types';
 
 interface SceneSelectorProps {
   text: string;

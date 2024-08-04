@@ -1,18 +1,20 @@
 import { backend, isMobile, promptService } from '.';
-import { Sampling } from '../backends/imageGen';
+import { NoiseSchedule, Sampling } from '../backends/imageGen';
 import { ResourceSyncService } from './ResourceSyncService';
 import {
-  InPaintScene,
-  RegularPreSet,
-  StylePreSet,
-  StylePreSetShared,
+  InpaintScene,
+  IPreSetShared,
+  ISDPreset,
+  ISDStyleShared,
   PARR,
   PieceLibrary,
-  PreSet,
+  Preset,
+  PreSetShared,
   PromptGroupNode,
   PromptNode,
   PromptRandomNode,
   Scene,
+  SDPreset,
   Session,
 } from './types';
 
@@ -24,29 +26,17 @@ export function toPARR(str: string) {
   return cleanPARR(str.replace('\n', ',').split(',')).filter((x) => x !== '');
 }
 
-const PROMPT_SERVICE_INTERVAL = 5000;
-
-export class PromptService extends ResourceSyncService<PieceLibrary> {
+export class PromptService extends EventTarget {
   running: boolean;
   constructor() {
-    super('pieces', PROMPT_SERVICE_INTERVAL);
+    super();
     this.running = true;
-  }
-
-  async getHook(rc: PieceLibrary, name: string) {}
-
-  createDefault(name: string): PieceLibrary {
-    return {
-      description: name,
-      pieces: {},
-      multi: {},
-    };
   }
 
   tryExpandPiece(
     p: string,
     session: Session,
-    scene: InPaintScene | Scene | undefined = undefined,
+    scene: InpaintScene | Scene | undefined = undefined,
   ) {
     const errorInfo =
       'project:' +
@@ -64,16 +54,16 @@ export class PromptService extends ResourceSyncService<PieceLibrary> {
           '올바르지 않은 조각 문법 "' + p + '" (' + errorInfo + ')',
         );
       }
-      const lib = session.library[parts[0]];
+      const lib = session.library.get(parts[0]);
       if (!lib) {
         throw new Error(
           '존재하지 않는 조각 모음 "' + p + '" (' + errorInfo + ')',
         );
       }
-      if (!(parts[1] in lib.pieces)) {
+      if (lib.pieces.find((x) => x.name === parts[1]) == null) {
         throw new Error('존재하지 않는 조각 "' + p + '" (' + errorInfo + ')');
       }
-      return lib.pieces[parts[1]];
+      return lib.pieces.find((x) => x.name === parts[1])!.prompt;
     }
     throw new Error('조각이 아닙니다 "' + p + '" (' + errorInfo + ')');
   }
@@ -87,17 +77,17 @@ export class PromptService extends ResourceSyncService<PieceLibrary> {
     if (parts.length !== 2) {
       return false;
     }
-    const lib = session.library[parts[0]];
+    const lib = session.library.get(parts[0]);
     if (!lib) {
       return false;
     }
-    return lib.multi[parts[1]] ?? false;
+    return lib.pieces.find((x) => x.name === parts[1])?.multi ?? false;
   }
 
   parseWord(
     word: string,
     session: Session | undefined = undefined,
-    scene: InPaintScene | Scene | undefined = undefined,
+    scene: InpaintScene | Scene | undefined = undefined,
     visited: { [key: string]: boolean } | undefined = undefined,
   ): PromptNode {
     if (!visited) {
@@ -184,17 +174,17 @@ export class PromptService extends ResourceSyncService<PieceLibrary> {
 
 export const createPrompts = async (
   session: Session,
-  preset: PreSet,
+  preset: ISDPreset,
+  shared: IPreSetShared,
   scene: Scene,
 ) => {
-  const shared = session.presetShareds[session.presetMode];
   const promptComb: string[] = [];
   const res: PromptNode[] = [];
   const dfs = async () => {
     if (promptComb.length === scene.slots.length) {
       let front = toPARR(preset.frontPrompt);
-      if (preset.type === 'style') {
-        const styleShared = shared as StylePreSetShared;
+      if (shared.type === 'sd_style') {
+        const styleShared = shared as ISDStyleShared;
         front = front.concat(toPARR(styleShared.characterPrompt));
         const newFront = [];
         const rest = [];
@@ -253,8 +243,8 @@ export const createPrompts = async (
         if (middle[right] !== '|') cur.push(middle[right]);
         right++;
       }
-      if (preset.type === 'style') {
-        const styleShared = shared as StylePreSetShared;
+      if (shared.type === 'sd_style') {
+        const styleShared = shared as ISDStyleShared;
         cur = cur.concat(toPARR(styleShared.backgroundPrompt));
       }
       cur = cur.concat(toPARR(preset.backPrompt));
@@ -474,48 +464,27 @@ export function lowerPromptNode(node: PromptNode): string {
   return reformat(node.children.map(lowerPromptNode).join(','));
 }
 
-export async function extractMiddlePrompt(preset: PreSet, prompt: string) {
-  if (!prompt) return '';
-  const fprompt = toPARR(preset.frontPrompt).join(', ');
-  const bprompt = toPARR(preset.backPrompt).join(', ');
-  let last = toPARR(prompt).join(', ') ?? '';
-  if (last.startsWith(fprompt)) {
-    last = last.slice(fprompt.length);
-  }
-  if (last.endsWith(bprompt)) {
-    last = last.slice(0, -bprompt.length);
-  }
-  last = toPARR(last).join(', ');
-  return last;
-}
-
 export const defaultFPrompt = `1girl, {artist:ixy}`;
 export const defaultBPrompt = `{best quality, amazing quality, very aesthetic, highres, incredibly absurdres}`;
 export const defaultUC = `worst quality, bad quality, displeasing, very displeasing, lowres, bad anatomy, bad perspective, bad proportions, bad aspect ratio, bad face, long face, bad teeth, bad neck, long neck, bad arm, bad hands, bad ass, bad leg, bad feet, bad reflection, bad shadow, bad link, bad source, wrong hand, wrong feet, missing limb, missing eye, missing tooth, missing ear, missing finger, extra faces, extra eyes, extra eyebrows, extra mouth, extra tongue, extra teeth, extra ears, extra breasts, extra arms, extra hands, extra legs, extra digits, fewer digits, cropped head, cropped torso, cropped shoulders, cropped arms, cropped legs, mutation, deformed, disfigured, unfinished, chromatic aberration, text, error, jpeg artifacts, watermark, scan, scan artifacts`;
 
-export function getDefaultPreset(): RegularPreSet {
+export function getDefaultPreset(): ISDPreset {
   return {
+    type: 'sd',
     name: '',
-    type: 'preset',
     frontPrompt: defaultFPrompt,
     backPrompt: defaultBPrompt,
     uc: defaultUC,
     sampling: Sampling.KEulerAncestral,
     promptGuidance: 5.0,
+    cfgRescale: 0.0,
     steps: 28,
-  };
-}
-
-export function getDefaultStylePreset(): StylePreSet {
-  return {
-    name: '',
-    type: 'style',
-    frontPrompt: defaultFPrompt,
-    backPrompt: defaultBPrompt,
-    uc: defaultUC,
-    sampling: Sampling.KEulerAncestral,
-    promptGuidance: 5.0,
-    steps: 28,
-    profile: '',
+    smea: false,
+    dyn: false,
+    noiseSchedule: NoiseSchedule.Native,
+    backend: {
+      type: 'NAI'
+    },
+    profile: undefined,
   };
 }

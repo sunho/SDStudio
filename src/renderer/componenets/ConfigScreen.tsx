@@ -6,20 +6,21 @@ import {
   localAIService,
   loginService,
   sessionService,
-} from './models';
+} from '../models';
 import {
   Config,
   ImageEditor,
   RemoveBgQuality,
-} from '../main/config';
-import { AppContext } from './App';
+} from '.../main/config';
+import { observer } from 'mobx-react-lite';
+import { appState } from '../models/AppService';
 
 interface ConfigScreenProps {
   onSave: () => void;
 }
 
-const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
-  const { curSession, pushDialog, pushMessage } = useContext(AppContext)!;
+const ConfigScreen = observer(({ onSave }: ConfigScreenProps) => {
+  const { curSession, pushDialog, pushMessage } = appState;
   const [imageEditor, setImageEditor] = useState('');
   const [useGPU, setUseGPU] = useState(false);
   const [whiteMode, setWhiteMode] = useState(false);
@@ -316,6 +317,6 @@ const ConfigScreen = ({ onSave }: ConfigScreenProps) => {
       </div>
     </div>
   );
-};
+});
 
 export default ConfigScreen;

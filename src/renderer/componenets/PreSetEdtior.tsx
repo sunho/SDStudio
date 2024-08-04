@@ -7,8 +7,7 @@ import {
   FileUploadBase64,
   DropdownSelect,
 } from './UtilComponents';
-import { NoiseSchedule, Resolution, Sampling } from './backends/imageGen';
-import { Context, AppContext } from './App';
+import { NoiseSchedule, Resolution, Sampling } from '../backends/imageGen';
 import PromptEditTextArea from './PromptEditTextArea';
 import { FaImage, FaPlus, FaTrash, FaTrashAlt } from 'react-icons/fa';
 import { FloatView } from './FloatView';
@@ -23,20 +22,20 @@ import {
   PreSet,
   PreSetMode,
   PromptNode,
-} from './models/types';
+} from '../models/types';
 import {
   sessionService,
   imageService,
   backend,
   promptService,
   taskQueueService,
-} from './models';
+} from '../models';
 import {
   getDefaultPreset,
   getDefaultStylePreset,
   toPARR,
-} from './models/PromptService';
-import { queueDummyPrompt } from './models/TaskQueueService';
+} from '../models/PromptService';
+import { queueDummyPrompt } from '../models/TaskQueueService';
 
 function useCommonSetup(): CommonSetup {
   const { curSession, selectedPreset } = useContext(AppContext)!;

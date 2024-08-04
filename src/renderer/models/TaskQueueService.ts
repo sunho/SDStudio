@@ -17,14 +17,21 @@ import {
   taskQueueService,
 } from '.';
 import {
-  BakedPreSet,
   GenericScene,
-  InPaintScene,
-  StylePreSet,
-  StylePreSetShared,
-  PreSet,
+  IAugmentShared,
+  InpaintScene,
+  IPreset,
+  IPreSetShared,
+  ISDAbstractPreset,
+  ISDAbstractShared,
+  ISDInpaintPreset,
+  ISDInpaintShared,
+  ISDPreset,
+  ISDShared,
+  Preset,
   PromptNode,
   Scene,
+  SelectedWorkflow,
   Session,
 } from './types';
 import { sleep } from './util';
@@ -48,33 +55,24 @@ const FAST_TASK_DEFAULT_ESTIMATE =
   (RANDOM_DELAY_STD * 1000) / 2 +
   1000;
 
-export interface GenerateTask {
-  type: 'generate';
-  id: string | undefined;
+export interface TaskParam {
   session: Session;
-  scene: string;
-  preset: BakedPreSet;
-  outPath: string;
-  done: number;
-  total: number;
-  nodelay?: boolean;
+  preset: IPreset;
+  shared: IPreSetShared;
+  fetched: Map<string, string>;
+  outputPath: string;
+  prompt?: PromptNode;
+  scene?: GenericScene;
   onComplete?: (path: string) => void;
+  nodelay?: boolean;
 }
 
-export interface InPaintTask {
-  type: 'inpaint';
+export interface Task {
   id: string | undefined;
-  session: Session;
-  scene: string;
-  image: string;
-  mask: string;
-  preset: BakedPreSet;
-  outPath: string;
+  cls: number;
+  params: TaskParam;
   done: number;
   total: number;
-  nodelay?: boolean;
-  onComplete?: (path: string) => void;
-  originalImage?: boolean;
 }
 
 function getRandomInt(min: number, max: number): number {
@@ -164,25 +162,14 @@ interface TaskQueueRun {
 
 interface TaskHandler {
   createTimeEstimator(): TaskTimeEstimator;
+  checkTask(task: Task): boolean;
   handleTask(task: Task, run: TaskQueueRun): Promise<boolean>;
   getNumTries(task: Task): number;
   handleDelay(task: Task, numTry: number): Promise<void>;
-  getSceneKey(task: Task): string;
 }
 
-export interface GenerateImageTaskParams {
-  preset: BakedPreSet;
-  outPath: string;
-  session: Session;
-  scene?: string;
-  image?: string;
-  mask?: string;
-  originalImage?: boolean;
-  onComplete?: (path: string) => void;
-}
-
-export function getSceneKey(session: Session, sceneName: string) {
-  return session.name + '-' + sceneName;
+export const getSceneKey = (session: Session, scene: GenericScene) => {
+  return session.name + '/' + scene.type + '/' + scene.name;
 }
 
 async function handleNAIDelay(numTry: number, fast: boolean) {
@@ -204,16 +191,6 @@ async function handleNAIDelay(numTry: number, fast: boolean) {
     }
   }
 }
-
-export interface Task {
-  type: TaskType;
-  id: string | undefined;
-  params: any;
-  done: number;
-  total: number;
-}
-
-export type TaskHandlerMap = { [key: string]: TaskHandler };
 
 class GenerateImageTaskHandler implements TaskHandler {
   inpaint: boolean;
@@ -240,22 +217,36 @@ class GenerateImageTaskHandler implements TaskHandler {
     await handleNAIDelay(numTry, this.fast);
   }
 
+  checkTask(task: Task): boolean {
+    if (task.params.preset.type === 'sd' && !this.inpaint) {
+      if (task.params.nodelay && this.fast) {
+        return true;
+      }
+      if (!task.params.nodelay && !this.fast) {
+        return true;
+      }
+    }
+    if (task.params.preset.type === 'sd_inpaint' && this.inpaint) {
+      return true;
+    }
+    return false;
+  }
+
   async handleTask(task: Task, run: TaskQueueRun) {
-    const params: GenerateImageTaskParams = task.params;
-    let prompt = lowerPromptNode(params.preset.prompt);
-    prompt = prompt.replace(String.fromCharCode(160), ' ');
+    const preset: ISDAbstractPreset = task.params.preset as ISDAbstractPreset;
+    const shared: ISDAbstractShared = task.params.shared as ISDAbstractShared;
+    let prompt = lowerPromptNode(task.params.prompt!);
     console.log('lowered prompt: ' + prompt);
-    const uc = params.preset.uc.replace(String.fromCharCode(160), ' ');
     const outputFilePath =
-      params.outPath + '/' + Date.now().toString() + '.png';
+      task.params.outputPath + '/' + Date.now().toString() + '.png';
     if (prompt === '') {
       prompt = '1girl';
     }
     const vibes = await Promise.all(
-      params.preset.vibes.map(async (x: any) => ({
+      shared.vibes.map(async (x: any) => ({
         image: dataUriToBase64(
           (await imageService.fetchImage(
-            imageService.getVibesDir(params.session) +
+            imageService.getVibesDir(task.params.session) +
               '/' +
               x.path.split('/').pop()!,
           ))!,
@@ -266,26 +257,28 @@ class GenerateImageTaskHandler implements TaskHandler {
     );
     const arg: ImageGenInput = {
       prompt: prompt,
-      uc: uc,
+      uc: preset.uc,
       model: Model.Anime,
-      resolution: params.preset.resolution,
-      sampling: params.preset.sampling,
-      sm: params.preset.smea,
-      dyn: params.preset.dyn,
+      resolution: task.params.scene!.resolution as Resolution,
+      sampling: preset.sampling as Sampling,
+      sm: preset.smea,
+      dyn: preset.dyn,
       vibes: vibes,
-      steps: params.preset.steps,
-      cfgRescale: params.preset.cfgRescale,
-      noiseSchedule: params.preset.noiseSchedule,
-      promptGuidance: params.preset.promptGuidance,
+      steps: preset.steps,
+      cfgRescale: preset.cfgRescale,
+      noiseSchedule: preset.noiseSchedule as NoiseSchedule,
+      promptGuidance: preset.promptGuidance,
       outputFilePath: outputFilePath,
-      seed: params.preset.seed,
+      seed: shared.seed,
     };
     if (this.inpaint) {
+      const inpaintPreset = preset as ISDInpaintPreset;
+      const inpaintShared = shared as ISDInpaintShared;
       arg.model = Model.Inpaint;
-      arg.image = params.image;
-      arg.mask = params.mask;
-      arg.originalImage = params.originalImage;
-      arg.imageStrength = 0.7;
+      arg.image = inpaintShared.image;
+      arg.mask = inpaintPreset.mask;
+      arg.originalImage = inpaintPreset.originalImage;
+      arg.imageStrength = inpaintPreset.strength;
       arg.vibes = [];
     }
     console.log(arg);
@@ -309,19 +302,19 @@ class GenerateImageTaskHandler implements TaskHandler {
     }
     await backend.generateImage(arg);
 
-    if (params.preset.seed) {
-      params.preset.seed = stepSeed(params.preset.seed);
+    if (shared.seed) {
+      shared.seed = stepSeed(shared.seed);
     }
 
-    if (params.onComplete) {
-      params.onComplete(outputFilePath);
+    if (task.params.onComplete) {
+      task.params.onComplete(outputFilePath);
     }
 
-    if (params.scene != null) {
+    if (task.params.scene != null) {
       if (this.inpaint) {
-        imageService.onAddInPaint(params.session, params.scene, outputFilePath);
+        imageService.onAddInPaint(task.params.session, task.params.scene.name, outputFilePath);
       } else {
-        imageService.onAddImage(params.session, params.scene, outputFilePath);
+        imageService.onAddImage(task.params.session, task.params.scene.name, outputFilePath);
       }
     }
 
@@ -330,12 +323,6 @@ class GenerateImageTaskHandler implements TaskHandler {
 
   getNumTries(task: Task) {
     return 40;
-  }
-
-  getSceneKey(task: Task) {
-    const params: GenerateImageTaskParams = task.params;
-    if (!params.scene) return '';
-    return getSceneKey(params.session, params.scene);
   }
 }
 
@@ -360,48 +347,42 @@ class RemoveBgTaskHandler implements TaskHandler {
   }
 
   async handleTask(task: Task, run: TaskQueueRun) {
-    const params: RemoveBgTaskParams = task.params;
     const outputFilePath =
-      params.ouputPath + '/' + Date.now().toString() + '.png';
-    await localAIService.removeBg(params.image, outputFilePath);
-    if (params.onComplete) params.onComplete(outputFilePath);
-    imageService.onAddImage(params.session, params.scene, outputFilePath);
+      task.params.outputPath + '/' + Date.now().toString() + '.png';
+    const shared = task.params.shared as IAugmentShared;
+    await localAIService.removeBg(shared.image!, outputFilePath);
+    if (task.params.onComplete) task.params.onComplete(outputFilePath);
+    imageService.onAddImage(task.params.session, task.params.scene!.name, outputFilePath);
     return true;
+  }
+
+  checkTask(task: Task): boolean {
+    return task.params.preset.type === 'augment' && task.params.preset.backend.type === 'SD';
   }
 
   getNumTries(task: Task) {
     return 1;
   }
-
-  getSceneKey(task: Task) {
-    const params: GenerateImageTaskParams = task.params;
-    if (!params.scene) {
-      return '';
-    }
-    return getSceneKey(params.session, params.scene);
-  }
 }
 
-export type TaskType = 'generate' | 'generate-fast' | 'inpaint' | 'remove-bg';
 
 export class TaskQueueService extends EventTarget {
   queue: CircularQueue<Task>;
-  handlers: TaskHandlerMap;
-  timeEstimators: { [key: string]: TaskTimeEstimator };
-  groupStats: { [key: string]: TaskStats };
-  sceneStats: { [key: string]: { [sceneKey: string]: TaskStats } };
+  handlers: TaskHandler[];
+  timeEstimators: TaskTimeEstimator[];
+  groupStats: TaskStats[];
+  sceneStats: { [sceneKey: string]: TaskStats };
   currentRun: TaskQueueRun | undefined;
   taskSet: { [key: string]: boolean };
-  constructor(handlers: TaskHandlerMap) {
+  constructor(handlers: TaskHandler[]) {
     super();
     this.handlers = handlers;
-    this.timeEstimators = {};
-    this.groupStats = {};
     this.sceneStats = {};
-    for (const key of Object.keys(this.handlers)) {
-      this.timeEstimators[key] = this.handlers[key].createTimeEstimator();
-      this.groupStats[key] = { done: 0, total: 0 };
-      this.sceneStats[key] = {};
+    this.timeEstimators = [];
+    this.groupStats = [];
+    for (const handler of this.handlers) {
+      this.timeEstimators.push(handler.createTimeEstimator());
+      this.groupStats.push({ done: 0, total: 0 });
     }
     this.queue = new CircularQueue();
     this.taskSet = {};
@@ -416,48 +397,53 @@ export class TaskQueueService extends EventTarget {
     this.dispatchProgress();
   }
 
-  removeTasksFromScene(type: TaskType, sceneKey: string) {
+  removeTasksFromScene(scene: GenericScene) {
     const oldQueue = this.queue;
     this.queue = new CircularQueue<Task>();
     while (!oldQueue.isEmpty()) {
       const task = oldQueue.peek();
       oldQueue.dequeue();
       this.removeTaskInternal(task);
-      if (
-        !(
-          task.type === type &&
-          this.handlers[type].getSceneKey(task) === sceneKey
-        )
-      ) {
+      if (task.params.scene !== scene) {
         this.addTaskInternal(task);
       }
     }
     this.dispatchProgress();
   }
 
-  addTask(type: TaskType, numExec: number, params: any) {
+  addTask(params: TaskParam, numExec: number) {
     const task: Task = {
-      type: type,
       id: v4(),
+      cls: -1,
       params: params,
       done: 0,
       total: numExec,
     };
+    task.cls = this.getTaskCls(task);
     this.addTaskInternal(task);
   }
 
   addTaskInternal(task: Task) {
     this.queue.enqueue(task);
     this.taskSet[task.id!] = true;
-    this.groupStats[task.type].total += task.total;
-    this.groupStats[task.type].done += task.done;
-    const sceneKey = this.handlers[task.type].getSceneKey(task);
-    if (!(sceneKey in this.sceneStats[task.type])) {
-      this.sceneStats[task.type][sceneKey] = { done: 0, total: 0 };
+    this.groupStats[task.cls].total += task.total;
+    this.groupStats[task.cls].done += task.done;
+    const sceneKey = task.params.scene ? getSceneKey(task.params.session, task.params.scene) : '';
+    if (!(sceneKey in this.sceneStats)) {
+      this.sceneStats[sceneKey] = { done: 0, total: 0 };
     }
-    this.sceneStats[task.type][sceneKey].done += task.done;
-    this.sceneStats[task.type][sceneKey].total += task.total;
+    this.sceneStats[sceneKey].done += task.done;
+    this.sceneStats[sceneKey].total += task.total;
     this.dispatchProgress();
+  }
+
+  getTaskCls(task: Task) {
+    for (let i=0;i<this.handlers.length;i++) {
+      if (this.handlers[i].checkTask(task)) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   isEmpty() {
@@ -496,9 +482,9 @@ export class TaskQueueService extends EventTarget {
   statsAllTasks(): TaskStats {
     let done = 0;
     let total = 0;
-    for (const key of Object.keys(this.handlers)) {
-      done += this.groupStats[key].done;
-      total += this.groupStats[key].total;
+    for (let i = 0; i < this.handlers.length; i++) {
+      done += this.groupStats[i].done;
+      total += this.groupStats[i].total;
     }
     return { done, total };
   }
@@ -509,33 +495,34 @@ export class TaskQueueService extends EventTarget {
     }
     const task = this.queue.peek();
     if (type === 'mean') {
-      return this.timeEstimators[task.type].estimateMean();
+      return this.timeEstimators[task.cls].estimateMean();
     }
-    return this.timeEstimators[task.type].estimateMedian();
+    return this.timeEstimators[task.cls].estimateMedian();
   }
 
   estimateTime(type: 'median' | 'mean'): number {
     let res = 0;
-    for (const key of Object.keys(this.handlers)) {
+    for (let i = 0; i < this.handlers.length; i++) {
       if (type === 'mean') {
         res +=
-          this.timeEstimators[key].estimateMean() *
-          (this.groupStats[key].total - this.groupStats[key].done);
+          this.timeEstimators[i].estimateMean() *
+          (this.groupStats[i].total - this.groupStats[i].done);
       } else {
         res +=
-          this.timeEstimators[key].estimateMedian() *
-          (this.groupStats[key].total - this.groupStats[key].done);
+          this.timeEstimators[i].estimateMedian() *
+          (this.groupStats[i].total - this.groupStats[i].done);
       }
     }
     return res;
   }
 
-  statsTasksFromScene(type: TaskType, sceneKey: string): TaskStats {
+  statsTasksFromScene(session: Session, scene: GenericScene): TaskStats {
     let done = 0;
     let total = 0;
-    if (sceneKey in this.sceneStats[type]) {
-      done += this.sceneStats[type][sceneKey].done;
-      total += this.sceneStats[type][sceneKey].total;
+    const sceneKey = getSceneKey(session, scene);
+    if (sceneKey in this.sceneStats) {
+      done += this.sceneStats[sceneKey].done;
+      total += this.sceneStats[sceneKey].total;
     }
     return { done, total };
   }
@@ -545,12 +532,12 @@ export class TaskQueueService extends EventTarget {
   }
 
   removeTaskInternal(task: Task) {
-    this.groupStats[task.type].done -= task.done;
-    this.groupStats[task.type].total -= task.total;
-    const sceneKey = this.handlers[task.type].getSceneKey(task);
-    if (sceneKey in this.sceneStats[task.type]) {
-      this.sceneStats[task.type][sceneKey].done -= task.done;
-      this.sceneStats[task.type][sceneKey].total -= task.total;
+    this.groupStats[task.cls].done -= task.done;
+    this.groupStats[task.cls].total -= task.total;
+    const sceneKey = task.params.scene ? getSceneKey(task.params.session, task.params.scene) : '';
+    if (sceneKey in this.sceneStats) {
+      this.sceneStats[sceneKey].done -= task.done;
+      this.sceneStats[sceneKey].total -= task.total;
     }
     delete this.taskSet[task.id!];
   }
@@ -566,7 +553,7 @@ export class TaskQueueService extends EventTarget {
       }
       let done = false;
       const before = Date.now();
-      const handler = this.handlers[task.type];
+      const handler = this.handlers[task.cls];
       const numTries = handler.getNumTries(task);
       for (let i = 0; i < numTries; i++) {
         if (cur.stopped) {
@@ -577,7 +564,7 @@ export class TaskQueueService extends EventTarget {
           await handler.handleDelay(task, i);
           await handler.handleTask(task, cur);
           const after = Date.now();
-          this.timeEstimators[task.type].addSample(after - before);
+          this.timeEstimators[task.cls].addSample(after - before);
           done = true;
           cur.delayCnt--;
           if (cur.delayCnt === 0) {
@@ -590,9 +577,9 @@ export class TaskQueueService extends EventTarget {
           if (!cur.stopped) {
             task.done++;
             if (task.id! in this.taskSet) {
-              this.groupStats[task.type].done++;
-              const sceneKey = handler.getSceneKey(task);
-              this.sceneStats[task.type][sceneKey].done++;
+              this.groupStats[task.cls].done++;
+              const sceneKey = task.params.scene ? getSceneKey(task.params.session, task.params.scene) : '';
+              this.sceneStats[sceneKey].done++;
             }
           }
           this.dispatchEvent(new CustomEvent('complete', {}));
@@ -671,7 +658,7 @@ export const queueDummyPrompt = (
 
 export const queueScenePrompt = (
   session: Session,
-  preset: PreSet,
+  preset: Preset,
   scene: Scene,
   prompt: PromptNode,
   samples: number,
@@ -710,25 +697,10 @@ export const queueScenePrompt = (
   }
 };
 
-export const queueRemoveBg = async (
-  session: Session,
-  scene: Scene,
-  image: string,
-  onComplete?: (path: string) => void,
-) => {
-  const params: RemoveBgTaskParams = {
-    session,
-    scene: scene.name,
-    image,
-    ouputPath: imageService.getImageDir(session, scene),
-    onComplete,
-  };
-  taskQueueService.addTask('remove-bg', 1, params);
-};
 
 export const queueScene = async (
   session: Session,
-  preset: PreSet,
+  preset: Preset,
   scene: Scene,
   samples: number,
 ) => {
@@ -740,8 +712,8 @@ export const queueScene = async (
 
 export const createInPaintPrompt = async (
   session: Session,
-  preset: PreSet,
-  scene: InPaintScene,
+  preset: Preset,
+  scene: InpaintScene,
 ) => {
   let parr = toPARR(scene.prompt);
   const newNode: PromptNode = {
@@ -756,8 +728,8 @@ export const createInPaintPrompt = async (
 
 export const queueInPaint = async (
   session: Session,
-  preset: PreSet,
-  scene: InPaintScene,
+  preset: Preset,
+  scene: InpaintScene,
   samples: number,
 ) => {
   const prompt = await createInPaintPrompt(session, preset, scene);
@@ -796,16 +768,19 @@ export const queueInPaint = async (
   taskQueueService.addTask('inpaint', samples, params);
 };
 
+export const queueWorkflow = (session: Session, workflow: SelectedWorkflow, scene: GenericScene, samples: number) => {
+}
+
 export const queueGenericScene = async (
   session: Session,
-  preset: PreSet,
+  preset: Preset,
   scene: GenericScene,
   samples: number,
 ) => {
   if (scene.type === 'scene') {
     return queueScene(session, preset, scene as Scene, samples);
   }
-  return queueInPaint(session, preset, scene as InPaintScene, samples);
+  return queueInPaint(session, preset, scene as InpaintScene, samples);
 };
 
 export const removeTaskFromGenericScene = (

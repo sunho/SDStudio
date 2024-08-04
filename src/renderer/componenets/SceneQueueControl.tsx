@@ -1,5 +1,4 @@
 import { memo, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { AppContext } from './App';
 import { FloatView } from './FloatView';
 import SceneEditor from './SceneEditor';
 import {
@@ -17,10 +16,10 @@ import { base64ToDataUri } from './BrushTool';
 import { useDrag, useDrop } from 'react-dnd';
 import { getEmptyImage } from 'react-dnd-html5-backend';
 import { useContextMenu } from 'react-contexify';
-import { Resolution, resolutionMap } from './backends/imageGen';
+import { Resolution, resolutionMap } from '../backends/imageGen';
 import SceneSelector from './SceneSelector';
 import { v4 } from 'uuid';
-import { ImageOptimizeMethod } from './backend';
+import { ImageOptimizeMethod } from '../backend';
 import {
   isMobile,
   gameService,
@@ -30,27 +29,28 @@ import {
   backend,
   localAIService,
   zipService,
-} from './models';
+} from '../models';
 import {
   getMainImage,
   dataUriToBase64,
   deleteImageFiles,
-} from './models/ImageService';
-import { getCollection, setCollection } from './models/SessionService';
+} from '../models/ImageService';
 import {
   queueGenericScene,
   removeTaskFromGenericScene,
   statsGenericSceneTasks,
-  queueRemoveBg,
-} from './models/TaskQueueService';
+  queueWorkflow,
+} from '../models/TaskQueueService';
 import {
   GenericScene,
   ContextMenuType,
   Scene,
-  InPaintScene,
+  InpaintScene,
   Session,
-} from './models/types';
-import { extractPromptDataFromBase64 } from './models/util';
+} from '../models/types';
+import { extractPromptDataFromBase64 } from '../models/util';
+import { appState, SceneSelectorItem } from '../models/AppService';
+import { observer } from 'mobx-react-lite';
 
 interface SceneCellProps {
   scene: GenericScene;
@@ -64,7 +64,7 @@ interface SceneCellProps {
   style?: React.CSSProperties;
 }
 
-export const SceneCell = ({
+export const SceneCell = observer(({
   scene,
   refreshSceneImageFuncs,
   getImage,
@@ -75,7 +75,6 @@ export const SceneCell = ({
   cellSize,
   style,
 }: SceneCellProps) => {
-  const ctx = useContext(AppContext)!;
   const { show, hideAll } = useContextMenu({
     id: ContextMenuType.Scene,
   });
@@ -89,7 +88,7 @@ export const SceneCell = ({
   ];
   const cellSizes3 = ['w-48', 'w-36 md:w-64', ' w-96'];
 
-  const curIndex = Object.values(getCollection(curSession, scene.type)).indexOf(
+  const curIndex = curSession.getScenes(scene.type).indexOf(
     scene,
   );
   const [{ isDragging }, drag, preview] = useDrag(
@@ -143,20 +142,11 @@ export const SceneCell = ({
         scene: GenericScene;
         curIndex: number;
       }) {
-        if (!isMobile || true) return;
-        if (draggedScene != scene) {
-          const overIndex = Object.values(
-            getCollection(curSession, scene.type),
-          ).indexOf(scene);
-          moveScene!(draggedScene, overIndex);
-        }
       },
       drop: (item: any, monitor) => {
         if (!isMobile || true) {
           const { scene: droppedScene, curIndex: droppedIndex } = item;
-          const overIndex = Object.values(
-            getCollection(curSession, scene.type),
-          ).indexOf(scene);
+          const overIndex = curSession.getScenes(scene.type).indexOf(scene);
           moveScene!(droppedScene, overIndex);
         }
       },
@@ -166,14 +156,14 @@ export const SceneCell = ({
 
   const addToQueue = async (scene: GenericScene) => {
     try {
-      await queueGenericScene(
+      queueWorkflow(
         curSession,
-        ctx.selectedPreset!,
+        appState.curSession?.selectedWorkflow!,
         scene,
-        ctx.samples,
-      );
+        appState.samples,
+      )
     } catch (e: any) {
-      ctx.pushMessage('프롬프트 에러: ' + e.message);
+      appState.pushMessage('프롬프트 에러: ' + e.message);
     }
   };
 
@@ -299,7 +289,7 @@ export const SceneCell = ({
       </div>
     </div>
   );
-};
+});
 
 interface QueueControlProps {
   type: 'scene' | 'inpaint';
@@ -309,31 +299,21 @@ interface QueueControlProps {
   className?: string;
 }
 
-interface SceneSelectorItem {
-  text: string;
-  callback: (scenes: Scene[]) => void;
-}
-
-const QueueControl = memo(
+const QueueControl = observer(
   ({ type, className, showPannel, filterFunc, onClose }: QueueControlProps) => {
-    const ctx = useContext(AppContext)!;
-    const curSession = ctx.curSession!;
+    const curSession = appState.curSession!;
     const [_, rerender] = useState<{}>({});
     const [editingScene, setEditingScene] = useState<GenericScene | undefined>(
       undefined,
     );
     const [inpaintEditScene, setInpaintEditScene] = useState<
-      InPaintScene | undefined
+      InpaintScene | undefined
     >(undefined);
     const [displayScene, setDisplayScene] = useState<GenericScene | undefined>(
       undefined,
     );
     const refreshSceneImageFuncs = useRef<{ [key: string]: () => void }>({});
     const [cellSize, setCellSize] = useState(1);
-    const updateScenes = () => {
-      sessionService.markUpdated(curSession.name);
-      rerender({});
-    };
     useEffect(() => {
       const onProgressUpdated = () => {
         rerender({});
@@ -342,7 +322,6 @@ const QueueControl = memo(
         sessionService.addEventListener('inpaint-updated', onProgressUpdated);
       }
       taskQueueService.addEventListener('progress', onProgressUpdated);
-      imageService.addEventListener('updated', updateScenes);
       sessionService.addEventListener('scene-order-changed', onProgressUpdated);
       return () => {
         if (type === 'inpaint') {
@@ -352,7 +331,6 @@ const QueueControl = memo(
           );
         }
         taskQueueService.removeEventListener('progress', onProgressUpdated);
-        imageService.removeEventListener('updated', updateScenes);
         sessionService.removeEventListener(
           'scene-order-changed',
           onProgressUpdated,
@@ -364,49 +342,41 @@ const QueueControl = memo(
     }, [curSession]);
     const addAllToQueue = async () => {
       try {
-        for (const scene of Object.values(getCollection(curSession, type))) {
-          await queueGenericScene(
-            curSession,
-            ctx.selectedPreset!,
-            scene,
-            ctx.samples,
-          );
+        for (const scene of curSession.getScenes(type)) {
+          queueWorkflow(curSession, curSession.selectedWorkflow!, scene, appState.samples);
         }
       } catch (e: any) {
-        ctx.pushMessage('프롬프트 에러: ' + e.message);
+        appState.pushMessage('프롬프트 에러: ' + e.message);
       }
     };
     const addScene = () => {
       if (type === 'scene') {
         (async () => {
-          ctx.pushDialog({
+          appState.pushDialog({
             type: 'input-confirm',
             text: '신규 씬 이름을 입력해주세요',
             callback: async (inputValue) => {
               if (inputValue) {
-                const scenes = getCollection(curSession, type);
+                const scenes = curSession.getScenes(type);
                 if (inputValue in scenes) {
-                  ctx.pushMessage('이미 존재하는 씬 이름입니다.');
+                  appState.pushMessage('이미 존재하는 씬 이름입니다.');
                   return;
                 }
 
                 if (inputValue) {
                   if (inputValue in curSession.scenes) {
-                    ctx.pushMessage('이미 존재하는 씬 이름입니다.');
+                    appState.pushMessage('이미 존재하는 씬 이름입니다.');
                     return;
                   }
-                  scenes[inputValue] = {
-                    type: 'scene',
+                  curSession.addScene(Scene.fromJSON({type: 'scene',
                     name: inputValue,
                     resolution: 'portrait',
-                    locked: false,
-                    slots: [[{ prompt: '', enabled: true }]],
+                    slots: [[{ id: v4(), prompt: '', enabled: true }]],
                     mains: [],
                     imageMap: [],
                     round: undefined,
                     game: undefined,
-                  };
-                  updateScenes();
+                  }));
                 }
               }
             },
@@ -424,7 +394,7 @@ const QueueControl = memo(
         return image;
       } else {
         return await imageService.fetchImageSmall(
-          sessionService.getInpaintOrgPath(curSession!, scene as InPaintScene),
+          sessionService.getInpaintOrgPath(curSession!, scene as InpaintScene),
           500,
         );
       }
@@ -451,7 +421,6 @@ const QueueControl = memo(
                 } else {
                   scene.mains.push(filename);
                 }
-                updateScenes();
                 refreshSceneImageFuncs.current[scene.name]();
                 sessionService.mainImageUpdated();
               },
@@ -482,7 +451,7 @@ const QueueControl = memo(
                   prompt = '';
                   uc = '';
                 }
-                const newScene: InPaintScene = {
+                const newScene: InpaintScene = {
                   type: 'inpaint',
                   name: name,
                   prompt,
@@ -501,7 +470,6 @@ const QueueControl = memo(
                 );
                 curSession!.inpaints[name] = newScene;
                 close();
-                updateScenes();
                 setInpaintEditScene(newScene);
                 sessionService.inPaintHook();
               },
@@ -512,7 +480,7 @@ const QueueControl = memo(
               text: '해당 이미지로 인페인트',
               className: 'back-orange',
               onClick: async (
-                scene: InPaintScene,
+                scene: InpaintScene,
                 path: string,
                 close: () => void,
               ) => {
@@ -521,7 +489,7 @@ const QueueControl = memo(
                 let mask = await imageService.fetchImage(
                   sessionService.getInpaintMaskPath(
                     curSession!,
-                    scene as InPaintScene,
+                    scene as InpaintScene,
                   ),
                 );
                 mask = dataUriToBase64(mask!);
@@ -532,8 +500,7 @@ const QueueControl = memo(
                   mask,
                 );
                 close();
-                updateScenes();
-                setInpaintEditScene(scene as InPaintScene);
+                setInpaintEditScene(scene as InpaintScene);
                 sessionService.inPaintHook();
               },
             },
@@ -541,17 +508,17 @@ const QueueControl = memo(
               text: '원본 씬으로 이미지 복사',
               className: 'back-green',
               onClick: async (
-                scene: InPaintScene,
+                scene: InpaintScene,
                 path: string,
                 close: () => void,
               ) => {
                 if (!scene.sceneRef) {
-                  ctx.pushMessage('원본 씬이 없습니다.');
+                  appState.pushMessage('원본 씬이 없습니다.');
                   return;
                 }
-                const orgScene = curSession!.scenes[scene.sceneRef];
+                const orgScene = curSession!.scenes.get(scene.sceneRef);
                 if (!orgScene) {
-                  ctx.pushMessage('원본 씬이 삭제되었거나 이동했습니다.');
+                  appState.pushMessage('원본 씬이 삭제되었거나 이동했습니다.');
                   return;
                 }
                 await backend.copyFile(
@@ -575,7 +542,7 @@ const QueueControl = memo(
         // @ts-ignore
         onClick: async (scene: Scene, path: string, close: () => void) => {
           if (!localAIService.ready) {
-            ctx.pushMessage('환경설정에서 배경 제거 기능을 활성화해주세요');
+            appState.pushMessage('환경설정에서 배경 제거 기능을 활성화해주세요');
             return;
           }
           let image = await imageService.fetchImage(path);
@@ -652,7 +619,7 @@ const QueueControl = memo(
                 }}
               >
                 <InPaintEditor
-                  editingScene={editingScene as InPaintScene}
+                  editingScene={editingScene as InpaintScene}
                   onConfirm={() => {
                     setEditingScene(undefined);
                     setAdding(false);
@@ -691,214 +658,7 @@ const QueueControl = memo(
           scene.mains = scene.mains.map((x) => (x === dst ? src : x));
         }
       }
-      updateScenes();
       sessionService.mainImageUpdated();
-    };
-    const exportPackage = async (selected?: Scene[]) => {
-      const exportImpl = async (
-        prefix: string,
-        fav: boolean,
-        opt: string,
-        imageSize: number,
-      ) => {
-        const paths = [];
-        await imageService.refreshBatch(curSession!);
-        const scenes = selected ?? Object.values(curSession!.scenes);
-        for (const scene of scenes) {
-          await gameService.refreshList(curSession!, scene);
-          const cands = gameService.getOutputs(curSession!, scene);
-          const imageMap: any = {};
-          cands.forEach((x) => {
-            imageMap[x] = true;
-          });
-          const images = [];
-          if (fav) {
-            if (scene.mains.length) {
-              for (const main of scene.mains) {
-                if (imageMap[main]) images.push(main);
-              }
-            } else {
-              if (cands.length) {
-                images.push(cands[0]);
-              }
-            }
-          } else {
-            for (const cand of cands) {
-              images.push(cand);
-            }
-          }
-          for (let i = 0; i < images.length; i++) {
-            const path = images[i];
-            if (images.length === 1) {
-              paths.push({
-                path: imageService.getImageDir(curSession!, scene) + '/' + path,
-                name: prefix + scene.name + '.png',
-              });
-            } else {
-              paths.push({
-                path: imageService.getImageDir(curSession!, scene) + '/' + path,
-                name: prefix + scene.name + '.' + (i + 1).toString() + '.png',
-              });
-            }
-          }
-        }
-        if (opt !== 'original') {
-          try {
-            let done = 0;
-            for (const item of paths) {
-              const outputPath = 'tmp/' + v4() + '.webp';
-              ctx.setProgressDialog({
-                text: '이미지 크기 최적화 중..',
-                done: done,
-                total: paths.length,
-              });
-              await backend.resizeImage({
-                inputPath: item.path,
-                outputPath: outputPath,
-                maxHeight: imageSize,
-                maxWidth: imageSize,
-                optimize:
-                  opt === 'lossy'
-                    ? ImageOptimizeMethod.LOSSY
-                    : ImageOptimizeMethod.LOSSLESS,
-              });
-              item.path = outputPath;
-              item.name =
-                item.name.substring(0, item.name.length - 4) + '.webp';
-              done++;
-            }
-          } catch (e: any) {
-            ctx.pushMessage(e.message);
-            ctx.setProgressDialog(undefined);
-            return;
-          }
-        }
-        ctx.setProgressDialog({
-          text: '이미지 압축파일 생성중..',
-          done: 0,
-          total: 1,
-        });
-        const outFilePath =
-          'exports/' +
-          curSession!.name +
-          '_main_images_' +
-          Date.now().toString() +
-          '.tar';
-        if (zipService.isZipping) {
-          ctx.pushDialog({
-            type: 'yes-only',
-            text: '이미 다른 이미지 내보내기가 진행중입니다',
-          });
-          return;
-        }
-        try {
-          await zipService.zipFiles(paths, outFilePath);
-        } catch (e: any) {
-          ctx.pushMessage(e.message);
-          ctx.setProgressDialog(undefined);
-          return;
-        }
-        ctx.setProgressDialog(undefined);
-        ctx.pushDialog({
-          type: 'yes-only',
-          text: '이미지 내보내기가 완료되었습니다',
-        });
-        await backend.showFile(outFilePath);
-        ctx.setProgressDialog(undefined);
-      };
-      const menu = await ctx.pushDialogAsync({
-        type: 'select',
-        text: '내보낼 이미지를 선택해주세요',
-        items: [
-          { text: '즐겨찾기 이미지만 내보내기', value: 'fav' },
-          { text: '모든 이미지 전부 내보내기', value: 'all' },
-        ],
-      });
-      if (!menu) return;
-      const format = await ctx.pushDialogAsync({
-        type: 'select',
-        text: '파일 이름 형식을 선택해주세요',
-        items: [
-          { text: '(씬이름).(이미지 번호).png', value: 'normal' },
-          { text: '(캐릭터 이름).(씬이름).(이미지 번호)', value: 'prefix' },
-        ],
-      });
-      if (!format) return;
-
-      const optItems = [
-        { text: '원본', value: 'original' },
-        { text: '저손실 webp 최적화 (에셋용 권장)', value: 'lossy' },
-      ];
-      if (!isMobile) {
-        optItems.push({ text: '무손실 webp 최적화', value: 'lossless' });
-      }
-      const opt = await ctx.pushDialogAsync({
-        type: 'select',
-        text: '이미지 크기 최적화 방법을 선택해주세요',
-        items: optItems,
-      });
-      if (!opt) return;
-      let imageSize = 0;
-      if (opt !== 'original') {
-        const inputImageSize = await ctx.pushDialogAsync({
-          type: 'input-confirm',
-          text: '이미지 픽셀 크기를 결정해주세요 (추천값 1024)',
-        });
-        if (!inputImageSize) return;
-        try {
-          imageSize = parseInt(inputImageSize);
-        } catch (error) {
-          return;
-        }
-      }
-      if (format === 'normal') {
-        await exportImpl('', menu === 'fav', opt, imageSize);
-      } else {
-        ctx.pushDialog({
-          type: 'input-confirm',
-          text: '캐릭터 이름을 입력해주세요',
-          callback: async (prefix) => {
-            if (!prefix) return;
-            await exportImpl(prefix + '.', menu === 'fav', opt, imageSize);
-          },
-        });
-      }
-    };
-
-    const removeBg = async (selected: Scene[]) => {
-      if (!localAIService.ready) {
-        ctx.pushMessage('환경설정에서 배경 제거 기능을 활성화해주세요');
-        return;
-      }
-      for (const scene of selected) {
-        if (scene.mains.length === 0) {
-          const images = gameService.getOutputs(curSession!, scene);
-          if (!images.length) continue;
-          let image = await imageService.fetchImage(
-            imageService.getImageDir(curSession!, scene) + '/' + images[0],
-          );
-          image = dataUriToBase64(image!);
-          queueRemoveBg(curSession!, scene, image);
-        } else {
-          const mains = scene.mains;
-          for (const main of mains) {
-            const path =
-              imageService.getImageDir(curSession!, scene) + '/' + main;
-            let image = await imageService.fetchImage(path);
-            image = dataUriToBase64(image!);
-            queueRemoveBg(curSession!, scene, image, (newPath: string) => {
-              for (let j = 0; scene.mains.length; j++) {
-                if (scene.mains[j] === main) {
-                  scene.mains[j] = newPath.split('/').pop()!;
-                  break;
-                }
-              }
-              updateScenes();
-              sessionService.mainImageUpdated();
-            });
-          }
-        }
-      }
     };
 
     const resultViewerRef = useRef<any>(null);
@@ -930,218 +690,21 @@ const QueueControl = memo(
     const [sceneSelector, setSceneSelector] = useState<
       SceneSelectorItem | undefined
     >(undefined);
-    const handleBatchProcess = async (value: string, selected: Scene[]) => {
-      const isMain = (scene: Scene, path: string) => {
-        if (type === 'inpaint') return false;
-        const filename = path.split('/').pop()!;
-        return !!(scene && scene.mains.includes(filename));
-      };
-      if (value === 'removeImage') {
-        ctx.pushDialog({
-          type: 'select',
-          text: '이미지를 삭제합니다. 원하시는 작업을 선택해주세요.',
-          items: [
-            {
-              text: '모든 이미지 삭제',
-              value: 'all',
-            },
-            {
-              text: '즐겨찾기 제외 모든 이미지 삭제',
-              value: 'fav',
-            },
-            {
-              text: '즐겨찾기 제외 n등 이하 이미지 삭제',
-              value: 'n',
-            },
-          ],
-          callback: async (menu) => {
-            if (menu === 'all') {
-              ctx.pushDialog({
-                type: 'confirm',
-                text: '정말로 모든 이미지를 삭제하시겠습니까?',
-                callback: async () => {
-                  for (const scene of selected) {
-                    const paths = gameService
-                      .getOutputs(curSession, scene)
-                      .map(
-                        (x) =>
-                          imageService.getImageDir(curSession, scene!) +
-                          '/' +
-                          x,
-                      );
-                    await deleteImageFiles(curSession!, paths);
-                  }
-                },
-              });
-            } else if (menu === 'n') {
-              ctx.pushDialog({
-                type: 'input-confirm',
-                text: '몇등 이하 이미지를 삭제할지 입력해주세요.',
-                callback: async (value) => {
-                  if (value) {
-                    for (const scene of selected) {
-                      const paths = gameService
-                        .getOutputs(curSession, scene)
-                        .map(
-                          (x) =>
-                            imageService.getImageDir(curSession, scene!) +
-                            '/' +
-                            x,
-                        );
-                      const n = parseInt(value);
-                      await deleteImageFiles(
-                        curSession!,
-                        paths.slice(n).filter((x) => !isMain(scene, x)),
-                      );
-                    }
-                  }
-                },
-              });
-            } else if (menu === 'fav') {
-              ctx.pushDialog({
-                type: 'confirm',
-                text: '정말로 즐겨찾기 외 모든 이미지를 삭제하시겠습니까?',
-                callback: async () => {
-                  for (const scene of selected) {
-                    const paths = gameService
-                      .getOutputs(curSession, scene)
-                      .map(
-                        (x) =>
-                          imageService.getImageDir(curSession, scene!) +
-                          '/' +
-                          x,
-                      );
-                    await deleteImageFiles(
-                      curSession!,
-                      paths.filter((x) => !isMain(scene, x)),
-                    );
-                  }
-                },
-              });
-            }
-          },
-        });
-      } else if (value === 'changeResolution') {
-        const options = Object.entries(resolutionMap)
-          .filter((x) => !x[0].includes('small'))
-          .map(([key, value]) => {
-            return {
-              text: `${value.width}x${value.height}`,
-              value: key,
-            };
-          });
-        ctx.pushDialog({
-          type: 'dropdown',
-          text: '변경할 해상도를 선택해주세요',
-          items: options,
-          callback: async (value?: string) => {
-            if (!value) return;
-            const action = () => {
-              for (const scene of selected) {
-                scene.resolution = value as Resolution;
-              }
-            };
-            updateScenes();
-            if (value.includes('large') || value.includes('wallpaper')) {
-              ctx.pushDialog({
-                text: 'Anlas를 소모하는 해상도 입니다. 계속하겠습니까?',
-                type: 'confirm',
-                callback: () => {
-                  action();
-                },
-              });
-            } else {
-              action();
-            }
-          },
-        });
-      } else if (value === 'removeAllFav') {
-        ctx.pushDialog({
-          type: 'confirm',
-          text: '정말로 모든 즐겨찾기를 해제하겠습니까?',
-          callback: () => {
-            for (const scene of selected) {
-              scene.mains = [];
-            }
-            updateScenes();
-            sessionService.mainImageUpdated();
-          },
-        });
-      } else if (value === 'setFav') {
-        ctx.pushDialog({
-          type: 'input-confirm',
-          text: '몇등까지 즐겨찾기로 지정할지 입력해주세요',
-          callback: async (value) => {
-            if (value) {
-              const n = parseInt(value);
-              for (const scene of selected) {
-                const cands = gameService
-                  .getOutputs(curSession!, scene)
-                  .slice(0, n);
-                scene.mains = scene.mains
-                  .concat(cands)
-                  .filter((x, i, self) => self.indexOf(x) === i);
-              }
-              updateScenes();
-              sessionService.mainImageUpdated();
-            }
-          },
-        });
-      } else if (value === 'removeBg') {
-        removeBg(selected);
-      } else if (value === 'export') {
-        exportPackage(selected);
-      } else {
-        console.log('Not implemented');
-      }
-    };
-
-    const openMenu = () => {
-      let items = [
-        { text: '📁 이미지 내보내기', value: 'export' },
-        { text: '🔪 즐겨찾기 이미지 배경 제거', value: 'removeBg' },
-        { text: '🗑️ 이미지 삭제', value: 'removeImage' },
-        { text: '🖥️ 해상도 변경 ', value: 'changeResolution' },
-        { text: '❌ 즐겨찾기 전부 해제', value: 'removeAllFav' },
-        { text: '⭐ 상위 n등 즐겨찾기 지정', value: 'setFav' },
-      ];
-      if (isMobile) {
-        items = items.filter((x) => x.value !== 'removeBg');
-      }
-      ctx.pushDialog({
-        type: 'select',
-        text: '선택할 씬들에 적용할 대량 작업을 선택해주세요',
-        graySelect: true,
-        items: items,
-        callback: (value, text) => {
-          setSceneSelector({
-            text: text!,
-            callback: (selected) => {
-              setSceneSelector(undefined);
-              handleBatchProcess(value!, selected);
-            },
-          });
-        },
-      });
-    };
 
     const moveScene = (draggingScene: GenericScene, targetIndex: number) => {
       console.log(draggingScene, targetIndex);
-      const scenes = Object.values(getCollection(curSession, type));
+      const scenes = curSession.getScenes(type);
       const reorderedScenes = scenes.filter((scene) => scene !== draggingScene);
       reorderedScenes.splice(targetIndex, 0, draggingScene);
-
-      setCollection(
-        curSession,
-        type,
-        reorderedScenes.reduce((acc, scene, index) => {
-          acc[scene.name] = scene;
-          return acc;
-        }, {}) as any,
-      );
-
-      sessionService.markUpdated(curSession.name);
-      rerender({});
+      const final = reorderedScenes.reduce((acc, scene, index) => {
+        acc.set(scene.name, scene);
+        return acc;
+      }, new Map()) as any;
+      if (type === 'scene') {
+        curSession.scenes = final;
+      } else {
+        curSession.inpaints = final;
+      }
     };
 
     return (
@@ -1150,7 +713,7 @@ const QueueControl = memo(
           <FloatView priority={0} onEscape={() => setSceneSelector(undefined)}>
             <SceneSelector
               text={sceneSelector.text}
-              scenes={Object.values(curSession!.scenes)}
+              scenes={curSession!.getScenes('scene') as Scene[]}
               onConfirm={sceneSelector.callback}
               getImage={getImage}
             />
@@ -1179,7 +742,7 @@ const QueueControl = memo(
                 </button>
               )}
               {type === 'scene' && (
-                <button className={`round-button back-gray`} onClick={openMenu}>
+                <button className={`round-button back-gray`} onClick={()=>{appState.openBatchProcessMenu(setSceneSelector)}}>
                   대량 작업
                 </button>
               )}
@@ -1196,7 +759,7 @@ const QueueControl = memo(
         )}
         <div className="flex flex-1 overflow-hidden">
           <div className="flex flex-wrap overflow-auto justify-start items-start content-start">
-            {Object.values(getCollection(curSession!, type))
+            {curSession.getScenes(type)
               .filter((x) => {
                 if (!filterFunc) return true;
                 return filterFunc(x);

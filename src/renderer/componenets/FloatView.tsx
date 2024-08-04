@@ -9,7 +9,7 @@ import React, {
 } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import { App as CapacitorApp } from '@capacitor/app';
-import { isMobile } from './models';
+import { isMobile } from '../models';
 
 interface FloatView {
   id: number;

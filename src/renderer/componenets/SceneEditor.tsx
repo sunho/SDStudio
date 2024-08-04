@@ -23,7 +23,6 @@ import {
   FaTimes,
 } from 'react-icons/fa';
 import { FaTrash } from 'react-icons/fa';
-import { AppContext } from './App';
 import Denque from 'denque';
 import { writeFileSync } from 'original-fs';
 import { windowsStore } from 'process';
@@ -31,7 +30,7 @@ import Scrollbars from 'react-custom-scrollbars-2';
 import PromptEditTextArea from './PromptEditTextArea';
 import PreSetEditor from './PreSetEdtior';
 import { TaskProgressBar } from './TaskQueueControl';
-import { Resolution, resolutionMap } from './backends/imageGen';
+import { Resolution, resolutionMap } from '../backends/imageGen';
 import { FloatView } from './FloatView';
 import { v4 as uuidv4 } from 'uuid';
 import { useDrag, useDrop } from 'react-dnd';
@@ -42,23 +41,23 @@ import {
   isMobile,
   sessionService,
   backend,
-} from './models';
-import { getMainImagePath } from './models/ImageService';
+} from '../models';
+import { getMainImagePath } from '../models/ImageService';
 import {
   highlightPrompt,
   createPrompts,
   lowerPromptNode,
-} from './models/PromptService';
-import { renameScene } from './models/SessionService';
-import { queueScenePrompt } from './models/TaskQueueService';
+} from '../models/PromptService';
+import { renameScene } from '../models/SessionService';
+import { queueScenePrompt } from '../models/TaskQueueService';
 import {
   Scene,
-  PreSet,
-  PreSetMode,
+  Preset,
   PromptPiece,
   PromptPieceSlot,
   PromptNode,
-} from './models/types';
+} from '../models/types';
+import { appState } from '../models/AppService';
 
 interface Props {
   scene: Scene;
@@ -93,9 +92,8 @@ interface SlotEditorProps {
 }
 
 interface BigPromptEditorProps {
-  selectedPreset: PreSet;
+  selectedPreset: Preset;
   sceneMode: boolean;
-  presetMode: PreSetMode;
   getMiddlePrompt: () => string;
   setMiddlePrompt: (txt: string) => void;
   queuePrompt: (middle: string, callback: (path: string) => void) => void;
@@ -113,8 +111,7 @@ export const BigPromptEditor = ({
   queuePrompt,
   setMainImage,
 }: BigPromptEditorProps) => {
-  const { curSession, pushMessage, setSelectedPreset } =
-    useContext(AppContext)!;
+  const { curSession, pushMessage } = appState;
   const [image, setImage] = useState<string | undefined>(undefined);
   const [path, setPath] = useState<string | undefined>(initialImagePath);
   const [_, rerender] = useState<{}>({});
@@ -186,7 +183,6 @@ export const BigPromptEditor = ({
             styleEditMode={!sceneMode}
             getMiddlePrompt={getMiddlePrompt}
             onMiddlePromptChange={setMiddlePrompt}
-            setSelectedPreset={setSelectedPreset}
           />
         </div>
         <div className="h-full flex flex-col p-2 overflow-hidden block md:hidden">
@@ -371,7 +367,7 @@ export const SlotPiece = ({
 const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
   const textAreaRef = useRef<any>([]);
   const [_, rerender] = useState<{}>({});
-  const { curSession, selectedPreset, pushMessage } = useContext(AppContext)!;
+  const { curSession, pushMessage } = appState;
   useEffect(() => {
     for (const slot of scene.slots) {
       for (const piece of slot) {
@@ -477,8 +473,7 @@ const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
 
 const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
   const [_, rerender] = useState<{}>({});
-  const { curSession, selectedPreset, pushMessage, pushDialog } =
-    useContext(AppContext)!;
+  const { curSession, pushMessage, pushDialog } = appState;
   const [curName, setCurName] = useState('');
 
   useEffect(() => {

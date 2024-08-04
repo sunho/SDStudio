@@ -1,5 +1,6 @@
+import { cast } from 'mobx-state-tree';
 import { backend, isMobile, gameService, imageService } from '.';
-import { GenericScene, InPaintScene, Scene, Session } from './types';
+import { GenericScene, InpaintScene, Scene, Session } from './types';
 import { assert } from './util';
 
 export const supportedImageSizes = [200, 400, 500];
@@ -311,7 +312,7 @@ export class ImageService extends EventTarget {
     return this.images[session.name][scene.name];
   }
 
-  getInPaints(session: Session, scene: InPaintScene) {
+  getInPaints(session: Session, scene: InpaintScene) {
     if (!(session.name in this.inpaints)) {
       return [];
     }
@@ -332,7 +333,7 @@ export class ImageService extends EventTarget {
     return 'outs/' + session.name + '/' + scene.name;
   }
 
-  getInPaintDir(session: Session, scene: InPaintScene) {
+  getInPaintDir(session: Session, scene: InpaintScene) {
     return 'inpaints/' + session.name + '/' + scene.name;
   }
 
@@ -369,7 +370,7 @@ export class ImageService extends EventTarget {
     scene.imageMap = newImageMap;
     target[session.name][scene.name] = [...scene.imageMap];
     if (scene.type === 'scene') {
-      scene.mains = scene.mains.filter((x: string) => x in fileSet);
+      scene.mains =  scene.mains.filter((x: string) => x in fileSet);
     }
     if (emitEvent)
       this.dispatchEvent(
@@ -405,12 +406,12 @@ export class ImageService extends EventTarget {
     this.images[session.name][scene] = this.images[session.name][scene].concat([
       path.split('/').pop()!,
     ]);
-    session.scenes[scene].imageMap.push(path.split('/').pop()!);
+    session.scenes.get(scene)?.imageMap.push(path.split('/').pop()!);
     if (isMobile)
       for (const size of supportedImageSizes) this.fetchImageSmall(path, size);
     this.dispatchEvent(
       new CustomEvent('updated', {
-        detail: { batch: false, session, scene: session.scenes[scene] },
+        detail: { batch: false, session, scene: session.scenes.get(scene) },
       }),
     );
   }
@@ -425,12 +426,12 @@ export class ImageService extends EventTarget {
     this.inpaints[session.name][scene] = this.inpaints[session.name][
       scene
     ].concat([path.split('/').pop()!]);
-    session.inpaints[scene].imageMap.push(path.split('/').pop()!);
+    session.inpaints.get(scene)?.imageMap.push(path.split('/').pop()!);
     if (isMobile)
       for (const size of supportedImageSizes) this.fetchImageSmall(path, size);
     this.dispatchEvent(
       new CustomEvent('updated', {
-        detail: { batch: false, session, scene: session.inpaints[scene] },
+        detail: { batch: false, session, scene: session.inpaints.get(scene) },
       }),
     );
   }

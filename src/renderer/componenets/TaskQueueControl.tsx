@@ -1,19 +1,16 @@
 import { useContext, useEffect, useRef, useState } from 'react';
-import { AppContext } from './App';
 import { FaSpinner } from 'react-icons/fa';
 import { FaPlay, FaRegCalendarTimes, FaStop } from 'react-icons/fa';
 import { FaTimes } from 'react-icons/fa';
 import { FaRegClock } from 'react-icons/fa';
-import { taskQueueService } from './models';
+import { taskQueueService } from '../models';
 import {
   GenerateImageTaskParams,
   RemoveBgTaskParams,
   Task,
-} from './models/TaskQueueService';
-
-interface Props {
-  setSamples: (nw: number) => void;
-}
+} from '../models/TaskQueueService';
+import { appState } from '../models/AppService';
+import { observer } from 'mobx-react-lite';
 
 interface ProgressBarProps {
   duration: number;
@@ -58,7 +55,7 @@ interface TaskProgressBarProps {
   fast?: boolean;
 }
 export const TaskProgressBar = ({ fast }: TaskProgressBarProps) => {
-  const { pushMessage } = useContext(AppContext)!;
+  const { pushMessage } = appState;
   const key = useRef<number>(0);
   const [duration, setDuration] = useState(0);
   const [isError, setIsError] = useState(false);
@@ -233,8 +230,7 @@ const TaskQueueList = ({ onClose }: { onClose?: () => void }) => {
   );
 };
 
-const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
-  const ctx = useContext(AppContext)!;
+const TaskQueueControl = observer(({ }) => {
   const [_, rerender] = useState<{}>({});
   const [showList, setShowList] = useState(false);
   useEffect(() => {
@@ -271,13 +267,13 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
           max={99}
           className={'ml-2 p-1 md:w-16 text-center gray-input'}
           type="number"
-          value={ctx.samples}
+          value={appState.samples}
           onChange={(e: any) => {
             try {
               const num = parseInt(e.currentTarget.value) ?? 0;
-              setSamples(Math.max(1, Math.min(99, num)));
+              appState.samples = Math.max(1, Math.min(99, num));
             } catch (e: any) {
-              setSamples(1);
+              appState.samples = 1;
             }
           }}
         />
@@ -321,6 +317,6 @@ const TaskQueueControl: React.FC<Props> = ({ setSamples }) => {
       )}
     </div>
   );
-};
+});
 
 export default TaskQueueControl;

@@ -79,10 +79,6 @@ jobs:
         run: |
           npm install -g npm@latest
           python3 -m pip install setuptools --break-system-packages
-          cd src/native
-          rm package-lock.json
-          npm install
-          cd ../..
           cd release/app
           npm uninstall sharp
           npm install --platform=darwin --arch=x64 sharp@0.32.6
@@ -91,8 +87,6 @@ jobs:
           npm rebuild --platform=darwin --arch=x64 tar-fs
           cd ../..
           npm install
-
-
 
       - name: Build the application
         run: npm run package
