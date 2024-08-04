@@ -1,6 +1,7 @@
 import { useContext, useEffect, useState } from 'react';
-import { AppContext } from './App';
 import { DropdownSelect } from './UtilComponents';
+import { appState } from '../models/AppService';
+import { observer } from 'mobx-react-lite';
 
 export interface Dialog {
   text: string;
@@ -15,17 +16,13 @@ export interface Dialog {
   items?: { text: string; value: string }[];
 }
 
-interface Props {
-  setDialogs: (dialogs: Dialog[]) => void;
-}
-
-const ConfirmWindow = ({ setDialogs }: Props) => {
-  const { dialogs } = useContext(AppContext)!;
+const ConfirmWindow = observer(() => {
+  const dialogs = appState.dialogs;
   const [inputValue, setInputValue] = useState<string>('');
 
   const handleConfirm = () => {
     const currentDialog = dialogs[dialogs.length - 1];
-    setDialogs(dialogs.slice(0, dialogs.length - 1));
+    appState.dialogs = dialogs.slice(0, dialogs.length - 1);
     if (currentDialog && currentDialog.callback) {
       currentDialog.callback(
         currentDialog.type === 'input-confirm' ||
@@ -50,7 +47,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [inputValue, dialogs, setDialogs]);
+  }, [inputValue, appState.dialogs]);
 
   return (
     <>
@@ -91,7 +88,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                     className="px-4 py-2 rounded back-gray clickable "
                     onClick={() => {
                       if (curDialog.onCancel) curDialog.onCancel();
-                      setDialogs(dialogs.slice(0, dialogs.length - 1));
+                      appState.dialogs = dialogs.slice(0, dialogs.length - 1);
                       setInputValue('');
                     }}
                   >
@@ -119,7 +116,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                     className="px-4 py-2 rounded back-gray clickable"
                     onClick={() => {
                       if (curDialog.onCancel) curDialog.onCancel();
-                      setDialogs(dialogs.slice(0, dialogs.length - 1));
+                      appState.dialogs = dialogs.slice(0, dialogs.length - 1);
                       setInputValue('');
                     }}
                   >
@@ -137,7 +134,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                         (curDialog.graySelect ? 'back-lgray' : 'back-sky')
                       }
                       onClick={() => {
-                        setDialogs(dialogs.slice(0, dialogs.length - 1));
+                        appState.dialogs = dialogs.slice(0, dialogs.length - 1);
                         if (curDialog.callback) {
                           curDialog.callback!(item.value, item.text);
                         }
@@ -150,7 +147,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                     className="w-full px-4 py-2 clickable rounded back-gray"
                     onClick={() => {
                       if (curDialog.onCancel) curDialog.onCancel();
-                      setDialogs(dialogs.slice(0, dialogs.length - 1));
+                      appState.dialogs = dialogs.slice(0, dialogs.length - 1);
                     }}
                   >
                     취소
@@ -186,7 +183,7 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
                       className="flex-1 px-4 py-2 block rounded back-gray clickable"
                       onClick={() => {
                         if (curDialog.onCancel) curDialog.onCancel();
-                        setDialogs(dialogs.slice(0, dialogs.length - 1));
+                        appState.dialogs = dialogs.slice(0, dialogs.length - 1);
                         setInputValue('');
                       }}
                     >
@@ -201,6 +198,6 @@ const ConfirmWindow = ({ setDialogs }: Props) => {
       )}
     </>
   );
-};
+});
 
 export default ConfirmWindow;

@@ -1,13 +1,19 @@
 import { backend } from '.';
 import { sleep } from './util';
 
-export abstract class ResourceSyncService<T> extends EventTarget {
+export interface Serealizable {
+  fromJSON(json: any): any;
+  toJSON(): any;
+}
+
+export abstract class ResourceSyncService<T extends Serealizable> extends EventTarget {
   resources: { [name: string]: T };
   dirty: { [name: string]: boolean };
   resourceList: string[];
   resourceDir: string;
   updateInterval: number;
   running: boolean;
+  dummy: T | undefined;
   constructor(resourceDir: string, interval: number) {
     super();
     this.resources = {};
@@ -16,6 +22,9 @@ export abstract class ResourceSyncService<T> extends EventTarget {
     this.resourceList = [];
     this.updateInterval = interval;
     this.running = true;
+    (async ()=> {
+      this.dummy = await this.createDefault('dummy');
+    })();
   }
 
   abstract createDefault(name: string): T | Promise<T>;
@@ -64,7 +73,7 @@ export abstract class ResourceSyncService<T> extends EventTarget {
         const str = await backend.readFile(
           this.resourceDir + '/' + name + '.json',
         );
-        this.resources[name] = JSON.parse(str);
+        this.resources[name] = this.dummy!.fromJSON(JSON.parse(str));
         await this.getHook(this.resources[name], name);
         this.dispatchEvent(
           new CustomEvent<{ name: string }>('fetched', { detail: { name } }),
@@ -83,7 +92,7 @@ export abstract class ResourceSyncService<T> extends EventTarget {
       if (l)
         await backend.writeFile(
           this.resourceDir + '/' + name + '.json',
-          JSON.stringify(l),
+          JSON.stringify(l.toJSON()),
         );
     }
     this.dirty = {};
@@ -96,7 +105,7 @@ export abstract class ResourceSyncService<T> extends EventTarget {
       const l = this.resources[name];
       await backend.writeFile(
         this.resourceDir + '/' + name + '.json',
-        JSON.stringify(l),
+        JSON.stringify(l.toJSON()),
       );
     }
   }
@@ -105,7 +114,7 @@ export abstract class ResourceSyncService<T> extends EventTarget {
     if (name in this.resources) {
       throw new Error('Resource already exists');
     }
-    this.resources[name] = value;
+    this.resources[name] = value.fromJSON(value);
     await this.getHook(this.resources[name], name);
     this.markUpdated(name);
     await this.update();

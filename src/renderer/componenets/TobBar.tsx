@@ -1,18 +1,11 @@
 import { useContext, useEffect, useState } from 'react';
-import { AppContext } from './App';
 import { FloatView } from './FloatView';
 import ConfigScreen from './ConfigScreen';
 import SessionSelect from './SessionSelect';
-import { PreSet, Session } from './models/types';
-import { loginService, backend, taskQueueService } from './models';
+import { Preset, Session } from '../models/types';
+import { loginService, backend, taskQueueService } from '../models';
 
-interface Props {
-  setCurSession: (session: Session | undefined) => void;
-  setSelectedPreset: (presets: PreSet) => void;
-}
-
-const TobBar = ({ setCurSession, setSelectedPreset }: Props) => {
-  const ctx = useContext(AppContext)!;
+const TobBar = () => {
   const [loggedIn, setLoggedIn] = useState(false);
   const [credits, setCredits] = useState(0);
 
@@ -72,10 +65,7 @@ const TobBar = ({ setCurSession, setSelectedPreset }: Props) => {
         )}
       </p>
       <div className="ml-auto block md:hidden">
-        <SessionSelect
-          setCurSession={setCurSession}
-          setSelectedPreset={setSelectedPreset}
-        />
+        <SessionSelect/>
       </div>
       {settings && (
         <FloatView

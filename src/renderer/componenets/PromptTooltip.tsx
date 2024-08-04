@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { promptService } from './models';
+import { promptService } from '../models';
 
 interface Props {
   text: string;

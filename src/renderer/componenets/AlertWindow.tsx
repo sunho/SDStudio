@@ -1,17 +1,14 @@
+import { observer } from 'mobx-react-lite';
 import { useContext, useEffect } from 'react';
-import { AppContext } from './App';
+import { appState } from '../models/AppService';
 
-interface Props {
-  setMessages: (messages: string[]) => void;
-}
-
-const AlertWindow = ({ setMessages }: Props) => {
-  const { messages } = useContext(AppContext)!;
+const AlertWindow = observer(() => {
+  const { messages } = appState;
 
   useEffect(() => {
     const interval = setInterval(() => {
       if (messages.length > 0) {
-        setMessages(messages.slice(0, messages.length - 1));
+        appState.messages = messages.slice(0, messages.length - 1);
       }
     }, 5000);
     return () => {
@@ -26,7 +23,7 @@ const AlertWindow = ({ setMessages }: Props) => {
           <div>{messages[messages.length - 1]}</div>
           <button
             onClick={() => {
-              setMessages(messages.slice(0, messages.length - 1));
+              appState.messages = messages.slice(0, messages.length - 1);
             }}
           >
             X
@@ -35,6 +32,6 @@ const AlertWindow = ({ setMessages }: Props) => {
       )}
     </div>
   );
-};
+});
 
 export default AlertWindow;

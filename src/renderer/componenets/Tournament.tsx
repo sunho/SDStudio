@@ -1,18 +1,18 @@
 import { useContext, useEffect, useRef, useState } from 'react';
-import { AppContext } from './App';
 import { useContextMenu } from 'react-contexify';
-import { gameService, sessionService, backend, imageService } from './models';
-import { shuffleArray } from './models/GameService';
-import { Scene, InPaintScene, ContextMenuType } from './models/types';
+import { gameService, sessionService, backend, imageService } from '../models';
+import { shuffleArray } from '../models/GameService';
+import { Scene, InpaintScene, ContextMenuType } from '../models/types';
+import { appState } from '../models/AppService';
+import { observer } from 'mobx-react-lite';
 
 interface TournamentProps {
-  scene: Scene | InPaintScene;
-  onFilenameChange: (src: string, dst: string) => void;
+  scene: Scene | InpaintScene;
   path: string;
 }
 
-const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
-  const { curSession, pushMessage, pushDialog } = useContext(AppContext)!;
+const Tournament = observer(({ scene, path }: TournamentProps) => {
+  const { curSession, pushMessage, pushDialog } = appState;
   const [images, setImages] = useState<string[]>([]);
   const [players, setPlayers] = useState<string[]>([]);
   const lock = useRef(false);
@@ -29,8 +29,8 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
     if (newRound) {
       const round = scene.round!;
       setPlayers([
-        round.players[round.curPlayer].path,
-        round.players[round.curPlayer + 1].path,
+        round.players[round.curPlayer],
+        round.players[round.curPlayer + 1],
       ]);
     }
     setFinalRank(finalizedRank);
@@ -75,7 +75,7 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
       const [finalizedRank, newRound] = gameService.nextRound(scene.game!);
       if (newRound) {
         scene.round = newRound;
-        setPlayers([newRound.players[0].path, newRound.players[1].path]);
+        setPlayers([newRound.players[0], newRound.players[1]]);
       }
       setFinalRank(finalizedRank);
       sessionUpdated();
@@ -83,8 +83,8 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
       return;
     }
     setPlayers([
-      round.players[round.curPlayer].path,
-      round.players[round.curPlayer + 1].path,
+      round.players[round.curPlayer],
+      round.players[round.curPlayer + 1],
     ]);
     sessionUpdated();
     lock.current = false;
@@ -184,8 +184,8 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
     shuffleArray(items);
     round.players = round.players.slice(0, round.curPlayer).concat(items);
     setPlayers([
-      round.players[round.curPlayer].path,
-      round.players[round.curPlayer + 1].path,
+      round.players[round.curPlayer],
+      round.players[round.curPlayer + 1],
     ]);
     sessionUpdated();
   };
@@ -229,8 +229,8 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
               setPlayers([]);
               round.curPlayer -= 2;
               setPlayers([
-                round.players[round.curPlayer].path,
-                round.players[round.curPlayer + 1].path,
+                round.players[round.curPlayer],
+                round.players[round.curPlayer + 1],
               ]);
             }
           }}
@@ -337,6 +337,6 @@ const Tournament = ({ scene, path, onFilenameChange }: TournamentProps) => {
       </div>
     </div>
   );
-};
+});
 
 export default Tournament;

@@ -6,8 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { AppContext } from './App';
-import { backend, promptService, sessionService } from './models';
+import { backend, promptService, sessionService } from '../models';
 import { DropdownSelect } from './UtilComponents';
 import PromptEditTextArea from './PromptEditTextArea';
 import {
@@ -20,7 +19,9 @@ import {
 import { FaTrash } from 'react-icons/fa';
 import { useDrag, useDrop } from 'react-dnd';
 import { getEmptyImage } from 'react-dnd-html5-backend';
-import { PieceLibrary } from './models/types';
+import { PieceLibrary } from '../models/types';
+import { appState } from '../models/AppService';
+import { observer } from 'mobx-react-lite';
 
 interface PieceCellProps {
   pieceName: string;
@@ -42,7 +43,7 @@ export const PieceCell = ({
   width,
   style,
 }: PieceCellProps) => {
-  const { curSession, pushDialog, pushMessage } = useContext(AppContext)!;
+  const { curSession, pushDialog, pushMessage } = appState;
 
   const containerRef = useRef<any>();
   const elementRef = createRef<any>();
@@ -174,8 +175,8 @@ export const PieceCell = ({
   );
 };
 
-const PieceEditor = () => {
-  const { curSession, pushMessage, pushDialog } = useContext(AppContext)!;
+const PieceEditor = observer(() => {
+  const { curSession, pushMessage, pushDialog } = appState;
   const [selectedPieceLibrary, setSelectedPieceLibrary] = useState<
     string | null
   >(null);
@@ -190,7 +191,7 @@ const PieceEditor = () => {
 
   useEffect(() => {
     setCurPieceLibrary(
-      selectedPieceLibrary ? curSession!.library[selectedPieceLibrary] : null,
+      selectedPieceLibrary ? curSession!.library.get(selectedPieceLibrary)! : null,
     );
   }, [selectedPieceLibrary]);
 
@@ -326,6 +327,6 @@ const PieceEditor = () => {
       )}
     </div>
   );
-};
+});
 
 export default PieceEditor;

@@ -52,7 +52,6 @@ sessionService.run();
 export const imageService = new ImageService();
 
 export const promptService = new PromptService();
-promptService.run();
 
 export const taskQueueService = new TaskQueueService(tasksHandlerMap);
 

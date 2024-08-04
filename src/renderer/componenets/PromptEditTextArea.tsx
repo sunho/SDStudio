@@ -11,7 +11,6 @@ import {
   useRef,
   useState,
 } from 'react';
-import { AppContext } from './App';
 import Denque from 'denque';
 import {
   FaBook,
@@ -28,9 +27,11 @@ import {
 import { FaPerson, FaStar } from 'react-icons/fa6';
 import { FixedSizeList as List } from 'react-window';
 import getCaretCoordinates from 'textarea-caret';
-import { isMobile, backend } from './models';
-import { highlightPrompt } from './models/PromptService';
-import { WordTag, calcGapMatch } from './models/Tags';
+import { isMobile, backend } from '../models';
+import { highlightPrompt } from '../models/PromptService';
+import { WordTag, calcGapMatch } from '../models/Tags';
+import { appState } from '../models/AppService';
+import { observer } from 'mobx-react-lite';
 
 interface PromptEditTextAreaProps {
   value: string;
@@ -1220,7 +1221,7 @@ const NativeEditTextArea = forwardRef(
   },
 );
 
-const PromptEditTextArea = ({
+const PromptEditTextArea = observer(({
   value,
   onChange,
   disabled,
@@ -1228,7 +1229,7 @@ const PromptEditTextArea = ({
   lineHighlight,
   innerRef,
 }: PromptEditTextAreaProps) => {
-  const { curSession } = useContext(AppContext)!;
+  const { curSession } = appState;
   const editorRef = useRef<EditTextAreaRef | null>(null);
   const historyRef = useRef<Denque<HistoryEntry>>(new Denque<HistoryEntry>());
   const redoRef = useRef<Denque<HistoryEntry>>(new Denque<HistoryEntry>());
@@ -1428,6 +1429,6 @@ const PromptEditTextArea = ({
       )}
     </>
   );
-};
+});
 
 export default PromptEditTextArea;

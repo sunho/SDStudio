@@ -37,7 +37,7 @@ export class GameService extends EventTarget {
     if (e.detail.batch) {
       for (const type of ['scene', 'inpaint']) {
         const session = e.detail.session;
-        for (const scene of Object.values(session[type + 's'])) {
+        for (const scene of session.getScenes(type)) {
           this.refreshList(session, scene as GenericScene);
         }
       }
@@ -161,7 +161,7 @@ export class GameService extends EventTarget {
     for (let i = 0; i < game.length - 1; i++) {
       if (game[i].rank != i) {
         const round: Round = {
-          players: matchPlayers,
+          players: matchPlayers.map(x => x.path),
           winMask: matchPlayers.map(() => false),
           curPlayer: 0,
         };
