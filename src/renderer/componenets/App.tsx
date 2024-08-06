@@ -61,7 +61,6 @@ import {
 import { dataUriToBase64 } from '../models/ImageService';
 import { importStyle, embedJSONInPNG } from '../models/SessionService';
 import {
-  Preset,
   isValidSession,
   SceneContextAlt,
   ImageContextAlt,
@@ -317,27 +316,22 @@ export const App = observer(() => {
               <StackGrow className="flex">
                 {appState.curSession && (
                   <>
-                    {/* <StackGrow outerClassName="hidden md:block">
+                    <StackGrow outerClassName="hidden md:block">
                       <PreSetEditor
-                        type={curSession.presetMode}
                         key={editorKey}
                         middlePromptMode={false}
-                        selectedPreset={selectedPreset}
-                        setSelectedPreset={setSelectedPreset}
                       />
-                    </StackGrow> */}
+                    </StackGrow>
                     <StackGrow>
                       <TabComponent
                         key={appState.curSession.name}
                         tabs={tabs}
-                        // toggleView={
-                        //   <PreSetEditor
-                        //     type={appState.curSession}
-                        //     key={editorKey + '2'}
-                        //     globalMode
-                        //     middlePromptMode={false}
-                        //   />
-                        // }
+                        toggleView={
+                          <PreSetEditor
+                            key={editorKey + '2'}
+                            middlePromptMode={false}
+                          />
+                        }
                       />
                     </StackGrow>
                   </>

@@ -1,7 +1,9 @@
 import { NoiseSchedule, Resolution, Sampling } from '../backends/imageGen';
 import { types, Instance, cast, SnapshotIn, SnapshotOut } from "mobx-state-tree"
-import { action, observable } from 'mobx';
+import { action, observable, makeObservable } from 'mobx';
 import { Serealizable } from './ResourceSyncService';
+import { workFlowService } from '.';
+import { WFWorkFlow, WorkFlowDef } from './workflows/WorkFlow';
 
 export type PARR = string[];
 
@@ -80,6 +82,8 @@ export interface UpscaleJob extends AbstractJob {
   image: string;
   resolution: string;
 }
+
+export type Job = SDJob | SDInpaintJob | AugmentJob | UpscaleJob;
 
 export interface IPiece {
   name: string;
@@ -243,42 +247,16 @@ export interface IInpaintScene extends IAbstractScene {
   type: 'inpaint';
   workflowType: string;
   image: string;
-  preset?: IPreset;
-  shared?: IPreSetShared;
+  preset?: any;
+  shared?: any;
   sceneRef?: string;
-}
-
-export const PresetFromJSON = (json: IPreset): Preset => {
-  if (json.type === 'sd') {
-    return SDPreset.fromJSON(json);
-  } else if (json.type === 'sd_inpaint') {
-    return SDInpaintPreset.fromJSON(json);
-  } else if (json.type === 'augment') {
-    return AugmentPreset.fromJSON(json);
-  } else if (json.type === 'upscale') {
-    return UpscalePreset.fromJSON(json);
-  } else {
-    throw new Error('Invalid preset type');
-  }
-}
-
-export const PresetSharedFromJSON = (json: IPreSetShared): PreSetShared => {
-  if (json.type === 'sd') {
-    return SDShared.fromJSON(json);
-  } else if (json.type === 'sd_style') {
-    return SDStyleShared.fromJSON(json);
-  } else if (json.type === 'augment') {
-    return AugmentShared.fromJSON(json);
-  } else {
-    throw new Error('Invalid shared type');
-  }
 }
 
 export class InpaintScene extends AbstractScene implements IInpaintScene {
   @observable accessor type: 'inpaint' = 'inpaint';
   @observable accessor workflowType: string = '';
-  @observable accessor preset: Preset | undefined = undefined;
-  @observable accessor shared: PreSetShared | undefined = undefined;
+  @observable accessor preset: any | undefined = undefined;
+  @observable accessor shared: any | undefined = undefined;
   @observable accessor image: string = '';
   @observable accessor sceneRef: string | undefined = undefined;
 
@@ -287,8 +265,8 @@ export class InpaintScene extends AbstractScene implements IInpaintScene {
     Object.assign(scene, AbstractScene.fromJSON(json));
     scene.type = 'inpaint';
     scene.workflowType = json.workflowType;
-    scene.preset = json.preset && PresetFromJSON(json.preset);
-    scene.shared = json.shared && PresetSharedFromJSON(json.shared);
+    scene.preset = json.preset && workFlowService.presetFromJSON(json.preset);
+    scene.shared = json.shared && workFlowService.sharedFromJSON(json.shared);
     scene.image = json.image;
     scene.sceneRef = json.sceneRef;
     return scene;
@@ -312,27 +290,31 @@ export type GenericScene = Scene | InpaintScene;
 
 export interface SelectedWorkflow {
   workflowType: string;
-  presetName: string;
+  presetName?: string;
 }
 
 export interface ISession {
   name: string;
   selectedWorkflow?: SelectedWorkflow;
-  presets: Record<string, IPreset[]>;
+  presets: Record<string, any[]>;
   inpaints: Record<string, IInpaintScene>;
   scenes: Record<string, IScene>;
   library: Record<string, IPieceLibrary>;
-  presetShareds: Record<string, IPreSetShared>;
+  presetShareds: Record<string, any>;
 }
 
 export class Session implements Serealizable {
   @observable accessor name: string = '';
   @observable accessor selectedWorkflow: SelectedWorkflow | undefined = undefined;
-  @observable accessor presets: Map<string, Preset[]> = new Map();
+  @observable accessor presets: Map<string, any[]> = new Map();
   @observable accessor inpaints: Map<string, InpaintScene> = new Map();
   @observable accessor scenes: Map<string, Scene> = new Map();
   @observable accessor library: Map<string, PieceLibrary> = new Map();
-  @observable accessor presetShareds: Map<string, PreSetShared> = new Map();
+  @observable accessor presetShareds: Map<string, any> = new Map();
+
+  constructor() {
+    makeObservable(this);
+  }
 
   hasScene(type: 'scene' | 'inpaint', name: string): boolean {
     if (type === 'scene') {
@@ -370,12 +352,12 @@ export class Session implements Serealizable {
     return this.presets.get(type)?.some(preset => preset.name === name) ?? false;
   }
 
-  getPreset(type: string, name: string): Preset | undefined {
+  getPreset(type: string, name: string): any | undefined {
     return this.presets.get(type)?.find(preset => preset.name === name);
   }
 
   @action
-  addPreset(preset: Preset): void {
+  addPreset(preset: any): void {
     const presets = this.presets.get(preset.type) || [];
     presets.push(preset);
     this.presets.set(preset.type, presets);
@@ -394,12 +376,21 @@ export class Session implements Serealizable {
     return Array.from(this.inpaints.values());
   }
 
+  getCommonSetup(flow: SelectedWorkflow): [string, any, any, WorkFlowDef] {
+    const type = flow.workflowType;
+    const preset = flow.presetName && this.getPreset(type, flow.presetName);
+    const shared = this.presetShareds.get(type);
+    const def = workFlowService.getDef(type);
+    return [type, preset, shared, def];
+  }
+
+
   static fromJSON(json: ISession): Session {
     const session = new Session();
     session.name = json.name;
     session.selectedWorkflow = json.selectedWorkflow;
     session.presets = new Map(
-      Object.entries(json.presets).map(([key, value]) => [key, value.map(preset => PresetFromJSON(preset))])
+      Object.entries(json.presets).map(([key, value]) => [key, value.map(preset => workFlowService.presetFromJSON(preset))])
     );
     session.inpaints = new Map(
       Object.entries(json.inpaints).map(([key, value]) => [key, InpaintScene.fromJSON(value)])
@@ -411,7 +402,7 @@ export class Session implements Serealizable {
       Object.entries(json.library).map(([key, value]) => [key, PieceLibrary.fromJSON(value)])
     );
     session.presetShareds = new Map(
-      Object.entries(json.presetShareds).map(([key, value]) => [key, PresetSharedFromJSON(value)])
+      Object.entries(json.presetShareds).map(([key, value]) => [key, workFlowService.sharedFromJSON(value)])
     );
     return session;
   }
@@ -480,7 +471,7 @@ export interface SceneContextAlt {
 
 export interface StyleContextAlt {
   type: 'style';
-  preset: SDPreset;
+  preset: any;
   session: Session;
 }
 

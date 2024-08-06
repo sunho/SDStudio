@@ -22,7 +22,7 @@ export class AppState {
   @observable accessor curSession: Session | undefined = undefined;
   @observable accessor messages: string[] = [];
   @observable accessor dialogs: Dialog[] = [];
-  @observable accessor samples: number = 0;
+  @observable accessor samples: number = 10;
 
   @action
   addMessage(message: string): void {
@@ -42,9 +42,11 @@ export class AppState {
   pushMessage(msg: string) {
     this.messages.push(msg);
   }
+
   pushDialog(dialog: Dialog) {
     this.dialogs.push(dialog);
   }
+
   pushDialogAsync(dialog: any) {
     return new Promise<string | undefined>((resolve, reject) => {
       dialog.callback = (value?: string, text?: string) => {
@@ -56,11 +58,13 @@ export class AppState {
       this.dialogs.push(dialog);
     });
   }
+
   setProgressDialog(dialog: any) {
     this.dialogs.push(dialog);
   }
+
   handleFile(file: File) {
-      if (file.type === 'application/json') {
+    if (file.type === 'application/json') {
       const reader = new FileReader();
       reader.onload = (e: any) => {
           try {

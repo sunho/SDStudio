@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from 'react';
 import { FloatView } from './FloatView';
 import ConfigScreen from './ConfigScreen';
 import SessionSelect from './SessionSelect';
-import { Preset, Session } from '../models/types';
+import { Session } from '../models/types';
 import { loginService, backend, taskQueueService } from '../models';
 
 const TobBar = () => {

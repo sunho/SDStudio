@@ -1,4 +1,3 @@
-import { getDefaultPreset } from './PromptService';
 import { Scene, Session } from './types';
 
 export interface DenDenPrePrompt {

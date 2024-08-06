@@ -2,7 +2,7 @@ import { useContext, useEffect, useRef, useState } from 'react';
 import { useContextMenu } from 'react-contexify';
 import { gameService, sessionService, backend, imageService } from '../models';
 import { shuffleArray } from '../models/GameService';
-import { Scene, InpaintScene, ContextMenuType } from '../models/types';
+import { Scene, InpaintScene, ContextMenuType, Player } from '../models/types';
 import { appState } from '../models/AppService';
 import { observer } from 'mobx-react-lite';
 
@@ -49,11 +49,15 @@ const Tournament = observer(({ scene, path }: TournamentProps) => {
         loses++;
       }
     }
-    const roundRank = round.players[0].rank;
+    const cvt = new Map<string, Player>();
+    for (const player of scene.game!) {
+      cvt.set(player.path, player);
+    }
+    const roundRank = cvt.get(round.players[0])!.rank;
     const winRank = roundRank - loses;
     for (let i = 0; i < round.players.length; i++) {
       if (round.winMask[i]) {
-        round.players[i].rank = winRank;
+        cvt.get(round.players[i])!.rank = winRank;
       }
     }
     if (winRank === 0) {

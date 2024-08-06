@@ -52,12 +52,12 @@ import { renameScene } from '../models/SessionService';
 import { queueScenePrompt } from '../models/TaskQueueService';
 import {
   Scene,
-  Preset,
   PromptPiece,
   PromptPieceSlot,
   PromptNode,
 } from '../models/types';
 import { appState } from '../models/AppService';
+import { observer } from 'mobx-react-lite';
 
 interface Props {
   scene: Scene;
@@ -69,11 +69,11 @@ interface PromptHighlighterProps {
   className?: string;
 }
 
-export const PromptHighlighter = ({
+export const PromptHighlighter = observer(({
   className,
   text,
 }: PromptHighlighterProps) => {
-  const { curSession } = useContext(AppContext)!;
+  const { curSession } = appState;
   return (
     <div
       className={
@@ -83,7 +83,7 @@ export const PromptHighlighter = ({
       dangerouslySetInnerHTML={{ __html: highlightPrompt(curSession!, text) }}
     ></div>
   );
-};
+});
 
 interface SlotEditorProps {
   scene: Scene;
@@ -162,13 +162,8 @@ export const BigPromptEditor = ({
         >
           <PreSetEditor
             middlePromptMode={true}
-            type={presetMode}
-            globalMode={sceneMode}
-            selectedPreset={selectedPreset!}
-            styleEditMode={!sceneMode}
             getMiddlePrompt={getMiddlePrompt}
             onMiddlePromptChange={setMiddlePrompt}
-            setSelectedPreset={setSelectedPreset}
           />
         </FloatView>
       )}
@@ -178,9 +173,6 @@ export const BigPromptEditor = ({
         <div className={'hidden md:block h-full '}>
           <PreSetEditor
             middlePromptMode={true}
-            selectedPreset={selectedPreset!}
-            type={presetMode}
-            styleEditMode={!sceneMode}
             getMiddlePrompt={getMiddlePrompt}
             onMiddlePromptChange={setMiddlePrompt}
           />

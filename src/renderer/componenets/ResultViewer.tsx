@@ -41,7 +41,7 @@ import { ContextMenuType, GenericScene, Scene } from '../models/types';
 import { imageService, sessionService, isMobile, gameService, backend } from '../models';
 import { dataUriToBase64, deleteImageFiles } from '../models/ImageService';
 import { getResultDirectory } from '../models/SessionService';
-import { queueGenericScene, removeTaskFromGenericScene } from '../models/TaskQueueService';
+import { queueGenericScene, queueWorkflow, removeTaskFromGenericScene } from '../models/TaskQueueService';
 import { extractPromptDataFromBase64 } from '../models/util';
 import { appState } from '../models/AppService';
 
@@ -866,7 +866,6 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
             }}
           >
             <Tournament
-              onFilenameChange={onFilenameChange}
               scene={scene}
               path={getResultDirectory(curSession!, scene)}
             />
@@ -907,12 +906,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
               <button
                 className={`round-button back-green`}
                 onClick={async () => {
-                  await queueGenericScene(
-                    curSession!,
-                    selectedPreset!,
-                    scene,
-                    samples,
-                  );
+                  await queueWorkflow(curSession!, curSession!.selectedWorkflow!, scene, appState.samples);
                 }}
               >
                 {!isMobile ? '예약 추가' : <FaPlus />}

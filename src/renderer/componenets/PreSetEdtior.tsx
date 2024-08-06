@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useContext, useEffect, useState } from 'react';
+import * as mobx from 'mobx'
 import {
   TextAreaWithUndo,
   NumberSelect,
@@ -15,12 +16,7 @@ import { v4 } from 'uuid';
 import { BigPromptEditor } from './SceneEditor';
 import { useContextMenu } from 'react-contexify';
 import {
-  CommonSetup,
   ContextMenuType,
-  StylePreSet,
-  StylePreSetShared,
-  PreSet,
-  PreSetMode,
   PromptNode,
 } from '../models/types';
 import {
@@ -29,116 +25,16 @@ import {
   backend,
   promptService,
   taskQueueService,
+  workFlowService,
 } from '../models';
 import {
-  getDefaultPreset,
-  getDefaultStylePreset,
   toPARR,
 } from '../models/PromptService';
 import { queueDummyPrompt } from '../models/TaskQueueService';
-
-function useCommonSetup(): CommonSetup {
-  const { curSession, selectedPreset } = useContext(AppContext)!;
-  return {
-    type: curSession!.presetMode,
-    preset: selectedPreset!,
-    shared: curSession!.presetShareds[curSession!.presetMode]!,
-  };
-}
-
-const PreSetSelect = ({
-  selectedPreset,
-  setSelectedPreset,
-  onChange,
-}: {
-  selectedPreset: PreSet;
-  setSelectedPreset: (preset: PreSet) => void;
-  onChange: () => void;
-}) => {
-  const { curSession, pushDialog, pushMessage } = useContext(AppContext)!;
-  const presets = curSession!.presets.filter((x) => x.type === 'preset');
-  return (
-    <div className="w-full h-full">
-      <div className="flex items-center mb-3">
-        <p className="text-xl font-bold text-default">이미지 생성 프리셋</p>
-        <button
-          className={`round-button back-llgray ml-auto text-sm h-8 `}
-          onClick={() => {
-            curSession!.presetMode = 'style';
-            setSelectedPreset(
-              curSession!.presets.filter((x) => x.type === 'style')[0],
-            );
-            sessionService.markUpdated(curSession!.name);
-          }}
-        >
-          이지모드
-        </button>
-      </div>
-
-      <div className="flex gap-2 pr-2">
-        <DropdownSelect
-          selectedOption={selectedPreset}
-          menuPlacement="bottom"
-          options={presets.map((x) => ({
-            label: x.name,
-            value: x,
-          }))}
-          onSelect={(opt) => {
-            setSelectedPreset(opt.value);
-          }}
-        />
-        <button
-          className={`icon-button`}
-          onClick={() => {
-            pushDialog({
-              type: 'input-confirm',
-              text: '프리셋 이름을 입력하세요.',
-              callback: (name) => {
-                if (!name) return;
-                if (name && presets.find((x) => x.name === name)) {
-                  pushMessage('중복되는 프리셋 이름입니다');
-                }
-                if (name) {
-                  const newPreset = getDefaultPreset();
-                  newPreset.name = name;
-                  curSession!.presets.push(newPreset);
-                  setSelectedPreset(newPreset);
-                  sessionService.markUpdated(curSession!.name);
-                  onChange();
-                }
-              },
-            });
-          }}
-        >
-          <FaPlus />
-        </button>
-        <button
-          className={`icon-button`}
-          onClick={() => {
-            if (presets.length <= 1) {
-              pushMessage('프리셋은 최소 한 개 이상이어야 합니다');
-              return;
-            }
-            pushDialog({
-              type: 'confirm',
-              text: '정말로 이 프리셋을 삭제하시겠습니까?',
-              callback: () => {
-                curSession!.presets = curSession!.presets.filter(
-                  (x) => x !== selectedPreset,
-                );
-                setSelectedPreset(presets.find((x) => x !== selectedPreset)!);
-                sessionService.markUpdated(curSession!.name);
-                onChange();
-              },
-            });
-          }}
-        >
-          <FaTrashAlt />
-        </button>
-      </div>
-    </div>
-  );
-};
+import { appState } from '../models/AppService';
+import { observer } from 'mobx-react-lite';
+import { WFAbstractVar, WFIElement, WFIGroup, WFIInlineInput, WFIPush, WFIStack, WorkFlowDef } from '../models/workflows/WorkFlow';
+import { StackFixed, StackGrow, VerticalStack } from './LayoutComponents';
 
 const VibeImage = ({
   path,
@@ -170,12 +66,8 @@ interface VibeEditorProps {
 }
 
 export const VibeEditor = ({ disabled, closeEditor }: VibeEditorProps) => {
-  const { curSession } = useContext(AppContext)!;
-  const commonSetup = useCommonSetup();
-  const [_, rerender] = useState<{}>({});
   const updatePresets = () => {
     sessionService.markUpdated(curSession!.name);
-    rerender({});
   };
   const vibeChange = async (vibe: string) => {
     if (!vibe) return;
@@ -189,7 +81,7 @@ export const VibeEditor = ({ disabled, closeEditor }: VibeEditorProps) => {
     <div className="w-full h-full overflow-hidden flex flex-col">
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-auto">
-          {commonSetup.shared.vibes.map((vibe) => (
+          {false && commonSetup.shared.vibes.map((vibe) => (
             <div className="border border-gray-300 mt-2 p-2 flex gap-2 items-begin">
               <VibeImage
                 path={vibe.path}
@@ -289,20 +181,17 @@ export const VibeEditor = ({ disabled, closeEditor }: VibeEditorProps) => {
 };
 
 export const VibeButton = ({ onClick }: { onClick: () => void }) => {
-  const { curSession } = useContext(AppContext)!;
-  const commonSetup = useCommonSetup();
-
   return (
     <>
-      {commonSetup.shared.vibes.length === 0 && (
+      {(
         <button
-          className={`round-button back-gray h-8 w-full flex`}
+          className={`round-button back-gray h-8 w-full flex mt-2`}
           onClick={onClick}
         >
           <div className="flex-1">바이브 이미지 설정 열기</div>
         </button>
       )}
-      {commonSetup.shared.vibes.length > 0 && (
+      {false && commonSetup.shared.vibes.length > 0 && (
         <div className="w-full flex items-center">
           <div className={'flex-none mr-2 gray-label'}>바이브 설정:</div>
           <VibeImage
@@ -347,7 +236,7 @@ const InlineEditorField = ({
   children: React.ReactNode;
 }) => {
   return (
-    <div className="flex gap-2 items-center">
+    <div className="pt-2 flex gap-2 items-center">
       <span className={'flex-none gray-label'}>{label}:</span>
       {children}
     </div>
@@ -466,7 +355,7 @@ const NAIPreSetEditor: React.FC<Props> = ({
                     if (num <= 0) throw new Error('Seed must be positive');
                     commonSetup.shared.seed = num;
                   } catch (e) {
-                    commonSetup.shared.seed = undefined;
+                    commonSetup.shared.seed = null;
                   }
                   updatePresets();
                 }}
@@ -989,55 +878,327 @@ const NAIStylePreSetEditor: React.FC<Props> = ({
   );
 };
 
-interface Props {
-  selectedPreset: PreSet;
-  setSelectedPreset: (preset: PreSet) => void;
-  middlePromptMode: boolean;
-  globalMode?: boolean;
-  getMiddlePrompt?: () => string;
-  onMiddlePromptChange?: (txt: string) => void;
-  type?: PreSetMode;
-  styleEditMode?: boolean;
+const IntSliderInput = ({
+  label,
+  value,
+  onChange,
+  disabled,
+  step,
+  min,
+  max
+}: {
+  label: string;
+  value: number;
+  onChange: (val: number) => void;
+  disabled: boolean;
+  step: number;
+  min: number;
+  max: number;
+}) => {
+  return (
+    <div className="flex w-full items-center md:flex-row flex-col mt-2 gap-2">
+      <div
+        className={
+          'whitespace-nowrap flex-none mr-auto md:mr-0 gray-label'
+        }
+      >
+        {label}:
+      </div>
+      <div className="flex flex-1 md:w-auto w-full gap-1">
+        <input
+          className="flex-1"
+          type="range"
+          step={step}
+          min={min}
+          max={max}
+          value={value}
+          onChange={(e) => {
+            onChange(parseFloat(e.target.value));
+          }}
+          disabled={disabled}
+        />
+        <div className="w-11 flex-none text-lg text-center back-lllgray">
+          {value}
+        </div>
+      </div>
+    </div>
+  );
 }
 
-const PreSetEditor = ({
-  type,
-  globalMode,
-  setSelectedPreset,
-  selectedPreset,
+const PreSetSelect = observer(({
+  workflowType
+}: {
+  workflowType: string;
+}) => {
+  const curSession = appState.curSession!;
+  return (
+    <div className="flex gap-2 mt-2 items-center">
+      <div className="flex-none gray-label">사전세팅선택:</div>
+      <div className="round-button back-gray h-9 w-full"></div>
+      <button
+        className={`icon-button`}
+      >
+        <FaPlus />
+      </button>
+    </div>
+  );
+});
+
+
+interface NullIntInputProps {
+  label: string;
+  value: number|null;
+  disabled: boolean;
+  onChange: (val: number | undefined) => void;
+}
+
+const NullIntInput = ({ label, value, onChange, disabled }: NullIntInputProps) => {
+  return <input
+    className={`w-full gray-input`}
+    disabled={disabled}
+    value={value ? value.toString() : ''}
+    onChange={(e) => {
+      try {
+        const num = parseInt(e.target.value);
+        if (e.target.value === '') throw new Error('No seed');
+        if (isNaN(num)) throw new Error('Invalid seed');
+        if (!Number.isInteger(num))
+          throw new Error('Seed must be an integer');
+        if (num <= 0) throw new Error('Seed must be positive');
+        onChange(num);
+      } catch (e) {
+        onChange(undefined);
+      }
+    }}
+  />
+};
+
+interface IWFElementContext {
+  preset: any;
+  shared: any;
+  type: string;
+  middlePromptMode: boolean;
+  showGroup?: string;
+  setShowGroup: (group: string | undefined) => void;
+  getMiddlePrompt?: () => string;
+  onMiddlePromptChange?: (txt: string) => void;
+}
+
+interface WFElementProps {
+  element: WFIElement;
+}
+
+const WFElementContext = React.createContext<IWFElementContext | null>(null);
+
+interface IWFGroupContext {
+  curGroup?: string;
+}
+
+const WFGroupContext = React.createContext<IWFGroupContext | null>(null);
+
+const WFRenderElement = observer(({
+  element,
+}: WFElementProps) => {
+  switch (element.type) {
+  case 'stack':
+    return <WFRStack element={element} />;
+  case 'inline':
+    return <WFRInline element={element} />;
+  case 'group':
+    return <WFRGroup element={element} />;
+  case 'presetSelect':
+    return <WFRPresetSelect element={element} />;
+  case 'push':
+    return <WFRPush element={element} />;
+  }
+});
+
+const WFRPresetSelect = observer(({element}:WFElementProps) => {
+  const { type } = useContext(WFElementContext)!;
+  return <PreSetSelect workflowType={type} />;
+});
+
+const WFRGroup = observer(({element}:WFElementProps) => {
+  const grp = element as WFIGroup;
+  const { type, setShowGroup, showGroup } = useContext(WFElementContext)!;
+  const { curGroup } = useContext(WFGroupContext)!;
+  return <>
+    {grp.label !== showGroup && <button
+      className={`round-button back-gray h-8 w-full mt-2`}
+      onClick={() => {setShowGroup(grp.label)}}
+    >
+      {grp.label} 열기
+    </button>}
+    {grp.label === showGroup && <WFGroupContext.Provider value={{curGroup: grp.label}}>
+        <VerticalStack>
+        {grp.inputs.map(x => <WFRenderElement element={x} />)}
+        <button
+              className={`round-button back-gray h-8 w-full mt-2`}
+              onClick={() => {setShowGroup(undefined)}}
+            >
+              {grp.label} 닫기
+            </button>
+      </VerticalStack>
+    </WFGroupContext.Provider>}
+  </>
+});
+
+const WFRStack = observer(({element}:WFElementProps) => {
+  const stk = element as WFIStack;
+  return <VerticalStack>
+    {stk.inputs.map(x => <WFRenderElement element={x} />)}
+  </VerticalStack>
+});
+
+const WFRPush = observer(({element}:WFElementProps) => {
+  const { showGroup } = useContext(WFElementContext)!;
+  const { curGroup } = useContext(WFGroupContext)!;
+  const push = element as WFIPush;
+  if (curGroup !== showGroup) {
+    return <></>
+  }
+
+  if (push.direction === 'top') {
+    return <div className="mt-auto"></div>
+  } else if (push.direction === 'bottom') {
+    return <div className="mb-auto"></div>
+  } else if (push.direction === 'left') {
+    return <div className="ml-auto"></div>
+  } else if (push.direction === 'right') {
+    return <div className="mr-auto"></div>
+  }
+});
+
+const WFRInline = observer(({element}:WFElementProps) => {
+  const { type, showGroup, preset, shared } = useContext(WFElementContext)!;
+  const { curGroup } = useContext(WFGroupContext)!;
+  const input = element as WFIInlineInput;
+  const field = workFlowService.getVarDef(type, input.preset, input.field)!;
+  const getField = () => {
+    if (input.preset) {
+      return preset[input.field];
+    } else {
+      return shared[input.field];
+    }
+  };
+  const setField = (val: any) => {
+    if (input.preset) {
+      preset[input.field] = val;
+    } else {
+      shared[input.field] = val;
+    }
+  };
+  if (curGroup !== showGroup) {
+    return <></>
+  }
+  switch (field.type) {
+  case 'prompt':
+    return <EditorField label={input.label} full={input.flex === 'flex-1'}>
+        <PromptEditTextArea
+          value={getField()}
+          disabled={false}
+          onChange={setField}
+        ></PromptEditTextArea>
+      </EditorField>
+  case 'nullInt':
+    return <InlineEditorField label={input.label}>
+      <NullIntInput label={input.label} value={getField()} disabled={false} onChange={
+        (val) => setField(val)
+      }/>
+    </InlineEditorField>
+  case 'vibeSet':
+    return <VibeButton/>
+  case 'bool':
+    return <InlineEditorField label={input.label}>
+      <input
+        type="checkbox"
+        checked={getField()}
+        onChange={(e) => setField(e.target.checked)}
+      />
+    </InlineEditorField>
+  case 'int':
+    return <IntSliderInput label={input.label} value={getField()} onChange={setField} disabled={false} min={field.min} max={field.max} step={field.step} />
+  }
+  return <InlineEditorField label={input.label}>
+    asdf
+  </InlineEditorField>
+});
+
+interface Props {
+  middlePromptMode: boolean;
+  getMiddlePrompt?: () => string;
+  onMiddlePromptChange?: (txt: string) => void;
+}
+
+const PreSetEditor = observer(({
   middlePromptMode,
   getMiddlePrompt,
   onMiddlePromptChange,
-  styleEditMode,
 }: Props) => {
-  const ctx = useContext(AppContext)!;
-  const selPreset = globalMode ? ctx.selectedPreset! : selectedPreset;
-  const type2 = globalMode ? ctx.curSession!.presetMode : type;
-  if (type2 === 'preset') {
-    return (
-      <NAIPreSetEditor
-        globalMode={globalMode}
-        selectedPreset={selPreset}
-        setSelectedPreset={setSelectedPreset}
-        middlePromptMode={middlePromptMode}
-        styleEditMode={styleEditMode}
-        getMiddlePrompt={getMiddlePrompt}
-        onMiddlePromptChange={onMiddlePromptChange}
-      />
-    );
+  const [_, rerender] = useState<{}>({});
+  const [showGroup, setShowGroup] = useState<string | undefined>(undefined);
+  const curSession = appState.curSession!;
+  const workflowType = curSession.selectedWorkflow?.workflowType;
+  const shared = curSession.presetShareds?.get(workflowType!);
+  const presets = curSession.presets?.get(workflowType!);
+  if (!workflowType) {
+    curSession.selectedWorkflow = {
+      workflowType: workFlowService.generalFlows[0].getType(),
+    }
+    rerender({});
   } else {
-    return (
-      <NAIStylePreSetEditor
-        globalMode={globalMode}
-        selectedPreset={selPreset}
-        setSelectedPreset={setSelectedPreset}
-        middlePromptMode={middlePromptMode}
-        styleEditMode={styleEditMode}
-        getMiddlePrompt={getMiddlePrompt}
-        onMiddlePromptChange={onMiddlePromptChange}
-      />
-    );
+    if (!presets) {
+      const preset = workFlowService.buildPreset(workflowType);
+      preset.name = 'default';
+      curSession.presets.set(workflowType, [
+        preset
+      ]);
+      rerender({});
+    } else if (!shared) {
+      curSession.presetShareds.set(workflowType, {});
+      rerender({});
+    } else if (!curSession.selectedWorkflow!.presetName) {
+      curSession.selectedWorkflow!.presetName = presets[0].name;
+      rerender({});
+    }
   }
-};
+  return workflowType && shared && curSession.selectedWorkflow!.presetName && <VerticalStack className="p-3">
+    <StackFixed className="flex gap-2 items-center">
+      <span className={'flex-none gray-label'}>작업모드: </span>
+      <DropdownSelect
+        selectedOption={workflowType}
+        menuPlacement="bottom"
+        options={workFlowService.generalFlows.map(x=>({
+          value: x.getType(),
+          label: x.getTitle()
+        }))}
+        onSelect={(opt) => {
+          curSession.selectedWorkflow = {
+            workflowType: opt.value
+          }
+          setShowGroup(undefined);
+        }}
+      />
+    </StackFixed>
+    <StackGrow>
+      <WFElementContext.Provider value={{
+        preset: curSession.getPreset(workflowType, curSession.selectedWorkflow!.presetName),
+        shared: shared,
+        showGroup: showGroup,
+        setShowGroup: setShowGroup,
+        type: workflowType,
+        middlePromptMode,
+        getMiddlePrompt,
+        onMiddlePromptChange,
+      }}>
+        <WFGroupContext.Provider value={{}}>
+          <WFRenderElement
+            element={workFlowService.getGeneralEditor(workflowType)}
+          />
+        </WFGroupContext.Provider>
+      </WFElementContext.Provider>
+    </StackGrow>
+  </VerticalStack>
+});
 
 export default PreSetEditor;

@@ -21,9 +21,11 @@ import { ImageService } from './ImageService';
 import { LoginService } from './LoginService';
 import { PromptService } from './PromptService';
 import { SessionService } from './SessionService';
-import { TaskQueueService, tasksHandlerMap } from './TaskQueueService';
+import { taskHandlers, TaskQueueService } from './TaskQueueService';
 import { LocalAIService } from './LocalAIService';
 import { AppUpdateNoticeService } from './AppUpdateNoticeService';
+import { WorkFlowService } from './workflows/WorkFlowService';
+import { registerWorkFlows } from './workflows';
 
 export const backend =
   window.electron != null ? new ElectornBackend() : new AndroidBackend();
@@ -53,20 +55,14 @@ export const imageService = new ImageService();
 
 export const promptService = new PromptService();
 
-export const taskQueueService = new TaskQueueService(tasksHandlerMap);
+export const taskQueueService = new TaskQueueService(taskHandlers);
 
 export const loginService = new LoginService();
 
-function changeFilename(path: string, newFilename: string) {
-  const lastSlashIndex = path.lastIndexOf('/');
-  if (lastSlashIndex === -1) {
-    return newFilename;
-  }
-  const directoryPath = path.substring(0, lastSlashIndex + 1);
-  return directoryPath + newFilename;
-}
-
 export const gameService = new GameService();
+
+export const workFlowService = new WorkFlowService();
+registerWorkFlows(workFlowService);
 
 window.promptService = promptService;
 window.sessionService = sessionService;
