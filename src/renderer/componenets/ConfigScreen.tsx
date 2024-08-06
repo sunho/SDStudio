@@ -11,7 +11,7 @@ import {
   Config,
   ImageEditor,
   RemoveBgQuality,
-} from '.../main/config';
+} from '../../main/config';
 import { observer } from 'mobx-react-lite';
 import { appState } from '../models/AppService';
 

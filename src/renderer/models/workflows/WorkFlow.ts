@@ -5,20 +5,24 @@ export type WFBackendType = 'image' | 'none';
 
 export interface WorkFlowDef {
   type: string;
+  title: string;
   presetVars: WFVar[];
   sharedVars: WFVar[];
   backendType: WFBackendType;
   editor: WFIElement;
   i2i: boolean;
   handler: WFHandler;
-  testHandler?: WFTestHandler;
 }
 
-export type WFHandler = (session: Session, scene: GenericScene, preset: any, shared: any, samples: number, onComplete?: (img: string) => void) => void;
-export type WFTestHandler = (session: Session,  preset: any, shared: any, scene?: GenericScene, onComplete?: (img: string) => void) => void;
+export type WFHandler = (session: Session, scene: GenericScene, preset: any, shared: any, samples: number, onComplete?: (img: string) => void) => void | Promise<void>;
 
 export interface WFAbstractVar {
   name: string;
+}
+
+export interface WFStringVar extends WFAbstractVar {
+  type: 'string';
+  default: string;
 }
 
 export interface WFBackendVar extends WFAbstractVar {
@@ -71,7 +75,7 @@ export interface WFMaskVar extends WFAbstractVar {
   imageRef: string;
 }
 
-export type WFVar = WFIntVar | WFVibeSetVar | WFSamplingVar | WFNoiseScheduleVar | WFBoolVar | WFPromptVar | WFImageVar | WFMaskVar | WFBackendVar | WFNullIntVar;
+export type WFVar = WFIntVar | WFVibeSetVar | WFSamplingVar | WFNoiseScheduleVar | WFBoolVar | WFPromptVar | WFImageVar | WFMaskVar | WFBackendVar | WFNullIntVar | WFStringVar;
 
 export type WFIFlex = 'flex-1' | 'flex-2' | 'flex-none';
 
@@ -111,7 +115,12 @@ export interface WFIMiddlePlaceholderInput extends WFIAbstract {
   label: string;
 }
 
-export type WFIElement = WFIProfilePresetSelect | WFIPresetSelect | WFIStack | WFIInlineInput | WFIGroup | WFIMiddlePlaceholderInput;
+export interface WFIPush extends WFIAbstract {
+  type: 'push';
+  direction: 'top' | 'bottom' | 'left' | 'right';
+}
+
+export type WFIElement = WFIProfilePresetSelect | WFIPresetSelect | WFIStack | WFIInlineInput | WFIGroup | WFIMiddlePlaceholderInput | WFIPush;
 
 function createDefaultValue(varObj: WFVar) {
   switch (varObj.type) {
@@ -135,6 +144,8 @@ function createDefaultValue(varObj: WFVar) {
       return (varObj as WFBackendVar).default;
     case 'nullInt':
       return null;
+    case 'string':
+      return (varObj as WFStringVar).default;
     default:
       throw new Error('Unknown type');
   }
@@ -281,6 +292,15 @@ export class WFVarBuilder {
     return this;
   }
 
+  addStringVar(name: string, defaultValue: string): this {
+    this.vars.push({
+      type: 'string',
+      name,
+      default: defaultValue
+    });
+    return this;
+  }
+
   build(): WFVar[] {
     return this.vars;
   }
@@ -296,15 +316,20 @@ export class WFWorkFlow {
     return this.def.type;
   }
 
+  getTitle() {
+    return this.def.title;
+  }
+
   buildShared() {
     return materializeWFObj(this.def.type, this.def.sharedVars);
   }
 
   buildPreset() {
+    let newVars = this.def.presetVars.concat([{ type: 'string', name: 'name', default: '' }])
     if (this.def.backendType === 'none') {
       return materializeWFObj(this.def.type, this.def.presetVars);
     } else {
-      const newVars = this.def.presetVars.concat([{ type: 'backend', name: 'backend', default: { type: 'NAI' } }])
+      newVars = newVars.concat([{ type: 'backend', name: 'backend', default: { type: 'NAI' } }])
       return materializeWFObj(this.def.type, newVars);
     }
   }
@@ -346,6 +371,10 @@ export function wfiMiddlePlaceholderInput(label: string): WFIMiddlePlaceholderIn
   return { type: 'middlePlaceholder', label };
 }
 
+export function wfiPush(direction: 'top' | 'bottom' | 'left' | 'right'): WFIPush {
+  return { type: 'push', direction };
+}
+
 export class WFDefBuilder {
   private workflowDef: WorkFlowDef;
 
@@ -357,8 +386,14 @@ export class WFDefBuilder {
       backendType: 'none',
       editor: null as any,
       i2i: false,
+      title: '',
       handler: () => {}
     };
+  }
+
+  setTitle(title: string): this {
+    this.workflowDef.title = title;
+    return this;
   }
 
   setPresetVars(presetVars: WFVar[]): this {
@@ -388,11 +423,6 @@ export class WFDefBuilder {
 
   setHandler(handler: WFHandler): this {
     this.workflowDef.handler = handler;
-    return this;
-  }
-
-  setTestHandler(testHandler: WFTestHandler): this {
-    this.workflowDef.testHandler = testHandler;
     return this;
   }
 

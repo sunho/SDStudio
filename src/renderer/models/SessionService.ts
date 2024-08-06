@@ -5,17 +5,14 @@ import { backend, imageService, zipService } from '.';
 import { FileEntry } from '../backend';
 import defaultassets from '../defaultassets';
 import { dataUriToBase64 } from './ImageService';
-import { getDefaultPreset, defaultUC } from './PromptService';
+import { defaultUC } from './PromptService';
 import { ResourceSyncService } from './ResourceSyncService';
 import {
   PromptPieceSlot,
-  SDPreset,
   GenericScene,
   InpaintScene,
   Scene,
-  SDShared,
   Session,
-  Preset,
 } from './types';
 import { extractPromptDataFromBase64 } from './util';
 import * as PngChunk from 'png-chunk-text';
@@ -34,11 +31,9 @@ export class SessionService extends ResourceSyncService<Session> {
   }
 
   async createDefault(name: string) {
-    const preset = getDefaultPreset();
-    preset.name = 'default';
     const newSession = Session.fromJSON({
       name: name,
-      presets: Object.fromEntries([['sdimagegen', [preset]]]),
+      presets: {},
       inpaints: {},
       scenes: Object.fromEntries([['default', {
           type: 'scene',
@@ -51,10 +46,7 @@ export class SessionService extends ResourceSyncService<Session> {
           mains: [],
       }]]),
       library: {},
-      presetShareds: Object.fromEntries([[ 'sdimagegen', {
-        type: 'sd',
-        vibes: []
-      }]]),
+      presetShareds: {}
     });
     // await importDefaultPresets(newSession);
     return newSession;
@@ -70,7 +62,7 @@ export class SessionService extends ResourceSyncService<Session> {
 
   async exportSessionShallow(session: Session) {
     const sess: Session = Session.fromJSON(session.toJSON());
-    (sess.presetShareds.get('sdimagegen') as SDShared).vibes = [];
+    sess.presetShareds.get('sdimagegen').vibes = [];
     for (const scene of Object.values(sess.scenes)) {
       scene.game = undefined;
       scene.round = undefined;
@@ -452,12 +444,6 @@ export class SessionService extends ResourceSyncService<Session> {
 
   sceneOrderChanged(): void {
     this.dispatchEvent(new CustomEvent('scene-order-changed', {}));
-  }
-
-  styleEditStart(preset: Preset): void {
-    this.dispatchEvent(
-      new CustomEvent('style-edit-start', { detail: { preset } }),
-    );
   }
 
   configChanged(): void {

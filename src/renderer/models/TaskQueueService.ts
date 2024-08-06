@@ -15,22 +15,18 @@ import {
   promptService,
   sessionService,
   taskQueueService,
+  workFlowService,
 } from '.';
 import {
+  AbstractJob,
+  AugmentJob,
   GenericScene,
-  IAugmentShared,
   InpaintScene,
-  IPreset,
-  IPreSetShared,
-  ISDAbstractPreset,
-  ISDAbstractShared,
-  ISDInpaintPreset,
-  ISDInpaintShared,
-  ISDPreset,
-  ISDShared,
-  Preset,
+  Job,
   PromptNode,
   Scene,
+  SDAbstractJob,
+  SDInpaintJob,
   SelectedWorkflow,
   Session,
 } from './types';
@@ -57,9 +53,7 @@ const FAST_TASK_DEFAULT_ESTIMATE =
 
 export interface TaskParam {
   session: Session;
-  preset: IPreset;
-  shared: IPreSetShared;
-  fetched: Map<string, string>;
+  job: Job;
   outputPath: string;
   prompt?: PromptNode;
   scene?: GenericScene;
@@ -218,7 +212,7 @@ class GenerateImageTaskHandler implements TaskHandler {
   }
 
   checkTask(task: Task): boolean {
-    if (task.params.preset.type === 'sd' && !this.inpaint) {
+    if (task.params.job.type === 'sd' && !this.inpaint) {
       if (task.params.nodelay && this.fast) {
         return true;
       }
@@ -226,15 +220,14 @@ class GenerateImageTaskHandler implements TaskHandler {
         return true;
       }
     }
-    if (task.params.preset.type === 'sd_inpaint' && this.inpaint) {
+    if (task.params.job.type === 'sd_inpaint' && this.inpaint) {
       return true;
     }
     return false;
   }
 
   async handleTask(task: Task, run: TaskQueueRun) {
-    const preset: ISDAbstractPreset = task.params.preset as ISDAbstractPreset;
-    const shared: ISDAbstractShared = task.params.shared as ISDAbstractShared;
+    const job: SDAbstractJob = task.params.job as SDAbstractJob;
     let prompt = lowerPromptNode(task.params.prompt!);
     console.log('lowered prompt: ' + prompt);
     const outputFilePath =
@@ -243,7 +236,7 @@ class GenerateImageTaskHandler implements TaskHandler {
       prompt = '1girl';
     }
     const vibes = await Promise.all(
-      shared.vibes.map(async (x: any) => ({
+      job.vibes.map(async (x: any) => ({
         image: dataUriToBase64(
           (await imageService.fetchImage(
             imageService.getVibesDir(task.params.session) +
@@ -257,28 +250,27 @@ class GenerateImageTaskHandler implements TaskHandler {
     );
     const arg: ImageGenInput = {
       prompt: prompt,
-      uc: preset.uc,
+      uc: job.uc,
       model: Model.Anime,
       resolution: task.params.scene!.resolution as Resolution,
-      sampling: preset.sampling as Sampling,
-      sm: preset.smea,
-      dyn: preset.dyn,
+      sampling: job.sampling as Sampling,
+      sm: job.smea,
+      dyn: job.dyn,
       vibes: vibes,
-      steps: preset.steps,
-      cfgRescale: preset.cfgRescale,
-      noiseSchedule: preset.noiseSchedule as NoiseSchedule,
-      promptGuidance: preset.promptGuidance,
+      steps: job.steps,
+      cfgRescale: job.cfgRescale,
+      noiseSchedule: job.noiseSchedule as NoiseSchedule,
+      promptGuidance: job.promptGuidance,
       outputFilePath: outputFilePath,
-      seed: shared.seed,
+      seed: job.seed,
     };
     if (this.inpaint) {
-      const inpaintPreset = preset as ISDInpaintPreset;
-      const inpaintShared = shared as ISDInpaintShared;
+      const inpaintJob = job as SDInpaintJob;
       arg.model = Model.Inpaint;
-      arg.image = inpaintShared.image;
-      arg.mask = inpaintPreset.mask;
-      arg.originalImage = inpaintPreset.originalImage;
-      arg.imageStrength = inpaintPreset.strength;
+      arg.image = inpaintJob.image;
+      arg.mask = inpaintJob.mask;
+      arg.originalImage = inpaintJob.originalImage;
+      arg.imageStrength = inpaintJob.strength;
       arg.vibes = [];
     }
     console.log(arg);
@@ -302,8 +294,8 @@ class GenerateImageTaskHandler implements TaskHandler {
     }
     await backend.generateImage(arg);
 
-    if (shared.seed) {
-      shared.seed = stepSeed(shared.seed);
+    if (job.seed) {
+      job.seed = stepSeed(job.seed);
     }
 
     if (task.params.onComplete) {
@@ -349,15 +341,15 @@ class RemoveBgTaskHandler implements TaskHandler {
   async handleTask(task: Task, run: TaskQueueRun) {
     const outputFilePath =
       task.params.outputPath + '/' + Date.now().toString() + '.png';
-    const shared = task.params.shared as IAugmentShared;
-    await localAIService.removeBg(shared.image!, outputFilePath);
+    const job = task.params.job as AugmentJob;
+    await localAIService.removeBg(job.image!, outputFilePath);
     if (task.params.onComplete) task.params.onComplete(outputFilePath);
     imageService.onAddImage(task.params.session, task.params.scene!.name, outputFilePath);
     return true;
   }
 
   checkTask(task: Task): boolean {
-    return task.params.preset.type === 'augment' && task.params.preset.backend.type === 'SD';
+    return task.params.job.type === 'augment' && task.params.job.backend.type === 'SD';
   }
 
   getNumTries(task: Task) {
@@ -619,12 +611,12 @@ export class TaskQueueService extends EventTarget {
   }
 }
 
-export const tasksHandlerMap = {
-  generate: new GenerateImageTaskHandler(false, false),
-  'generate-fast': new GenerateImageTaskHandler(true, false),
-  inpaint: new GenerateImageTaskHandler(false, true),
-  'remove-bg': new RemoveBgTaskHandler(),
-};
+export const taskHandlers = [
+  new GenerateImageTaskHandler(false, false),
+  new GenerateImageTaskHandler(true, false),
+  new GenerateImageTaskHandler(false, true),
+  new RemoveBgTaskHandler()
+];
 
 export const queueDummyPrompt = (
   session: Session,
@@ -769,6 +761,8 @@ export const queueInPaint = async (
 };
 
 export const queueWorkflow = (session: Session, workflow: SelectedWorkflow, scene: GenericScene, samples: number) => {
+  const [type, preset, shared, def] = session.getCommonSetup(workflow);
+  def.handler(session, scene, preset, shared, samples);
 }
 
 export const queueGenericScene = async (

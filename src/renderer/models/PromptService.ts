@@ -3,18 +3,12 @@ import { NoiseSchedule, Sampling } from '../backends/imageGen';
 import { ResourceSyncService } from './ResourceSyncService';
 import {
   InpaintScene,
-  IPreSetShared,
-  ISDPreset,
-  ISDStyleShared,
   PARR,
   PieceLibrary,
-  Preset,
-  PreSetShared,
   PromptGroupNode,
   PromptNode,
   PromptRandomNode,
   Scene,
-  SDPreset,
   Session,
 } from './types';
 
@@ -174,8 +168,8 @@ export class PromptService extends EventTarget {
 
 export const createPrompts = async (
   session: Session,
-  preset: ISDPreset,
-  shared: IPreSetShared,
+  preset: any,
+  shared: any,
   scene: Scene,
 ) => {
   const promptComb: string[] = [];
@@ -184,8 +178,7 @@ export const createPrompts = async (
     if (promptComb.length === scene.slots.length) {
       let front = toPARR(preset.frontPrompt);
       if (shared.type === 'sd_style') {
-        const styleShared = shared as ISDStyleShared;
-        front = front.concat(toPARR(styleShared.characterPrompt));
+        front = front.concat(toPARR(shared.characterPrompt));
         const newFront = [];
         const rest = [];
         const regex = /^\d+(boy|girl|other)s?$/;
@@ -244,8 +237,7 @@ export const createPrompts = async (
         right++;
       }
       if (shared.type === 'sd_style') {
-        const styleShared = shared as ISDStyleShared;
-        cur = cur.concat(toPARR(styleShared.backgroundPrompt));
+        cur = cur.concat(toPARR(shared.backgroundPrompt));
       }
       cur = cur.concat(toPARR(preset.backPrompt));
       const newNode: PromptNode = {
@@ -467,24 +459,3 @@ export function lowerPromptNode(node: PromptNode): string {
 export const defaultFPrompt = `1girl, {artist:ixy}`;
 export const defaultBPrompt = `{best quality, amazing quality, very aesthetic, highres, incredibly absurdres}`;
 export const defaultUC = `worst quality, bad quality, displeasing, very displeasing, lowres, bad anatomy, bad perspective, bad proportions, bad aspect ratio, bad face, long face, bad teeth, bad neck, long neck, bad arm, bad hands, bad ass, bad leg, bad feet, bad reflection, bad shadow, bad link, bad source, wrong hand, wrong feet, missing limb, missing eye, missing tooth, missing ear, missing finger, extra faces, extra eyes, extra eyebrows, extra mouth, extra tongue, extra teeth, extra ears, extra breasts, extra arms, extra hands, extra legs, extra digits, fewer digits, cropped head, cropped torso, cropped shoulders, cropped arms, cropped legs, mutation, deformed, disfigured, unfinished, chromatic aberration, text, error, jpeg artifacts, watermark, scan, scan artifacts`;
-
-export function getDefaultPreset(): ISDPreset {
-  return {
-    type: 'sd',
-    name: '',
-    frontPrompt: defaultFPrompt,
-    backPrompt: defaultBPrompt,
-    uc: defaultUC,
-    sampling: Sampling.KEulerAncestral,
-    promptGuidance: 5.0,
-    cfgRescale: 0.0,
-    steps: 28,
-    smea: false,
-    dyn: false,
-    noiseSchedule: NoiseSchedule.Native,
-    backend: {
-      type: 'NAI'
-    },
-    profile: undefined,
-  };
-}
