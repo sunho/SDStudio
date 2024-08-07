@@ -68,6 +68,10 @@ export class WorkFlowService {
     return this.generalFlows.find(wf => wf.getType() === type)!.def.editor;
   }
 
+  getInnerEditor(type: string) {
+    return this.generalFlows.find(wf => wf.getType() === type)!.def.innerEditor!;
+  }
+
   getDef(type: string) {
     return this.workflows.get(type)!.def;
   }

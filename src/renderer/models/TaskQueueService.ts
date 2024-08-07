@@ -55,7 +55,6 @@ export interface TaskParam {
   session: Session;
   job: Job;
   outputPath: string;
-  prompt?: PromptNode;
   scene?: GenericScene;
   onComplete?: (path: string) => void;
   nodelay?: boolean;
@@ -154,12 +153,18 @@ interface TaskQueueRun {
   lastIp?: string;
 }
 
+export interface TaskInfo {
+  name: string;
+  emoji: string;
+}
+
 interface TaskHandler {
   createTimeEstimator(): TaskTimeEstimator;
   checkTask(task: Task): boolean;
   handleTask(task: Task, run: TaskQueueRun): Promise<boolean>;
   getNumTries(task: Task): number;
   handleDelay(task: Task, numTry: number): Promise<void>;
+  getInfo(task: Task): TaskInfo
 }
 
 export const getSceneKey = (session: Session, scene: GenericScene) => {
@@ -228,7 +233,7 @@ class GenerateImageTaskHandler implements TaskHandler {
 
   async handleTask(task: Task, run: TaskQueueRun) {
     const job: SDAbstractJob = task.params.job as SDAbstractJob;
-    let prompt = lowerPromptNode(task.params.prompt!);
+    let prompt = lowerPromptNode(job.prompt!);
     console.log('lowered prompt: ' + prompt);
     const outputFilePath =
       task.params.outputPath + '/' + Date.now().toString() + '.png';
@@ -313,6 +318,14 @@ class GenerateImageTaskHandler implements TaskHandler {
     return true;
   }
 
+  getInfo(task: Task) {
+    const title = task.params.scene ? task.params.scene.name : '(none)';
+    return {
+      name: title,
+      emoji: this.inpaint ? '🖌️' : '🖼️'
+    }
+  }
+
   getNumTries(task: Task) {
     return 40;
   }
@@ -355,8 +368,15 @@ class RemoveBgTaskHandler implements TaskHandler {
   getNumTries(task: Task) {
     return 1;
   }
-}
 
+  getInfo(task: Task) {
+    const title = task.params.scene ? task.params.scene.name : '(none)';
+    return {
+      name: title,
+      emoji: '🔪'
+    }
+  }
+}
 
 export class TaskQueueService extends EventTarget {
   queue: CircularQueue<Task>;
@@ -608,6 +628,10 @@ export class TaskQueueService extends EventTarget {
       this.currentRun = undefined;
     }
     this.dispatchProgress();
+  }
+
+  getTaskInfo(task: Task) {
+    return this.handlers[task.cls].getInfo(task);
   }
 }
 

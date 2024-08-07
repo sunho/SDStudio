@@ -5,7 +5,6 @@ import { FaTimes } from 'react-icons/fa';
 import { FaRegClock } from 'react-icons/fa';
 import { taskQueueService } from '../models';
 import {
-  GenerateImageTaskParams,
   RemoveBgTaskParams,
   Task,
 } from '../models/TaskQueueService';
@@ -55,7 +54,6 @@ interface TaskProgressBarProps {
   fast?: boolean;
 }
 export const TaskProgressBar = ({ fast }: TaskProgressBarProps) => {
-  const { pushMessage } = appState;
   const key = useRef<number>(0);
   const [duration, setDuration] = useState(0);
   const [isError, setIsError] = useState(false);
@@ -116,7 +114,7 @@ export const TaskProgressBar = ({ fast }: TaskProgressBarProps) => {
     };
     const onError = (e: any) => {
       if (e.detail.task.type === 'remove-bg') {
-        pushMessage('Error: ' + e.detail.error);
+        appState.pushMessage('Error: ' + e.detail.error);
       }
       setError(e.detail.error);
       setIsError(true);
@@ -139,7 +137,7 @@ export const TaskProgressBar = ({ fast }: TaskProgressBarProps) => {
     <div
       onClick={() => {
         if (error !== '') {
-          pushMessage('Error: ' + error);
+          appState.pushMessage('Error: ' + error);
         }
       }}
     >
@@ -175,27 +173,11 @@ const TaskQueueList = ({ onClose }: { onClose?: () => void }) => {
   }, []);
 
   const getEmoji = (task: Task) => {
-    if (task.type === 'generate' || task.type === 'generate-fast') {
-      return '🖼️';
-    } else if (task.type === 'inpaint') {
-      return '🖌️';
-    } else if (task.type === 'remove-bg') {
-      return '🔪';
-    }
+    return taskQueueService.getTaskInfo(task).emoji;
   };
 
   const getTaskText = (task: Task) => {
-    if (
-      task.type === 'generate' ||
-      task.type === 'generate-fast' ||
-      task.type === 'inpaint'
-    ) {
-      const params: GenerateImageTaskParams = task.params;
-      return params.scene;
-    } else if (task.type === 'remove-bg') {
-      const params: RemoveBgTaskParams = task.params;
-      return params.scene;
-    }
+    return taskQueueService.getTaskInfo(task).name;
   };
 
   return (

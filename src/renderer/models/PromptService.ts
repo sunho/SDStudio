@@ -247,6 +247,7 @@ export const createPrompts = async (
       for (const word of cur) {
         newNode.children.push(promptService.parseWord(word, session, scene));
       }
+      console.log('newnode', newNode);
       res.push(newNode);
       return;
     }

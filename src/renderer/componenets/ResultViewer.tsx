@@ -477,16 +477,16 @@ const ResultDetailView = ({
         let base64Image = await imageService.fetchImage(paths[selectedIndex])!;
         setImage(base64Image!);
         base64Image = dataUriToBase64(base64Image!);
-        try {
-          const [prompt, seed, scale, sampler, steps, uc] =
-            await extractPromptDataFromBase64(base64Image);
+        const job = await extractPromptDataFromBase64(base64Image);
+        if (job) {
+          const {prompt, seed, promptGuidance, sampling, steps, uc} = job;
           setMiddlePrompt(prompt);
-          setSeed(seed.toString());
-          setScale(scale.toString());
-          setSampler(sampler);
+          setSeed(seed?.toString() ?? '');
+          setScale(promptGuidance.toString());
+          setSampler(sampling);
           setSteps(steps.toString());
           setUc(uc);
-        } catch (e) {
+        } else {
           setMiddlePrompt('');
           setSeed('');
           setScale('');

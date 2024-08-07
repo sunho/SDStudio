@@ -13,6 +13,8 @@ import { isMobile, imageService, sessionService, backend } from '../models';
 import { dataUriToBase64 } from '../models/ImageService';
 import { InpaintScene } from '../models/types';
 import { extractPromptDataFromBase64 } from '../models/util';
+import { appState } from '../models/AppService';
+import { observer } from 'mobx-react-lite';
 
 interface Props {
   editingScene: InpaintScene;
@@ -22,9 +24,8 @@ interface Props {
 
 let brushSizeSaved = 10;
 
-const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
-  const { pushMessage, curSession, selectedPreset, pushDialog } =
-    useContext(AppContext)!;
+const InPaintEditor = observer(({ editingScene, onConfirm, onDelete }: Props) => {
+  const { curSession, pushDialog } = appState;
 
   const resolutionOptions = Object.entries(resolutionMap)
     .map(([key, value]) => {
@@ -42,7 +43,6 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
   const [currentPrompt, setCurrentPrompt] = useState('');
   const [currentUC, setCurrentUC] = useState('');
   const [originalImage, setOriginalImage] = useState(false);
-  const [sceneName, setSceneName] = useState('');
   const [brushing, setBrushing] = useState(true);
   useEffect(() => {
     if (isMobile) {
@@ -56,28 +56,21 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
       setResolution('portrait');
       setCurrentUC('');
       setOriginalImage(false);
-      setSceneName('');
       return;
     }
     setImage('');
     setMask(undefined);
     setTaskName(editingScene.name);
     setResolution(editingScene.resolution);
-    setCurrentPrompt(editingScene.prompt);
-    setCurrentUC(editingScene.uc);
-    setOriginalImage(editingScene.originalImage ?? false);
-    setSceneName(editingScene.name);
     async function loadImage() {
       try {
-        const data = await imageService.fetchImage(
-          sessionService.getInpaintOrgPath(
-            curSession!,
-            editingScene as InPaintScene,
-          ),
+        const data = await imageService.fetchVibeImage(
+          curSession!,
+          editingScene.preset.image
         );
         setImage(dataUriToBase64(data!));
       } catch (e) {
-        pushMessage('인페인트 이미지를 불러오는데 실패했습니다.');
+        appState.pushMessage('인페인트 이미지를 불러오는데 실패했습니다.');
       }
     }
     async function loadMask() {
@@ -262,41 +255,6 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
               />
             </div>
           </div>
-          <div className="flex-none flex whitespace-nowrap gap-3 items-center">
-            <span className="gray-label">비마스크영역 편집 방지:</span>
-            <input
-              type="checkbox"
-              checked={originalImage}
-              onChange={(e) => {
-                setOriginalImage(e.target.checked);
-              }}
-            />
-          </div>
-        </div>
-        <div className="mt-auto flex-1 md:flex-none flex flex-col md:block overflow-hidden">
-          <div className={'flex-none pt-2 pb-1 gray-label'}>프롬프트</div>
-          <div className="flex-1 md:h-36 mb-2 overflow-hidden">
-            <PromptEditTextArea
-              value={currentPrompt}
-              key={sceneName}
-              onChange={(txt) => {
-                setCurrentPrompt(txt);
-              }}
-            />
-          </div>
-
-          <div className={'flex-none pt-2 pb-1 gray-label'}>
-            네거티브 프롬프트
-          </div>
-          <div className="flex-1 md:h-36 mb-2 overflow-hidden">
-            <PromptEditTextArea
-              value={currentUC}
-              key={sceneName}
-              onChange={(txt) => {
-                setCurrentUC(txt);
-              }}
-            />
-          </div>
         </div>
         <div className="flex items-center gap-2 md:gap-4 md:ml-auto pb-2 overflow-hidden w-full">
           {
@@ -362,6 +320,6 @@ const InPaintEditor = ({ editingScene, onConfirm, onDelete }: Props) => {
       </TransformWrapper>
     </div>
   );
-};
+});
 
 export default InPaintEditor;

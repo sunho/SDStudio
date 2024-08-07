@@ -41,14 +41,14 @@ export interface ModelBackend {
 export interface AbstractJob {
 }
 
-export interface SDAbstractJob extends AbstractJob {
+export interface SDAbstractJob<T> extends AbstractJob {
   cfgRescale: number;
   steps: number;
   promptGuidance: number;
   smea: boolean;
   dyn: boolean;
   sampling: string;
-  prompt: PromptNode;
+  prompt: T;
   uc: string;
   noiseSchedule: string;
   backend: ModelBackend;
@@ -56,11 +56,11 @@ export interface SDAbstractJob extends AbstractJob {
   seed?: number;
 }
 
-export interface SDJob extends SDAbstractJob {
+export interface SDJob extends SDAbstractJob<PromptNode> {
   type: 'sd';
 }
 
-export interface SDInpaintJob extends SDAbstractJob {
+export interface SDInpaintJob extends SDAbstractJob<PromptNode> {
   type: 'sd_inpaint';
   mask: string;
   image: string;
@@ -246,9 +246,7 @@ export class Scene extends AbstractScene implements IScene {
 export interface IInpaintScene extends IAbstractScene {
   type: 'inpaint';
   workflowType: string;
-  image: string;
   preset?: any;
-  shared?: any;
   sceneRef?: string;
 }
 
@@ -256,19 +254,13 @@ export class InpaintScene extends AbstractScene implements IInpaintScene {
   @observable accessor type: 'inpaint' = 'inpaint';
   @observable accessor workflowType: string = '';
   @observable accessor preset: any | undefined = undefined;
-  @observable accessor shared: any | undefined = undefined;
-  @observable accessor image: string = '';
   @observable accessor sceneRef: string | undefined = undefined;
 
   static fromJSON(json: IInpaintScene): InpaintScene {
     const scene = new InpaintScene();
-    Object.assign(scene, AbstractScene.fromJSON(json));
+    Object.assign(scene, json);
     scene.type = 'inpaint';
-    scene.workflowType = json.workflowType;
     scene.preset = json.preset && workFlowService.presetFromJSON(json.preset);
-    scene.shared = json.shared && workFlowService.sharedFromJSON(json.shared);
-    scene.image = json.image;
-    scene.sceneRef = json.sceneRef;
     return scene;
   }
 
@@ -278,8 +270,6 @@ export class InpaintScene extends AbstractScene implements IInpaintScene {
       type: this.type,
       workflowType: this.workflowType,
       preset: this.preset?.toJSON(),
-      shared: this.shared?.toJSON(),
-      image: this.image,
       sceneRef: this.sceneRef,
     };
   }
@@ -325,6 +315,7 @@ export class Session implements Serealizable {
 
   @action
   addScene(scene: GenericScene): void {
+    console.log("name", scene.name)
     if (scene.type === 'scene') {
       this.scenes.set(scene.name, scene);
     } else {
@@ -472,6 +463,7 @@ export interface SceneContextAlt {
 export interface StyleContextAlt {
   type: 'style';
   preset: any;
+  container: any
   session: Session;
 }
 

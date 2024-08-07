@@ -8,7 +8,7 @@ const AlertWindow = observer(() => {
   useEffect(() => {
     const interval = setInterval(() => {
       if (messages.length > 0) {
-        appState.messages = messages.slice(0, messages.length - 1);
+        appState.messages.splice(0, 1);
       }
     }, 5000);
     return () => {
@@ -23,7 +23,7 @@ const AlertWindow = observer(() => {
           <div>{messages[messages.length - 1]}</div>
           <button
             onClick={() => {
-              appState.messages = messages.slice(0, messages.length - 1);
+              appState.messages.splice(0, 1);
             }}
           >
             X
