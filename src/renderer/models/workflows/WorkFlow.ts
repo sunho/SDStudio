@@ -10,6 +10,7 @@ export interface WorkFlowDef {
   sharedVars: WFVar[];
   backendType: WFBackendType;
   editor: WFIElement;
+  innerEditor?: WFIElement;
   i2i: boolean;
   handler: WFHandler;
 }
@@ -88,7 +89,6 @@ export interface WFIPresetSelect extends WFIAbstract {
 
 export interface WFIProfilePresetSelect extends WFIAbstract {
   type: 'profilePresetSelect';
-  editor: WFIElement;
 }
 
 export interface WFIStack extends WFIAbstract {
@@ -327,7 +327,7 @@ export class WFWorkFlow {
   buildPreset() {
     let newVars = this.def.presetVars.concat([{ type: 'string', name: 'name', default: '' }])
     if (this.def.backendType === 'none') {
-      return materializeWFObj(this.def.type, this.def.presetVars);
+      return materializeWFObj(this.def.type, newVars);
     } else {
       newVars = newVars.concat([{ type: 'backend', name: 'backend', default: { type: 'NAI' } }])
       return materializeWFObj(this.def.type, newVars);
@@ -351,8 +351,8 @@ export function wfiPresetSelect(): WFIPresetSelect {
   return { type: 'presetSelect' };
 }
 
-export function wfiProfilePresetSelect(editor: WFIElement): WFIProfilePresetSelect {
-  return { type: 'profilePresetSelect', editor };
+export function wfiProfilePresetSelect(): WFIProfilePresetSelect {
+  return { type: 'profilePresetSelect' };
 }
 
 export function wfiStack(inputs: WFIElement[]): WFIStack {
@@ -385,6 +385,7 @@ export class WFDefBuilder {
       sharedVars: [],
       backendType: 'none',
       editor: null as any,
+      innerEditor: null as any,
       i2i: false,
       title: '',
       handler: () => {}
@@ -413,6 +414,11 @@ export class WFDefBuilder {
 
   setEditor(editor: WFIElement): this {
     this.workflowDef.editor = editor;
+    return this;
+  }
+
+  setInnerEditor(innerEditor: WFIElement): this {
+    this.workflowDef.innerEditor = innerEditor;
     return this;
   }
 

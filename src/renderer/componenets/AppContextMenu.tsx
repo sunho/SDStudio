@@ -153,7 +153,7 @@ export const AppContextMenu = observer(() => {
     });
   };
   const editStyle = async (ctx: StyleContextAlt) => {
-    sessionService.styleEditStart(ctx.preset);
+    sessionService.styleEdit(ctx.preset, ctx.container);
   };
   const handleStyleItemClick = ({ id, props }: any) => {
     if (id === 'export') {

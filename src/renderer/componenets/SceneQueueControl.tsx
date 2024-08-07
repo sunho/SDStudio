@@ -29,6 +29,7 @@ import {
   backend,
   localAIService,
   zipService,
+  workFlowService,
 } from '../models';
 import {
   getMainImage,
@@ -51,6 +52,7 @@ import {
 import { extractPromptDataFromBase64 } from '../models/util';
 import { appState, SceneSelectorItem } from '../models/AppService';
 import { observer } from 'mobx-react-lite';
+import { createInpaintPreset } from '../models/workflows/SDWorkFlow';
 
 interface SceneCellProps {
   scene: GenericScene;
@@ -436,39 +438,27 @@ const QueueControl = observer(
                 let image = await imageService.fetchImage(path);
                 image = dataUriToBase64(image!);
                 let cnt = 0;
-                const newName = () => scene.name + '_inpaint_' + cnt;
-                while (newName() in curSession!.inpaints) {
+                const newName = () => scene.name + '_inpaint_' + cnt.toString();
+                while (curSession!.inpaints.has(newName())) {
                   cnt++;
                 }
                 const name = newName();
-                let prompt, uc;
-                try {
-                  const [prompt_, seed, scale, sampler, steps, uc_] =
-                    await extractPromptDataFromBase64(image);
-                  prompt = prompt_;
-                  uc = uc_;
-                } catch (e) {
-                  prompt = '';
-                  uc = '';
-                }
-                const newScene: InpaintScene = {
+                const job = await extractPromptDataFromBase64(image);
+                const preset = job ? createInpaintPreset('', '', job) : workFlowService.buildPreset('SDInpaint');
+                preset.image = await imageService.storeVibeImage(curSession!, image);
+                const newScene = InpaintScene.fromJSON({
                   type: 'inpaint',
                   name: name,
-                  prompt,
-                  uc,
+                  workflowType: 'SDInpaint',
+                  preset,
                   resolution: scene.resolution,
                   sceneRef: scene.name,
                   imageMap: [],
+                  mains: [],
                   round: undefined,
                   game: undefined,
-                };
-                await sessionService.saveInpaintImages(
-                  curSession!,
-                  newScene,
-                  image,
-                  '',
-                );
-                curSession!.inpaints[name] = newScene;
+                });
+                curSession!.addScene(newScene);
                 close();
                 setInpaintEditScene(newScene);
                 sessionService.inPaintHook();

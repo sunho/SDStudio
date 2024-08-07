@@ -1,4 +1,5 @@
 import ExifReader from 'exifreader';
+import { SDAbstractJob, SDJob } from './types';
 
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -58,23 +59,31 @@ export async function extractExifFromBase64(base64: string) {
   return exif;
 }
 
-export async function extractPromptDataFromBase64(base64: string) {
+export async function extractPromptDataFromBase64(base64: string): Promise<SDAbstractJob<string> | undefined> {
   const exif = await extractExifFromBase64(base64);
   const comment = exif['Comment'];
   if (comment && comment.value) {
     const data = JSON.parse(comment.value as string);
+    console.log(data)
+
     if (data['prompt']) {
-      return [
-        data['prompt'],
-        data['seed'],
-        data['scale'],
-        data['sampler'],
-        data['steps'],
-        data['uc'],
-      ];
+      return {
+        prompt: data['prompt'],
+        seed: data['seed'],
+        promptGuidance: data['scale'],
+        cfgRescale: data['cfg_rescale'],
+        sampling: data['sampler'],
+        noiseSchedule: data['noise_schedule'],
+        steps: data['steps'],
+        uc: data['uc'],
+        dyn: data['sm_dyn'],
+        smea: data['sm'],
+        vibes: [],
+        backend: {type:'NAI'}
+      };
     }
   }
-  throw new Error('No prompt data found');
+  return undefined;
 }
 
 export function assert(condition: any, message?: string): asserts condition {

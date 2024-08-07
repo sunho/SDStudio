@@ -430,6 +430,10 @@ export class SessionService extends ResourceSyncService<Session> {
     );
   }
 
+  styleEdit(preset: any, container: any) {
+    this.dispatchEvent(new CustomEvent('style-edit', { detail: { preset, container } }));
+  }
+
   inPaintHook(): void {
     this.dispatchEvent(new CustomEvent('inpaint-updated', {}));
   }

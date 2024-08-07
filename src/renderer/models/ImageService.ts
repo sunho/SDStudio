@@ -2,6 +2,7 @@ import { cast } from 'mobx-state-tree';
 import { backend, isMobile, gameService, imageService } from '.';
 import { GenericScene, InpaintScene, Scene, Session } from './types';
 import { assert } from './util';
+import { v4 } from 'uuid';
 
 export const supportedImageSizes = [200, 400, 500];
 const imageDirList = ['outs', 'inpaints'];
@@ -168,6 +169,11 @@ export class ImageService extends EventTarget {
     this.dispatchEvent(
       new CustomEvent('image-cache-invalidated', { detail: { path } }),
     );
+  }
+
+  async fetchVibeImage(session:Session, name: string) {
+    const path = imageService.getVibesDir(session) + '/' + name;
+    return await this.fetchImage(path);
   }
 
   async fetchImage(path: string, holdMutex = true) {
@@ -339,6 +345,12 @@ export class ImageService extends EventTarget {
 
   getVibesDir(session: Session) {
     return 'vibes/' + session.name;
+  }
+
+  async storeVibeImage(session: Session, data: string) {
+    const path = imageService.getVibesDir(session) + '/' + v4() + '.png';
+    await backend.writeDataFile(path, data);
+    return path.split('/').pop()!;
   }
 
   async refresh(

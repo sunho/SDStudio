@@ -28,7 +28,7 @@ import { writeFileSync } from 'original-fs';
 import { windowsStore } from 'process';
 import Scrollbars from 'react-custom-scrollbars-2';
 import PromptEditTextArea from './PromptEditTextArea';
-import PreSetEditor from './PreSetEdtior';
+import PreSetEditor, { UnionPreSetEditor } from './PreSetEdtior';
 import { TaskProgressBar } from './TaskQueueControl';
 import { Resolution, resolutionMap } from '../backends/imageGen';
 import { FloatView } from './FloatView';
@@ -92,8 +92,10 @@ interface SlotEditorProps {
 }
 
 interface BigPromptEditorProps {
-  selectedPreset: Preset;
-  sceneMode: boolean;
+  type?: string;
+  shared?: any;
+  preset?: any;
+  general: boolean;
   getMiddlePrompt: () => string;
   setMiddlePrompt: (txt: string) => void;
   queuePrompt: (middle: string, callback: (path: string) => void) => void;
@@ -102,9 +104,10 @@ interface BigPromptEditorProps {
 }
 
 export const BigPromptEditor = ({
-  sceneMode,
-  selectedPreset,
-  presetMode,
+  general,
+  type,
+  shared,
+  preset,
   getMiddlePrompt,
   setMiddlePrompt,
   initialImagePath,
@@ -160,7 +163,11 @@ export const BigPromptEditor = ({
             setPromptOpen(false);
           }}
         >
-          <PreSetEditor
+          <UnionPreSetEditor
+            general={general}
+            type={type}
+            preset={preset}
+            shared={shared}
             middlePromptMode={true}
             getMiddlePrompt={getMiddlePrompt}
             onMiddlePromptChange={setMiddlePrompt}
@@ -171,7 +178,11 @@ export const BigPromptEditor = ({
         className={'overflow-auto flex-none h-1/3 md:h-auto md:w-1/3 md:h-full'}
       >
         <div className={'hidden md:block h-full '}>
-          <PreSetEditor
+          <UnionPreSetEditor
+            general={general}
+            type={type}
+            preset={preset}
+            shared={shared}
             middlePromptMode={true}
             getMiddlePrompt={getMiddlePrompt}
             onMiddlePromptChange={setMiddlePrompt}
@@ -213,7 +224,7 @@ export const BigPromptEditor = ({
                   setMainImage && setMainImage(path);
                 }}
               >
-                {sceneMode ? (
+                {general? (
                   !isMobile ? (
                     '즐겨찾기 지정'
                   ) : (
@@ -545,9 +556,7 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
 
   const BigEditor = (
     <BigPromptEditor
-      sceneMode={true}
-      presetMode={curSession!.presetMode}
-      selectedPreset={selectedPreset!}
+      general={true}
       getMiddlePrompt={getMiddlePrompt}
       setMiddlePrompt={onMiddlePromptChange}
       queuePrompt={queuePrompt}

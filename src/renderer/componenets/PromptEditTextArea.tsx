@@ -900,7 +900,7 @@ interface EditTextAreaRef {
   undo(): void;
 }
 
-const EmulatedEditTextArea = forwardRef<EditTextAreaRef, any>(
+const EmulatedEditTextArea = observer(forwardRef<EditTextAreaRef, any>(
   (
     {
       value,
@@ -1005,6 +1005,14 @@ const EmulatedEditTextArea = forwardRef<EditTextAreaRef, any>(
       },
     }));
 
+    useEffect(()=>{
+      if (!editorRef.current) return;
+      if (value !== editorModelRef.current.curText) {
+        editorModelRef.current.updateCurText(value, false);
+        editorModelRef.current.updateDOM(value, 0, false);
+      }
+    },[value]);
+
     return (
       <>
         <div ref={containerRef} className="overflow-auto h-full">
@@ -1028,9 +1036,9 @@ const EmulatedEditTextArea = forwardRef<EditTextAreaRef, any>(
       </>
     );
   },
-);
+));
 
-const NativeEditTextArea = forwardRef(
+const NativeEditTextArea = observer(forwardRef(
   (
     {
       value,
@@ -1175,6 +1183,14 @@ const NativeEditTextArea = forwardRef(
       },
     }));
 
+    useEffect(() => {
+      if (!textareaRef.current || !highlightRef.current) return;
+      const text = textareaRef.current.value;
+      highlightRef.current.innerHTML =
+        highlight(text, getCurWord(), false) + '<span></span><br>';
+      pushHistory();
+    }, [value]);
+
     return (
       <div className="w-full h-full overflow-auto">
         <div ref={containerRef} className="native-text-area-container">
@@ -1219,7 +1235,7 @@ const NativeEditTextArea = forwardRef(
       </div>
     );
   },
-);
+));
 
 const PromptEditTextArea = observer(({
   value,
