@@ -72,6 +72,10 @@ export class WorkFlowService {
     return this.generalFlows.find(wf => wf.getType() === type)!.def.innerEditor!;
   }
 
+  getI2IEditor(type: string) {
+    return this.i2iFlows.find(wf => wf.getType() === type)!.def.editor;
+  }
+
   getDef(type: string) {
     return this.workflows.get(type)!.def;
   }

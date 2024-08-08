@@ -19,31 +19,27 @@ import {
 import { FaTrash } from 'react-icons/fa';
 import { useDrag, useDrop } from 'react-dnd';
 import { getEmptyImage } from 'react-dnd-html5-backend';
-import { PieceLibrary } from '../models/types';
+import { Piece, PieceLibrary } from '../models/types';
 import { appState } from '../models/AppService';
 import { observer } from 'mobx-react-lite';
 
 interface PieceCellProps {
-  pieceName: string;
-  value: string;
+  piece: Piece;
   name: string;
   curPieceLibrary: PieceLibrary;
-  onUpdated?: () => void;
   width?: number;
   style?: React.CSSProperties;
   movePiece?: (fromIndex: string, toIndex: string) => void;
 }
-export const PieceCell = ({
-  pieceName,
-  value,
+export const PieceCell = observer(({
+  piece,
   name,
   curPieceLibrary,
-  onUpdated,
   movePiece,
   width,
   style,
 }: PieceCellProps) => {
-  const { curSession, pushDialog, pushMessage } = appState;
+  const { curSession } = appState;
 
   const containerRef = useRef<any>();
   const elementRef = createRef<any>();
@@ -66,26 +62,25 @@ export const PieceCell = ({
   const [{ isDragging }, drag, preview] = useDrag(
     {
       type: 'piece',
-      item: { pieceName, curPieceLibrary, name, value, width: curWidth },
+      item: { piece, curPieceLibrary, name, width: curWidth },
       canDrag: () => true,
       collect: (monitor) => ({
         isDragging: monitor.isDragging(),
       }),
     },
-    [curWidth, pieceName],
+    [curWidth, piece],
   );
 
   const [, drop] = useDrop(
     {
       accept: 'piece',
       hover: (draggedItem: any) => {
-        if (draggedItem.pieceName !== pieceName) {
-          movePiece!(draggedItem.pieceName, pieceName);
-          onUpdated!();
+        if (draggedItem.piece !== piece) {
+          movePiece!(draggedItem.pieceName, piece.name);
         }
       },
     },
-    [curWidth, pieceName],
+    [curWidth, piece],
   );
 
   useEffect(() => {
@@ -112,35 +107,29 @@ export const PieceCell = ({
           className="font-bold text-default"
           onDoubleClick={() => {
             if (!movePiece) return;
-            pushDialog({
+            appState.pushDialog({
               type: 'input-confirm',
               text: '조각의 이름을 변경합니다',
               callback: (name) => {
                 if (!name) return;
-                if (name in curPieceLibrary.pieces) {
-                  pushMessage('조각이 이미 존재합니다');
+                if (curPieceLibrary.pieces.find((p) => p.name === name)) {
+                  appState.pushMessage('조각이 이미 존재합니다');
                   return;
                 }
-                curPieceLibrary.pieces[name] =
-                  curPieceLibrary!.pieces[pieceName];
-                curPieceLibrary.multi[name] = curPieceLibrary!.multi[pieceName];
-                delete curPieceLibrary!.pieces[pieceName];
-                delete curPieceLibrary!.multi[pieceName];
-                onUpdated!();
+                piece!.name = name;
                 sessionService.reloadPieceLibraryDB(curSession!);
               },
             });
           }}
         >
-          {pieceName}
+          {piece.name}
         </div>
         <button
           className="ml-auto text-red-500 dark:text-white"
           onClick={() => {
             if (!movePiece) return;
-            delete curPieceLibrary.pieces[pieceName];
-            delete curPieceLibrary.multi[pieceName];
-            onUpdated!();
+            const index = curPieceLibrary.pieces.indexOf(piece);
+            curPieceLibrary.pieces.splice(index, 1);
             sessionService.reloadPieceLibraryDB(curSession!);
           }}
         >
@@ -152,42 +141,35 @@ export const PieceCell = ({
           innerRef={elementRef}
           disabled={!movePiece}
           lineHighlight
-          value={value}
+          value={piece.prompt}
           onChange={(txt) => {
-            curPieceLibrary.pieces[pieceName] = txt;
-            sessionService.markUpdated(curSession!.name);
+            piece.prompt = txt;
           }}
         />
       </div>
       <div className={'mt-1 gray-label'}>
         랜덤 줄 선택 모드:{' '}
         <input
-          checked={curPieceLibrary.multi[pieceName]}
+          checked={piece.multi}
           type="checkbox"
           onChange={(e) => {
             if (!movePiece) return;
-            curPieceLibrary.multi[pieceName] = e.target.checked;
-            onUpdated!();
+            piece.multi = e.target.checked;
           }}
         />
       </div>
     </div>
   );
-};
+});
 
 const PieceEditor = observer(() => {
-  const { curSession, pushMessage, pushDialog } = appState;
+  const { curSession } = appState;
   const [selectedPieceLibrary, setSelectedPieceLibrary] = useState<
     string | null
   >(null);
   const [curPieceLibrary, setCurPieceLibrary] = useState<PieceLibrary | null>(
     null,
   );
-  const [_, rerender] = useState<{}>({});
-  const onUpdated = () => {
-    sessionService.markUpdated(curSession!.name);
-    rerender({});
-  };
 
   useEffect(() => {
     setCurPieceLibrary(
@@ -196,19 +178,10 @@ const PieceEditor = observer(() => {
   }, [selectedPieceLibrary]);
 
   const movePiece = (from: string, to: string) => {
-    const newPieces = { ...curPieceLibrary!.pieces };
-    const keys = Object.keys(newPieces);
-    const fromIndex = keys.indexOf(from);
-    const toIndex = keys.indexOf(to);
-    const [movedKey] = keys.splice(fromIndex, 1);
-    keys.splice(toIndex, 0, movedKey);
-
-    const reorderedPieces: any = {};
-    keys.forEach((key) => {
-      reorderedPieces[key] = newPieces[key];
-    });
-    curPieceLibrary!.pieces = reorderedPieces;
-    onUpdated();
+    const fromIndex = curPieceLibrary!.pieces.findIndex((p) => p.name === from);
+    const toIndex = curPieceLibrary!.pieces.findIndex((p) => p.name === to);
+    const [movedKey] = curPieceLibrary!.pieces.splice(fromIndex, 1);
+    curPieceLibrary!.pieces.splice(toIndex, 0, movedKey);
   };
 
   return (
@@ -217,7 +190,7 @@ const PieceEditor = observer(() => {
         <DropdownSelect
           selectedOption={selectedPieceLibrary}
           menuPlacement="bottom"
-          options={Object.entries(curSession!.library).map(([name, lib]) => ({
+          options={Array.from(curSession!.library.entries()).map(([name, lib]) => ({
             label: name,
             value: name,
           }))}
@@ -229,23 +202,21 @@ const PieceEditor = observer(() => {
         <button
           className={`icon-button h-8 px-4 ml-auto`}
           onClick={async () => {
-            pushDialog({
+            appState.pushDialog({
               type: 'input-confirm',
               text: '조각그룹의 이름을 입력하세요',
               callback: async (name) => {
                 if (!name) return;
-                if (name in curSession!.library) {
-                  pushMessage('조각그룹이 이미 존재합니다');
+                if (curSession!.library.has(name)) {
+                  appState.pushMessage('조각그룹이 이미 존재합니다');
                   return;
                 }
-                curSession!.library[name] = {
-                  pieces: {},
-                  description: name,
-                  multi: {},
-                };
+                curSession!.library.set(name, PieceLibrary.fromJSON({
+                  pieces: [],
+                  name: name,
+                }));
                 setSelectedPieceLibrary(name);
                 sessionService.reloadPieceLibraryDB(curSession!);
-                onUpdated();
               },
             });
           }}
@@ -274,13 +245,12 @@ const PieceEditor = observer(() => {
           className={`icon-button h-8 px-4`}
           onClick={async () => {
             if (!selectedPieceLibrary) return;
-            pushDialog({
+            appState.pushDialog({
               type: 'confirm',
               text: '정말로 삭제하시겠습니까?',
               callback: async () => {
-                delete curSession!.library[selectedPieceLibrary!];
+                curSession!.library.delete(selectedPieceLibrary!);
                 setSelectedPieceLibrary(null);
-                onUpdated();
                 sessionService.reloadPieceLibraryDB(curSession!);
               },
             });
@@ -291,31 +261,32 @@ const PieceEditor = observer(() => {
       </div>
       {curPieceLibrary && (
         <div className="h-min-0 flex-1 overflow-auto">
-          {Object.entries(curPieceLibrary.pieces).map(([key, value]) => (
+          {Array.from(curPieceLibrary.pieces.values()).map((piece) => (
             <PieceCell
-              key={curPieceLibrary.description! + ' ' + key}
-              pieceName={key}
-              value={value}
-              name={curPieceLibrary.description}
+              key={curPieceLibrary.name + ' ' + piece.name}
+              piece={piece}
+              name={curPieceLibrary.name}
               curPieceLibrary={curPieceLibrary}
-              onUpdated={onUpdated}
               movePiece={movePiece}
             />
           ))}
           <button
             className="py-2 px-8 rounded-xl back-lllgray"
             onClick={async () => {
-              pushDialog({
+              appState.pushDialog({
                 type: 'input-confirm',
                 text: '조각의 이름을 입력하세요',
                 callback: (name) => {
                   if (!name) return;
-                  if (name in curPieceLibrary.pieces) {
-                    pushMessage('조각이 이미 존재합니다');
+                  if (curPieceLibrary.pieces.find((p) => p.name === name)) {
+                    appState.pushMessage('조각이 이미 존재합니다');
                     return;
                   }
-                  curPieceLibrary!.pieces[name] = '';
-                  onUpdated();
+                  curPieceLibrary!.pieces.push(Piece.fromJSON({
+                    name: name,
+                    prompt: '',
+                    multi: false,
+                  }))
                   sessionService.reloadPieceLibraryDB(curSession!);
                 },
               });

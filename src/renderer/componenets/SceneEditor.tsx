@@ -49,7 +49,6 @@ import {
   lowerPromptNode,
 } from '../models/PromptService';
 import { renameScene } from '../models/SessionService';
-import { queueScenePrompt } from '../models/TaskQueueService';
 import {
   Scene,
   PromptPiece,
@@ -636,7 +635,7 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
                 type: 'confirm',
                 text: '정말로 해당 씬을 삭제하시겠습니까?',
                 callback: async () => {
-                  delete curSession!.scenes[scene.name];
+                  curSession!.removeScene(scene.type, scene.name);
                   updateScene();
                   onClosed();
                   if (onDeleted) {

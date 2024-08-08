@@ -5,11 +5,11 @@ import { sessionService, backend, imageService, isMobile } from "../models";
 import { appState } from "../models/AppService";
 import { dataUriToBase64 } from "../models/ImageService";
 import { embedJSONInPNG } from "../models/SessionService";
-import { SceneContextAlt, ImageContextAlt, StyleContextAlt, ContextMenuType } from "../models/types";
+import { SceneContextAlt, ImageContextAlt, StyleContextAlt, ContextMenuType, Scene, genericSceneFromJSON } from "../models/types";
 
 export const AppContextMenu = observer(() => {
   const duplicateScene = async (ctx: SceneContextAlt) => {
-    const newScene = GenericScene.create(getSnapshot(ctx.scene));
+    const newScene = genericSceneFromJSON(ctx.scene.toJSON());
     let cnt = 0;
     const newName = () =>
       newScene.name + '_copy' + (cnt === 0 ? '' : cnt.toString());
@@ -18,40 +18,14 @@ export const AppContextMenu = observer(() => {
     }
     newScene.name = newName();
     appState.curSession!.addScene(newScene);
-    sessionService.sceneOrderChanged();
   };
   const moveSceneFront = (ctx: SceneContextAlt) => {
-    const field = ctx.sceneType === 'scene' ? 'scenes' : 'inpaints';
-    const scene = curSession![field][ctx.name];
-    if (!scene) {
-      return;
-    }
-    const newScenes: any = {};
-    newScenes[ctx.name] = scene;
-    for (const key in curSession![field]) {
-      if (key !== ctx.name) {
-        newScenes[key] = curSession![field][key];
-      }
-    }
-    appState.curSession![field] = newScenes;
-    sessionService.sceneOrderChanged();
+    const curSession = appState.curSession;
+    curSession!.moveScene(ctx.scene, 0);
   };
   const moveSceneBack = (ctx: SceneContextAlt) => {
-    const field = ctx.sceneType === 'scene' ? 'scenes' : 'inpaints';
-    const scene = curSession![field][ctx.name];
-    if (!scene) {
-      return;
-    }
-    const newScenes: any = {};
-    for (const key in curSession![field]) {
-      if (key !== ctx.name) {
-        newScenes[key] = curSession![field][key];
-      }
-    }
-    newScenes[ctx.name] = scene;
-    appState.curSession![field] = newScenes;
-    sessionService.markUpdated(curSession!.name);
-    sessionService.sceneOrderChanged();
+    const curSession = appState.curSession;
+    curSession!.moveScene(ctx.scene, curSession!.scenes.size - 1);
   };
   const handleSceneItemClick = ({ id, props }: any) => {
     const ctx = props.ctx as SceneContextAlt;
@@ -142,13 +116,8 @@ export const AppContextMenu = observer(() => {
       type: 'confirm',
       text: '정말로 삭제하시겠습니까?',
       callback: async () => {
-        if (
-          ctx.session.presets.filter((p) => p.type === 'style').length === 1
-        ) {
-          appState.pushMessage('마지막 그림체는 삭제할 수 없습니다');
-          return;
-        }
-        sessionService.markUpdated(ctx.session.name);
+        const curSession = appState.curSession;
+        curSession!.removePreset(ctx.type, ctx.preset.name);
       },
     });
   };

@@ -176,6 +176,11 @@ export class ImageService extends EventTarget {
     return await this.fetchImage(path);
   }
 
+  async writeVibeImage(session:Session, name: string, data: string) {
+    const path = imageService.getVibesDir(session) + '/' + name;
+    await backend.writeDataFile(path, data);
+  }
+
   async fetchImage(path: string, holdMutex = true) {
     if (holdMutex) await this.acquireMutex(path);
     try {
@@ -351,6 +356,10 @@ export class ImageService extends EventTarget {
     const path = imageService.getVibesDir(session) + '/' + v4() + '.png';
     await backend.writeDataFile(path, data);
     return path.split('/').pop()!;
+  }
+
+  getVibeImagePath(session: Session, name: string) {
+    return imageService.getVibesDir(session) + '/' + name;
   }
 
   async refresh(
