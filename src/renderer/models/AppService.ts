@@ -47,7 +47,7 @@ export class AppState {
     this.dialogs.push(dialog);
   }
 
-  pushDialogAsync(dialog: any) {
+  pushDialogAsync(dialog: Dialog) {
     return new Promise<string | undefined>((resolve, reject) => {
       dialog.callback = (value?: string, text?: string) => {
         resolve(value);

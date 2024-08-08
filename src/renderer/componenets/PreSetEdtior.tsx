@@ -27,15 +27,63 @@ import {
   promptService,
   taskQueueService,
   workFlowService,
+  isMobile,
 } from '../models';
 import {
   toPARR,
 } from '../models/PromptService';
-import { queueDummyPrompt } from '../models/TaskQueueService';
 import { appState } from '../models/AppService';
 import { observer } from 'mobx-react-lite';
 import { WFAbstractVar, WFIElement, WFIGroup, WFIInlineInput, WFIPush, WFIStack, WFVar, WorkFlowDef } from '../models/workflows/WorkFlow';
 import { StackFixed, StackGrow, VerticalStack } from './LayoutComponents';
+
+const ImageSelect = observer(({
+ input
+}: {
+  input: WFIInlineInput;
+}) => {
+  const { curSession } = appState;
+  const { type, preset, shared, editVibe } = useContext(WFElementContext)!;
+  const getField = () => {
+    if (input.preset)
+      return preset[input.field];
+    return shared[input.field];
+  };
+  const setField = (val: any) => {
+    if (input.preset)
+      preset[input.field] = val;
+    else
+      shared[input.field] = val;
+  };
+  return <div className="inline-flex md:flex gap-3 items-center flex-none text-eplsis overflow-hidden gap-3 mb-1">
+    <span className="gray-label">{input.label}: </span>
+    <div className="w-24 md:w-48">
+      <FileUploadBase64
+        onFileSelect={async (file: string) => {
+          if (!getField()) {
+            const path = await imageService.storeVibeImage(curSession!, file);
+            setField(path);
+          } else {
+            await imageService.writeVibeImage(curSession!, getField(), file);
+          }
+        }}
+      ></FileUploadBase64>
+    </div>
+    {!isMobile && (
+      <button
+        className={`round-button back-sky`}
+        onClick={() => {
+          if (!getField()) return;
+          const path = imageService.getVibeImagePath(curSession!, getField());
+          backend.openImageEditor(path);
+          backend.watchImage(path);
+        }}
+      >
+        {input.label} 편집
+      </button>
+    )}
+  </div>
+});
 
 const VibeImage = ({
   path,
@@ -81,8 +129,7 @@ export const VibeEditor = observer(({ disabled }: VibeEditorProps) => {
   }
   const vibeChange = async (vibe: string) => {
     if (!vibe) return;
-    const path = imageService.getVibesDir(curSession!) + '/' + v4() + '.png';
-    await backend.writeDataFile(path, vibe);
+    const path = imageService.storeVibeImage(curSession!, vibe);
     getField().push({ path: path, info: 1.0, strength: 0.6 });
   };
 
@@ -662,10 +709,12 @@ const WFRInline = observer(({element}:WFElementProps) => {
   if (curGroup !== showGroup || editVibe != undefined) {
     return <></>
   }
+  const key = `${type}_${preset.name}_${input.field}`;
   switch (field.type) {
   case 'prompt':
     return <EditorField label={input.label} full={input.flex === 'flex-1'}>
         <PromptEditTextArea
+          key={key}
           value={getField()}
           disabled={false}
           onChange={setField}
@@ -675,23 +724,27 @@ const WFRInline = observer(({element}:WFElementProps) => {
     return <InlineEditorField label={input.label}>
       <NullIntInput label={input.label} value={getField()} disabled={false} onChange={
         (val) => setField(val)
-      }/>
+      }
+          key={key}
+      />
     </InlineEditorField>
   case 'vibeSet':
-    return <VibeButton input={input}/>
+    return <VibeButton input={input} key={key}/>
   case 'bool':
-    return <InlineEditorField label={input.label}>
+    return <InlineEditorField label={input.label} >
       <input
+        key={key}
         type="checkbox"
         checked={getField()}
         onChange={(e) => setField(e.target.checked)}
       />
     </InlineEditorField>
   case 'int':
-    return <IntSliderInput label={input.label} value={getField()} onChange={setField} disabled={false} min={field.min} max={field.max} step={field.step} />
+    return <IntSliderInput label={input.label} value={getField()} onChange={setField} disabled={false} min={field.min} max={field.max} step={field.step} key={key}/>
   case 'sampling':
     return  <InlineEditorField label={input.label}>
       <DropdownSelect
+        key={key}
         selectedOption={getField()}
         disabled={false}
         menuPlacement="top"
@@ -707,6 +760,7 @@ const WFRInline = observer(({element}:WFElementProps) => {
   case 'noiseSchedule':
     return <InlineEditorField label={input.label}>
       <DropdownSelect
+        key={key}
         selectedOption={getField()}
         disabled={false}
         menuPlacement="top"
@@ -719,6 +773,8 @@ const WFRInline = observer(({element}:WFElementProps) => {
         }}
       />
     </InlineEditorField>
+  case 'image':
+    return <ImageSelect input={input} key={key}/>
   }
   return <InlineEditorField label={input.label}>
     asdf
@@ -730,12 +786,12 @@ interface ImplProps {
   shared: any;
   preset: any;
   middlePromptMode: boolean;
-  general: boolean;
+  element: WFIElement;
   getMiddlePrompt?: () => string;
   onMiddlePromptChange?: (txt: string) => void;
 }
 
-export const PreSetEditorImpl = observer(({type, shared, preset, middlePromptMode, getMiddlePrompt, onMiddlePromptChange, general}: ImplProps) => {
+export const PreSetEditorImpl = observer(({type, shared, preset, element, middlePromptMode, getMiddlePrompt, onMiddlePromptChange }: ImplProps) => {
   const [editVibe, setEditVibe] = useState<WFIInlineInput|undefined>(undefined);
   const [showGroup, setShowGroup] = useState<string | undefined>(undefined);
   useEffect(() => {
@@ -757,7 +813,7 @@ export const PreSetEditorImpl = observer(({type, shared, preset, middlePromptMod
         <WFGroupContext.Provider value={{}}>
           <VibeEditor disabled={false}/>
           <WFRenderElement
-            element={general?workFlowService.getGeneralEditor(type):workFlowService.getInnerEditor(type)}
+            element={element}
           />
         </WFGroupContext.Provider>
       </WFElementContext.Provider>
@@ -768,7 +824,9 @@ interface InnerProps {
   type: string;
   shared: any;
   preset: any;
+  element: WFIElement;
   middlePromptMode: boolean;
+  nopad?: boolean;
   getMiddlePrompt?: () => string;
   onMiddlePromptChange?: (txt: string) => void;
 }
@@ -783,16 +841,17 @@ interface UnionProps {
   onMiddlePromptChange?: (txt: string) => void;
 }
 
-export const InnerPreSetEditor = observer(({type, shared, preset, middlePromptMode, getMiddlePrompt, onMiddlePromptChange}: InnerProps) => {
-  return <VerticalStack className="p-3">
+export const InnerPreSetEditor = observer(({type, shared, preset, element, middlePromptMode, getMiddlePrompt, onMiddlePromptChange, nopad}: InnerProps) => {
+  return <VerticalStack className={nopad ? "" : "p-3"}>
     <PreSetEditorImpl
       type={type}
       shared={shared}
       preset={preset}
+      element={element}
       middlePromptMode={middlePromptMode}
       getMiddlePrompt={getMiddlePrompt}
       onMiddlePromptChange={onMiddlePromptChange}
-      general={false}/>
+      />
   </VerticalStack>
 });
 
@@ -855,9 +914,10 @@ const PreSetEditor = observer(({
       shared={shared}
       preset={presets!.find(x=>x.name === curSession.selectedWorkflow!.presetName)!}
       middlePromptMode={middlePromptMode}
+      element={workFlowService.getGeneralEditor(workflowType)}
       getMiddlePrompt={getMiddlePrompt}
       onMiddlePromptChange={onMiddlePromptChange}
-      general={true}/>
+      />
   </VerticalStack>
 });
 
@@ -878,6 +938,7 @@ export const UnionPreSetEditor = observer(({
       type={type!}
       shared={shared!}
       preset={preset!}
+      element={workFlowService.getInnerEditor(type!)}
       middlePromptMode={middlePromptMode}
       getMiddlePrompt={getMiddlePrompt}
       onMiddlePromptChange={onMiddlePromptChange}/>

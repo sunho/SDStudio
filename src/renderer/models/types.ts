@@ -275,6 +275,13 @@ export class InpaintScene extends AbstractScene implements IInpaintScene {
   }
 }
 
+export function genericSceneFromJSON(json: IGenericScene): GenericScene {
+  if (json.type === 'scene') {
+    return Scene.fromJSON(json);
+  }
+  return InpaintScene.fromJSON(json);
+}
+
 export type IGenericScene = IScene | IInpaintScene;
 export type GenericScene = Scene | InpaintScene;
 
@@ -336,6 +343,21 @@ export class Session implements Serealizable {
       this.scenes.delete(name);
     } else {
       this.inpaints.delete(name);
+    }
+  }
+
+  moveScene(targetScene: GenericScene, index: number) {
+    const scenes = this.getScenes(targetScene.type);
+    const reorderedScenes = scenes.filter((scene) => scene !== targetScene);
+    reorderedScenes.splice(index, 0, targetScene);
+    const final = reorderedScenes.reduce((acc, scene) => {
+      acc.set(scene.name, scene);
+      return acc;
+    }, new Map()) as any;
+    if (targetScene.type === 'scene') {
+      this.scenes = final;
+    } else {
+      this.inpaints = final;
     }
   }
 

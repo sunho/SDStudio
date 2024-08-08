@@ -9,12 +9,13 @@ import PromptEditTextArea from './PromptEditTextArea';
 import { Resolution, resolutionMap } from '../backends/imageGen';
 import { FaArrowsAlt, FaBrush, FaPaintBrush, FaUndo } from 'react-icons/fa';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
-import { isMobile, imageService, sessionService, backend } from '../models';
+import { isMobile, imageService, sessionService, backend, workFlowService } from '../models';
 import { dataUriToBase64 } from '../models/ImageService';
 import { InpaintScene } from '../models/types';
 import { extractPromptDataFromBase64 } from '../models/util';
 import { appState } from '../models/AppService';
 import { observer } from 'mobx-react-lite';
+import { InnerPreSetEditor } from './PreSetEdtior';
 
 interface Props {
   editingScene: InpaintScene;
@@ -37,12 +38,7 @@ const InPaintEditor = observer(({ editingScene, onConfirm, onDelete }: Props) =>
   const [width, setWidth] = useState(0);
   const [height, setHeight] = useState(0);
   const [mask, setMask] = useState<string | undefined>(undefined);
-  const [resolution, setResolution] = useState('portrait');
-  const [taskName, setTaskName] = useState('');
   const [brushSize, setBrushSize] = useState(brushSizeSaved);
-  const [currentPrompt, setCurrentPrompt] = useState('');
-  const [currentUC, setCurrentUC] = useState('');
-  const [originalImage, setOriginalImage] = useState(false);
   const [brushing, setBrushing] = useState(true);
   useEffect(() => {
     if (isMobile) {
@@ -51,17 +47,10 @@ const InPaintEditor = observer(({ editingScene, onConfirm, onDelete }: Props) =>
     if (!editingScene) {
       setImage('');
       setMask(undefined);
-      setTaskName('');
-      setCurrentPrompt('');
-      setResolution('portrait');
-      setCurrentUC('');
-      setOriginalImage(false);
       return;
     }
     setImage('');
     setMask(undefined);
-    setTaskName(editingScene.name);
-    setResolution(editingScene.resolution);
     async function loadImage() {
       try {
         const data = await imageService.fetchVibeImage(
@@ -107,17 +96,12 @@ const InPaintEditor = observer(({ editingScene, onConfirm, onDelete }: Props) =>
       .catch(() => {});
   }, [image]);
 
-  const handleTaskNameChange = (event: any) => {
-    setTaskName(event.target.value);
-  };
-
   const deleteScene = () => {
     pushDialog({
       type: 'confirm',
       text: '정말로 해당 씬을 삭제하시겠습니까?',
       callback: () => {
-        delete curSession!.inpaints[editingScene!.name];
-        sessionService.markUpdated(curSession!.name);
+        curSession!.inpaints.delete(editingScene!.name);
         onConfirm();
         onDelete();
       },
@@ -125,51 +109,8 @@ const InPaintEditor = observer(({ editingScene, onConfirm, onDelete }: Props) =>
   };
 
   const confirm = async () => {
-    if (image === '') {
-      pushMessage('이미지를 넣어주세요.');
-      return;
-    }
-    const mask = brushTool.current!.getMaskBase64();
-    if (editingScene) {
-      editingScene.resolution = resolution;
-      editingScene.prompt = currentPrompt;
-      editingScene.uc = currentUC;
-      editingScene.originalImage = originalImage;
-      await sessionService.saveInpaintImages(
-        curSession!,
-        editingScene,
-        image,
-        mask,
-      );
-      sessionService.markUpdated(curSession!.name);
-      onConfirm();
-    } else {
-      if (!taskName || taskName === '') return;
-      if (taskName in curSession!.inpaints) {
-        pushMessage('이미 존재하는 씬 이름입니다.');
-        return;
-      }
 
-      const newScene: InpaintScene = {
-        type: 'inpaint',
-        name: taskName,
-        prompt: currentPrompt,
-        uc: currentUC,
-        resolution: resolution,
-        imageMap: [],
-        round: undefined,
-        game: undefined,
-      };
-      curSession!.inpaints[taskName] = newScene;
-      await sessionService.saveInpaintImages(
-        curSession!,
-        newScene,
-        image,
-        mask,
-      );
-      sessionService.markUpdated(curSession!.name);
-      onConfirm();
-    }
+    onConfirm();
   };
 
   const brushTool = useRef<BrushToolRef | null>(null);
@@ -182,9 +123,8 @@ const InPaintEditor = observer(({ editingScene, onConfirm, onDelete }: Props) =>
             <input
               type="text"
               className="gray-input flex-1"
-              value={taskName}
-              disabled={!!editingScene}
-              onChange={handleTaskNameChange}
+              value={editingScene.name}
+              onChange={(e) => { editingScene.name = e.target.value; }}
             />
             {editingScene && (
               <button className={`round-button back-red`} onClick={deleteScene}>
@@ -195,47 +135,13 @@ const InPaintEditor = observer(({ editingScene, onConfirm, onDelete }: Props) =>
               저장
             </button>
           </div>
-          <div className="inline-flex md:flex gap-3 items-center flex-none text-eplsis overflow-hidden gap-3 mb-1">
-            <span className="gray-label">이미지: </span>
-            <div className="w-24 md:w-48">
-              <FileUploadBase64
-                onFileSelect={async (file: string) => {
-                  try {
-                    const [prompt, seed, scale, sampler, steps, uc] =
-                      await extractPromptDataFromBase64(file);
-                    setImage(file);
-                    setCurrentPrompt(prompt);
-                    setCurrentUC(uc);
-                  } catch (e) {
-                    pushMessage('NAI 에서 생성된 이미지가 아닙니다.');
-                    setImage(file);
-                  }
-                }}
-              ></FileUploadBase64>
-            </div>
-            {!isMobile && (
-              <button
-                className={`round-button back-sky`}
-                onClick={() => {
-                  const path = sessionService.getInpaintOrgPath(
-                    curSession!,
-                    editingScene as InpaintScene,
-                  );
-                  backend.openImageEditor(path);
-                  backend.watchImage(path);
-                }}
-              >
-                이미지 편집
-              </button>
-            )}
-          </div>
           <div className="flex-none inline-flex md:flex whitespace-nowrap gap-3 items-center">
             {!isMobile && <span className="gray-label">해상도:</span>}
             <div className="w-36">
               <DropdownSelect
                 options={resolutionOptions}
                 menuPlacement="bottom"
-                selectedOption={resolution}
+                selectedOption={editingScene.resolution}
                 onSelect={(opt) => {
                   if (
                     opt.value.startsWith('large') ||
@@ -245,16 +151,26 @@ const InPaintEditor = observer(({ editingScene, onConfirm, onDelete }: Props) =>
                       type: 'confirm',
                       text: '해당 해상도는 Anlas를 소모합니다 (유로임) 계속하시겠습니까?',
                       callback: () => {
-                        setResolution(opt.value as Resolution);
+                        editingScene.resolution = opt.value as Resolution;
                       },
                     });
                   } else {
-                    setResolution(opt.value as Resolution);
+                    editingScene.resolution = opt.value as Resolution;
                   }
                 }}
               />
             </div>
           </div>
+        </div>
+        <div className="flex-1">
+          <InnerPreSetEditor
+            nopad
+            type={editingScene.workflowType}
+            preset={editingScene.preset}
+            shared={undefined}
+            element={workFlowService.getI2IEditor(editingScene.workflowType)}
+            middlePromptMode={false}
+          />
         </div>
         <div className="flex items-center gap-2 md:gap-4 md:ml-auto pb-2 overflow-hidden w-full">
           {

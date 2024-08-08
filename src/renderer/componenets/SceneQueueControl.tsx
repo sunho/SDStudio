@@ -215,8 +215,7 @@ export const SceneCell = observer(({
           props: {
             ctx: {
               type: 'scene',
-              sceneType: scene.type,
-              name: scene.name,
+              scene: scene,
             },
           },
         });
@@ -682,19 +681,7 @@ const QueueControl = observer(
     >(undefined);
 
     const moveScene = (draggingScene: GenericScene, targetIndex: number) => {
-      console.log(draggingScene, targetIndex);
-      const scenes = curSession.getScenes(type);
-      const reorderedScenes = scenes.filter((scene) => scene !== draggingScene);
-      reorderedScenes.splice(targetIndex, 0, draggingScene);
-      const final = reorderedScenes.reduce((acc, scene, index) => {
-        acc.set(scene.name, scene);
-        return acc;
-      }, new Map()) as any;
-      if (type === 'scene') {
-        curSession.scenes = final;
-      } else {
-        curSession.inpaints = final;
-      }
+      curSession!.moveScene(draggingScene, targetIndex);
     };
 
     return (
