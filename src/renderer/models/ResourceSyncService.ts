@@ -34,6 +34,7 @@ export abstract class ResourceSyncService<
 
   abstract createDefault(name: string): T | Promise<T>;
   abstract getHook(rc: T, name: string): Promise<void>;
+  abstract migrate(rc: any): any| Promise<any>;
 
   async add(name: string) {
     if (name in this.resources) {
@@ -79,7 +80,9 @@ export abstract class ResourceSyncService<
         const str = await backend.readFile(
           this.resourceDir + '/' + name + '.json',
         );
-        this.resources[name] = this.dummy!.fromJSON(JSON.parse(str));
+        let obj = JSON.parse(str);
+        obj = await this.migrate(obj);
+        this.resources[name] = this.dummy!.fromJSON(obj);
         const resource = this.resources[name];
         await this.getHook(this.resources[name], name);
         const dispose = reaction(
@@ -129,11 +132,12 @@ export abstract class ResourceSyncService<
     }
   }
 
-  async createFrom(name: string, value: T) {
+  async createFrom(name: string, value: any) {
     if (name in this.resources) {
       throw new Error('Resource already exists');
     }
-    this.resources[name] = value.fromJSON(value);
+    value = await this.migrate(value);
+    this.resources[name] = this.dummy!.fromJSON(value);
     await this.getHook(this.resources[name], name);
     this.#markUpdated(name);
     await this.update();

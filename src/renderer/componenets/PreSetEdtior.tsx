@@ -482,7 +482,7 @@ const ProfilePreSetSelect = observer(({}) => {
                 props: {
                   ctx: {
                     type: 'style',
-                    preset: preset,
+                    preset: x,
                     session: curSession!,
                     container: containerRef.current!,
                   },
