@@ -35,18 +35,23 @@ export class SessionService extends ResourceSyncService<Session> {
       name: name,
       presets: {},
       inpaints: {},
-      scenes: Object.fromEntries([['default', {
-          type: 'scene',
-          name: 'default',
-          resolution: 'portrait',
-          slots: [[{prompt:'', id: v4()}]],
-          game: undefined,
-          round: undefined,
-          imageMap: [],
-          mains: [],
-      }]]),
+      scenes: Object.fromEntries([
+        [
+          'default',
+          {
+            type: 'scene',
+            name: 'default',
+            resolution: 'portrait',
+            slots: [[{ prompt: '', id: v4() }]],
+            game: undefined,
+            round: undefined,
+            imageMap: [],
+            mains: [],
+          },
+        ],
+      ]),
       library: {},
-      presetShareds: {}
+      presetShareds: {},
     });
     // await importDefaultPresets(newSession);
     return newSession;
@@ -375,10 +380,12 @@ export class SessionService extends ResourceSyncService<Session> {
       if (!scene.imageMap) {
         scene.imageMap = cast([]);
         if (scene.game) {
-          scene.game = cast(scene.game.map((x: any) => ({
-            rank: x.rank,
-            path: x.path.split('/').pop()!,
-          })));
+          scene.game = cast(
+            scene.game.map((x: any) => ({
+              rank: x.rank,
+              path: x.path.split('/').pop()!,
+            })),
+          );
         }
         if (scene.round) {
           scene.round.players = scene.round.players.map((x: any) => ({
@@ -431,7 +438,9 @@ export class SessionService extends ResourceSyncService<Session> {
   }
 
   styleEdit(preset: any, container: any) {
-    this.dispatchEvent(new CustomEvent('style-edit', { detail: { preset, container } }));
+    this.dispatchEvent(
+      new CustomEvent('style-edit', { detail: { preset, container } }),
+    );
   }
 
   configChanged(): void {

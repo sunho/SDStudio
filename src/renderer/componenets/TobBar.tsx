@@ -65,7 +65,7 @@ const TobBar = () => {
         )}
       </p>
       <div className="ml-auto block md:hidden">
-        <SessionSelect/>
+        <SessionSelect />
       </div>
       {settings && (
         <FloatView

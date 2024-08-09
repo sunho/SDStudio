@@ -4,9 +4,7 @@ import { FaPlay, FaRegCalendarTimes, FaStop } from 'react-icons/fa';
 import { FaTimes } from 'react-icons/fa';
 import { FaRegClock } from 'react-icons/fa';
 import { taskQueueService } from '../models';
-import {
-  Task,
-} from '../models/TaskQueueService';
+import { Task } from '../models/TaskQueueService';
 import { appState } from '../models/AppService';
 import { observer } from 'mobx-react-lite';
 
@@ -211,7 +209,7 @@ const TaskQueueList = ({ onClose }: { onClose?: () => void }) => {
   );
 };
 
-const TaskQueueControl = observer(({ }) => {
+const TaskQueueControl = observer(({}) => {
   const [_, rerender] = useState<{}>({});
   const [showList, setShowList] = useState(false);
   useEffect(() => {

@@ -164,12 +164,12 @@ interface TaskHandler {
   handleTask(task: Task, run: TaskQueueRun): Promise<boolean>;
   getNumTries(task: Task): number;
   handleDelay(task: Task, numTry: number): Promise<void>;
-  getInfo(task: Task): TaskInfo
+  getInfo(task: Task): TaskInfo;
 }
 
 export const getSceneKey = (session: Session, scene: GenericScene) => {
   return session.name + '/' + scene.type + '/' + scene.name;
-}
+};
 
 async function handleNAIDelay(numTry: number, fast: boolean) {
   if (numTry === 0 && fast) {
@@ -232,7 +232,8 @@ class GenerateImageTaskHandler implements TaskHandler {
   }
 
   async handleTask(task: Task, run: TaskQueueRun) {
-    const job: SDAbstractJob<PromptNode> = task.params.job as SDAbstractJob<PromptNode>;
+    const job: SDAbstractJob<PromptNode> = task.params
+      .job as SDAbstractJob<PromptNode>;
     let prompt = lowerPromptNode(job.prompt!);
     console.log('lowered prompt: ' + prompt);
     const outputFilePath =
@@ -309,9 +310,17 @@ class GenerateImageTaskHandler implements TaskHandler {
 
     if (task.params.scene != null) {
       if (this.inpaint) {
-        imageService.onAddInPaint(task.params.session, task.params.scene.name, outputFilePath);
+        imageService.onAddInPaint(
+          task.params.session,
+          task.params.scene.name,
+          outputFilePath,
+        );
       } else {
-        imageService.onAddImage(task.params.session, task.params.scene.name, outputFilePath);
+        imageService.onAddImage(
+          task.params.session,
+          task.params.scene.name,
+          outputFilePath,
+        );
       }
     }
 
@@ -322,8 +331,8 @@ class GenerateImageTaskHandler implements TaskHandler {
     const title = task.params.scene ? task.params.scene.name : '(none)';
     return {
       name: title,
-      emoji: this.inpaint ? '🖌️' : '🖼️'
-    }
+      emoji: this.inpaint ? '🖌️' : '🖼️',
+    };
   }
 
   getNumTries(task: Task) {
@@ -349,12 +358,19 @@ class RemoveBgTaskHandler implements TaskHandler {
     const job = task.params.job as AugmentJob;
     await localAIService.removeBg(job.image!, outputFilePath);
     if (task.params.onComplete) task.params.onComplete(outputFilePath);
-    imageService.onAddImage(task.params.session, task.params.scene!.name, outputFilePath);
+    imageService.onAddImage(
+      task.params.session,
+      task.params.scene!.name,
+      outputFilePath,
+    );
     return true;
   }
 
   checkTask(task: Task): boolean {
-    return task.params.job.type === 'augment' && task.params.job.backend.type === 'SD';
+    return (
+      task.params.job.type === 'augment' &&
+      task.params.job.backend.type === 'SD'
+    );
   }
 
   getNumTries(task: Task) {
@@ -365,8 +381,8 @@ class RemoveBgTaskHandler implements TaskHandler {
     const title = task.params.scene ? task.params.scene.name : '(none)';
     return {
       name: title,
-      emoji: '🔪'
-    }
+      emoji: '🔪',
+    };
   }
 }
 
@@ -432,7 +448,9 @@ export class TaskQueueService extends EventTarget {
     this.taskSet[task.id!] = true;
     this.groupStats[task.cls].total += task.total;
     this.groupStats[task.cls].done += task.done;
-    const sceneKey = task.params.scene ? getSceneKey(task.params.session, task.params.scene) : '';
+    const sceneKey = task.params.scene
+      ? getSceneKey(task.params.session, task.params.scene)
+      : '';
     if (!(sceneKey in this.sceneStats)) {
       this.sceneStats[sceneKey] = { done: 0, total: 0 };
     }
@@ -442,7 +460,7 @@ export class TaskQueueService extends EventTarget {
   }
 
   getTaskCls(task: Task) {
-    for (let i=0;i<this.handlers.length;i++) {
+    for (let i = 0; i < this.handlers.length; i++) {
       if (this.handlers[i].checkTask(task)) {
         return i;
       }
@@ -538,7 +556,9 @@ export class TaskQueueService extends EventTarget {
   removeTaskInternal(task: Task) {
     this.groupStats[task.cls].done -= task.done;
     this.groupStats[task.cls].total -= task.total;
-    const sceneKey = task.params.scene ? getSceneKey(task.params.session, task.params.scene) : '';
+    const sceneKey = task.params.scene
+      ? getSceneKey(task.params.session, task.params.scene)
+      : '';
     if (sceneKey in this.sceneStats) {
       this.sceneStats[sceneKey].done -= task.done;
       this.sceneStats[sceneKey].total -= task.total;
@@ -582,7 +602,9 @@ export class TaskQueueService extends EventTarget {
             task.done++;
             if (task.id! in this.taskSet) {
               this.groupStats[task.cls].done++;
-              const sceneKey = task.params.scene ? getSceneKey(task.params.session, task.params.scene) : '';
+              const sceneKey = task.params.scene
+                ? getSceneKey(task.params.session, task.params.scene)
+                : '';
               this.sceneStats[sceneKey].done++;
             }
           }
@@ -631,10 +653,15 @@ export const taskHandlers = [
   new GenerateImageTaskHandler(false, false),
   new GenerateImageTaskHandler(true, false),
   new GenerateImageTaskHandler(false, true),
-  new RemoveBgTaskHandler()
+  new RemoveBgTaskHandler(),
 ];
 
-export const queueRemoveBg = (session: Session, scene: GenericScene, image: string, onComplete?: (path: string) => void) => {
+export const queueRemoveBg = (
+  session: Session,
+  scene: GenericScene,
+  image: string,
+  onComplete?: (path: string) => void,
+) => {
   const job: AugmentJob = {
     type: 'augment',
     image: image,
@@ -648,20 +675,38 @@ export const queueRemoveBg = (session: Session, scene: GenericScene, image: stri
     job,
     outputPath: imageService.getOutputDir(session, scene),
     scene,
-    onComplete
+    onComplete,
   };
   taskQueueService.addTask(params, 1);
 };
 
-export const queueWorkflow = async (session: Session, workflow: SelectedWorkflow, scene: GenericScene, samples: number) => {
+export const queueWorkflow = async (
+  session: Session,
+  workflow: SelectedWorkflow,
+  scene: GenericScene,
+  samples: number,
+) => {
   const [type, preset, shared, def] = session.getCommonSetup(workflow);
   const prompts = await def.createPrompt!(session, scene, preset, shared);
   for (const prompt of prompts) {
     await def.handler(session, scene, prompt, preset, shared, samples);
   }
-}
+};
 
-export const queueI2IWorkflow = async (session: Session, type: string, preset: any, scene: GenericScene, samples: number) => {
+export const queueI2IWorkflow = async (
+  session: Session,
+  type: string,
+  preset: any,
+  scene: GenericScene,
+  samples: number,
+) => {
   const def = workFlowService.getDef(type);
-  await def.handler(session, scene, {type:'text',text:''}, preset, undefined, samples);
-}
+  await def.handler(
+    session,
+    scene,
+    { type: 'text', text: '' },
+    preset,
+    undefined,
+    samples,
+  );
+};

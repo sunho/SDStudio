@@ -12,7 +12,7 @@ interface TournamentProps {
 }
 
 const Tournament = observer(({ scene, path }: TournamentProps) => {
-  const { curSession, } = appState;
+  const { curSession } = appState;
   const [images, setImages] = useState<string[]>([]);
   const [players, setPlayers] = useState<string[]>([]);
   const lock = useRef(false);
@@ -97,8 +97,7 @@ const Tournament = observer(({ scene, path }: TournamentProps) => {
     gameService.gameUpdated(curSession!, scene);
     sessionUpdated();
   };
-  const sessionUpdated = () => {
-  };
+  const sessionUpdated = () => {};
   useEffect(() => {
     setPlayers([]);
     setImages([]);

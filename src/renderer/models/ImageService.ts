@@ -171,12 +171,12 @@ export class ImageService extends EventTarget {
     );
   }
 
-  async fetchVibeImage(session:Session, name: string) {
+  async fetchVibeImage(session: Session, name: string) {
     const path = imageService.getVibesDir(session) + '/' + name;
     return await this.fetchImage(path);
   }
 
-  async writeVibeImage(session:Session, name: string, data: string) {
+  async writeVibeImage(session: Session, name: string, data: string) {
     const path = imageService.getVibesDir(session) + '/' + name;
     await backend.writeDataFile(path, data);
     await imageService.invalidateCache(path);
@@ -392,7 +392,7 @@ export class ImageService extends EventTarget {
     scene.imageMap = newImageMap;
     target[session.name][scene.name] = [...scene.imageMap];
     if (scene.type === 'scene') {
-      scene.mains =  scene.mains.filter((x: string) => x in fileSet);
+      scene.mains = scene.mains.filter((x: string) => x in fileSet);
     }
     if (emitEvent)
       this.dispatchEvent(

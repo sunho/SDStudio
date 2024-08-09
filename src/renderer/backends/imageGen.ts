@@ -74,7 +74,13 @@ export interface ImageGenInput {
   originalImage?: boolean;
 }
 
-export type AugmentMethod = 'lineart' | 'colorize' | 'bg-removal' | 'declutter' | 'emotion' | 'sketch';
+export type AugmentMethod =
+  | 'lineart'
+  | 'colorize'
+  | 'bg-removal'
+  | 'declutter'
+  | 'emotion'
+  | 'sketch';
 
 export interface ImageAugmentInput {
   method: AugmentMethod;

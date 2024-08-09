@@ -1,10 +1,33 @@
-import { NoiseSchedule, Sampling } from "../../backends/imageGen";
-import { WFDefBuilder, wfiGroup, wfiInlineInput, wfiMiddlePlaceholderInput, wfiPresetSelect, wfiProfilePresetSelect, wfiPush, wfiStack, WFVarBuilder } from "./WorkFlow";
-import { Session, GenericScene, SDJob, Scene, SDAbstractJob, PromptNode, SDInpaintJob } from "../types";
-import { createSDPrompts, defaultBPrompt, defaultFPrompt, defaultUC } from "../PromptService";
-import { imageService, taskQueueService, workFlowService } from "..";
-import { TaskParam } from "../TaskQueueService";
-import { dataUriToBase64 } from "../ImageService";
+import { NoiseSchedule, Sampling } from '../../backends/imageGen';
+import {
+  WFDefBuilder,
+  wfiGroup,
+  wfiInlineInput,
+  wfiMiddlePlaceholderInput,
+  wfiPresetSelect,
+  wfiProfilePresetSelect,
+  wfiPush,
+  wfiStack,
+  WFVarBuilder,
+} from './WorkFlow';
+import {
+  Session,
+  GenericScene,
+  SDJob,
+  Scene,
+  SDAbstractJob,
+  PromptNode,
+  SDInpaintJob,
+} from '../types';
+import {
+  createSDPrompts,
+  defaultBPrompt,
+  defaultFPrompt,
+  defaultUC,
+} from '../PromptService';
+import { imageService, taskQueueService, workFlowService } from '..';
+import { TaskParam } from '../TaskQueueService';
+import { dataUriToBase64 } from '../ImageService';
 
 const SDImageGenPreset = new WFVarBuilder()
   .addIntVar('cfgRescale', 0, 1, 0.01, 0)
@@ -72,7 +95,16 @@ const SDImageGenEasyInnerUI = wfiStack([
   ]),
 ]);
 
-const SDImageGenHandler = async (session: Session, scene: GenericScene, prompt: PromptNode, preset: any, shared: any, samples: number, onComplete?: (img: string) => void, nodelay?: boolean) => {
+const SDImageGenHandler = async (
+  session: Session,
+  scene: GenericScene,
+  prompt: PromptNode,
+  preset: any,
+  shared: any,
+  samples: number,
+  onComplete?: (img: string) => void,
+  nodelay?: boolean,
+) => {
   const job: SDJob = {
     type: 'sd',
     cfgRescale: preset.cfgRescale,
@@ -99,9 +131,14 @@ const SDImageGenHandler = async (session: Session, scene: GenericScene, prompt: 
   taskQueueService.addTask(param, samples);
 };
 
-const SDCreatePrompt = async (session: Session, scene: GenericScene, preset: any, shared: any) => {
+const SDCreatePrompt = async (
+  session: Session,
+  scene: GenericScene,
+  preset: any,
+  shared: any,
+) => {
   return await createSDPrompts(session, preset, shared, scene as Scene);
-}
+};
 
 export const SDImageGenDef = new WFDefBuilder('SDImageGen')
   .setTitle('이미지 생성')
@@ -162,9 +199,21 @@ const SDInpaintUI = wfiStack([
   // wfiInlineInput('시드', 'seed', true, 'flex-none'),
 ]);
 
-const SDInpaintHandler = async (session: Session, scene: GenericScene, prompt: PromptNode, preset: any, shared: any, samples: number, onComplete?: (img: string) => void) => {
-  const image = dataUriToBase64((await imageService.fetchVibeImage(session, preset.image))!);
-  const mask = dataUriToBase64((await imageService.fetchVibeImage(session, preset.mask))!);
+const SDInpaintHandler = async (
+  session: Session,
+  scene: GenericScene,
+  prompt: PromptNode,
+  preset: any,
+  shared: any,
+  samples: number,
+  onComplete?: (img: string) => void,
+) => {
+  const image = dataUriToBase64(
+    (await imageService.fetchVibeImage(session, preset.image))!,
+  );
+  const mask = dataUriToBase64(
+    (await imageService.fetchVibeImage(session, preset.mask))!,
+  );
   const job: SDInpaintJob = {
     type: 'sd_inpaint',
     cfgRescale: preset.cfgRescale,
@@ -172,7 +221,7 @@ const SDInpaintHandler = async (session: Session, scene: GenericScene, prompt: P
     promptGuidance: preset.promptGuidance,
     smea: preset.smea,
     dyn: preset.dyn,
-    prompt: {type:'text',text:preset.prompt},
+    prompt: { type: 'text', text: preset.prompt },
     sampling: preset.sampling,
     uc: preset.uc,
     noiseSchedule: preset.noiseSchedule,
@@ -204,7 +253,11 @@ export const SDInpaintDef = new WFDefBuilder('SDInpaint')
   .setHandler(SDInpaintHandler)
   .build();
 
-export function createInpaintPreset(image: string, mask: string, job: SDAbstractJob<string>): any {
+export function createInpaintPreset(
+  image: string,
+  mask: string,
+  job: SDAbstractJob<string>,
+): any {
   const preset = workFlowService.buildPreset('SDInpaint');
   preset.image = image;
   preset.mask = mask;

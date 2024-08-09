@@ -31,136 +31,138 @@ interface PieceCellProps {
   style?: React.CSSProperties;
   movePiece?: (fromIndex: string, toIndex: string) => void;
 }
-export const PieceCell = observer(({
-  piece,
-  name,
-  curPieceLibrary,
-  movePiece,
-  width,
-  style,
-}: PieceCellProps) => {
-  const { curSession } = appState;
+export const PieceCell = observer(
+  ({
+    piece,
+    name,
+    curPieceLibrary,
+    movePiece,
+    width,
+    style,
+  }: PieceCellProps) => {
+    const { curSession } = appState;
 
-  const containerRef = useRef<any>();
-  const elementRef = createRef<any>();
+    const containerRef = useRef<any>();
+    const elementRef = createRef<any>();
 
-  const [curWidth, setCurWidth] = useState<number>(0);
+    const [curWidth, setCurWidth] = useState<number>(0);
 
-  useLayoutEffect(() => {
-    const measure = () => {
-      if (!containerRef.current) return;
-      setCurWidth(containerRef.current.getBoundingClientRect().width);
-    };
+    useLayoutEffect(() => {
+      const measure = () => {
+        if (!containerRef.current) return;
+        setCurWidth(containerRef.current.getBoundingClientRect().width);
+      };
 
-    measure();
-    window.addEventListener('resize', measure);
-    return () => {
-      window.removeEventListener('resize', measure);
-    };
-  }, []);
+      measure();
+      window.addEventListener('resize', measure);
+      return () => {
+        window.removeEventListener('resize', measure);
+      };
+    }, []);
 
-  const [{ isDragging }, drag, preview] = useDrag(
-    {
-      type: 'piece',
-      item: { piece, curPieceLibrary, name, width: curWidth },
-      canDrag: () => true,
-      collect: (monitor) => ({
-        isDragging: monitor.isDragging(),
-      }),
-    },
-    [curWidth, piece],
-  );
-
-  const [, drop] = useDrop(
-    {
-      accept: 'piece',
-      hover: (draggedItem: any) => {
-        if (draggedItem.piece !== piece) {
-          movePiece!(draggedItem.pieceName, piece.name);
-        }
+    const [{ isDragging }, drag, preview] = useDrag(
+      {
+        type: 'piece',
+        item: { piece, curPieceLibrary, name, width: curWidth },
+        canDrag: () => true,
+        collect: (monitor) => ({
+          isDragging: monitor.isDragging(),
+        }),
       },
-    },
-    [curWidth, piece],
-  );
+      [curWidth, piece],
+    );
 
-  useEffect(() => {
-    preview(getEmptyImage(), { captureDraggingState: true });
-  }, [preview]);
+    const [, drop] = useDrop(
+      {
+        accept: 'piece',
+        hover: (draggedItem: any) => {
+          if (draggedItem.piece !== piece) {
+            movePiece!(draggedItem.pieceName, piece.name);
+          }
+        },
+      },
+      [curWidth, piece],
+    );
 
-  return (
-    <div
-      className={
-        'p-3 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-500 my-2 ' +
-        (isDragging ? 'opacity-0' : '')
-      }
-      style={style ? { ...style, width: width } : {}}
-      ref={(node) => {
-        if (movePiece) {
-          drag(drop(node));
-          containerRef.current = node;
+    useEffect(() => {
+      preview(getEmptyImage(), { captureDraggingState: true });
+    }, [preview]);
+
+    return (
+      <div
+        className={
+          'p-3 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-500 my-2 ' +
+          (isDragging ? 'opacity-0' : '')
         }
-        return null;
-      }}
-    >
-      <div className="flex pb-2">
-        <div
-          className="font-bold text-default"
-          onDoubleClick={() => {
-            if (!movePiece) return;
-            appState.pushDialog({
-              type: 'input-confirm',
-              text: '조각의 이름을 변경합니다',
-              callback: (name) => {
-                if (!name) return;
-                if (curPieceLibrary.pieces.find((p) => p.name === name)) {
-                  appState.pushMessage('조각이 이미 존재합니다');
-                  return;
-                }
-                piece!.name = name;
-                sessionService.reloadPieceLibraryDB(curSession!);
-              },
-            });
-          }}
-        >
-          {piece.name}
+        style={style ? { ...style, width: width } : {}}
+        ref={(node) => {
+          if (movePiece) {
+            drag(drop(node));
+            containerRef.current = node;
+          }
+          return null;
+        }}
+      >
+        <div className="flex pb-2">
+          <div
+            className="font-bold text-default"
+            onDoubleClick={() => {
+              if (!movePiece) return;
+              appState.pushDialog({
+                type: 'input-confirm',
+                text: '조각의 이름을 변경합니다',
+                callback: (name) => {
+                  if (!name) return;
+                  if (curPieceLibrary.pieces.find((p) => p.name === name)) {
+                    appState.pushMessage('조각이 이미 존재합니다');
+                    return;
+                  }
+                  piece!.name = name;
+                  sessionService.reloadPieceLibraryDB(curSession!);
+                },
+              });
+            }}
+          >
+            {piece.name}
+          </div>
+          <button
+            className="ml-auto text-red-500 dark:text-white"
+            onClick={() => {
+              if (!movePiece) return;
+              const index = curPieceLibrary.pieces.indexOf(piece);
+              curPieceLibrary.pieces.splice(index, 1);
+              sessionService.reloadPieceLibraryDB(curSession!);
+            }}
+          >
+            <FaTrash size={20} />
+          </button>
         </div>
-        <button
-          className="ml-auto text-red-500 dark:text-white"
-          onClick={() => {
-            if (!movePiece) return;
-            const index = curPieceLibrary.pieces.indexOf(piece);
-            curPieceLibrary.pieces.splice(index, 1);
-            sessionService.reloadPieceLibraryDB(curSession!);
-          }}
-        >
-          <FaTrash size={20} />
-        </button>
+        <div className="h-20">
+          <PromptEditTextArea
+            innerRef={elementRef}
+            disabled={!movePiece}
+            lineHighlight
+            value={piece.prompt}
+            onChange={(txt) => {
+              piece.prompt = txt;
+            }}
+          />
+        </div>
+        <div className={'mt-1 gray-label'}>
+          랜덤 줄 선택 모드:{' '}
+          <input
+            checked={piece.multi}
+            type="checkbox"
+            onChange={(e) => {
+              if (!movePiece) return;
+              piece.multi = e.target.checked;
+            }}
+          />
+        </div>
       </div>
-      <div className="h-20">
-        <PromptEditTextArea
-          innerRef={elementRef}
-          disabled={!movePiece}
-          lineHighlight
-          value={piece.prompt}
-          onChange={(txt) => {
-            piece.prompt = txt;
-          }}
-        />
-      </div>
-      <div className={'mt-1 gray-label'}>
-        랜덤 줄 선택 모드:{' '}
-        <input
-          checked={piece.multi}
-          type="checkbox"
-          onChange={(e) => {
-            if (!movePiece) return;
-            piece.multi = e.target.checked;
-          }}
-        />
-      </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 const PieceEditor = observer(() => {
   const { curSession } = appState;
@@ -173,7 +175,9 @@ const PieceEditor = observer(() => {
 
   useEffect(() => {
     setCurPieceLibrary(
-      selectedPieceLibrary ? curSession!.library.get(selectedPieceLibrary)! : null,
+      selectedPieceLibrary
+        ? curSession!.library.get(selectedPieceLibrary)!
+        : null,
     );
   }, [selectedPieceLibrary]);
 
@@ -190,10 +194,12 @@ const PieceEditor = observer(() => {
         <DropdownSelect
           selectedOption={selectedPieceLibrary}
           menuPlacement="bottom"
-          options={Array.from(curSession!.library.entries()).map(([name, lib]) => ({
-            label: name,
-            value: name,
-          }))}
+          options={Array.from(curSession!.library.entries()).map(
+            ([name, lib]) => ({
+              label: name,
+              value: name,
+            }),
+          )}
           onSelect={(opt) => {
             setSelectedPieceLibrary(opt.value);
           }}
@@ -211,10 +217,13 @@ const PieceEditor = observer(() => {
                   appState.pushMessage('조각그룹이 이미 존재합니다');
                   return;
                 }
-                curSession!.library.set(name, PieceLibrary.fromJSON({
-                  pieces: [],
-                  name: name,
-                }));
+                curSession!.library.set(
+                  name,
+                  PieceLibrary.fromJSON({
+                    pieces: [],
+                    name: name,
+                  }),
+                );
                 setSelectedPieceLibrary(name);
                 sessionService.reloadPieceLibraryDB(curSession!);
               },
@@ -282,11 +291,13 @@ const PieceEditor = observer(() => {
                     appState.pushMessage('조각이 이미 존재합니다');
                     return;
                   }
-                  curPieceLibrary!.pieces.push(Piece.fromJSON({
-                    name: name,
-                    prompt: '',
-                    multi: false,
-                  }))
+                  curPieceLibrary!.pieces.push(
+                    Piece.fromJSON({
+                      name: name,
+                      prompt: '',
+                      multi: false,
+                    }),
+                  );
                   sessionService.reloadPieceLibraryDB(curSession!);
                 },
               });

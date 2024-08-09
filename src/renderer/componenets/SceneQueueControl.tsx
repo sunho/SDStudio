@@ -1,11 +1,7 @@
 import { memo, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { FloatView } from './FloatView';
 import SceneEditor from './SceneEditor';
-import {
-  FaEdit,
-  FaPlus,
-  FaRegCalendarTimes,
-} from 'react-icons/fa';
+import { FaEdit, FaPlus, FaRegCalendarTimes } from 'react-icons/fa';
 import Tournament from './Tournament';
 import ResultViewer from './ResultViewer';
 import InPaintEditor from './InPaintEditor';
@@ -32,10 +28,7 @@ import {
   dataUriToBase64,
   deleteImageFiles,
 } from '../models/ImageService';
-import {
-  queueRemoveBg,
-  queueWorkflow,
-} from '../models/TaskQueueService';
+import { queueRemoveBg, queueWorkflow } from '../models/TaskQueueService';
 import {
   GenericScene,
   ContextMenuType,
@@ -60,238 +53,237 @@ interface SceneCellProps {
   style?: React.CSSProperties;
 }
 
-export const SceneCell = observer(({
-  scene,
-  getImage,
-  setDisplayScene,
-  moveScene,
-  setEditingScene,
-  curSession,
-  cellSize,
-  style,
-}: SceneCellProps) => {
-  const { show, hideAll } = useContextMenu({
-    id: ContextMenuType.Scene,
-  });
-  const [image, setImage] = useState<string | undefined>(undefined);
-
-  const cellSizes = ['w-48 h-48', 'w-36 h-36 md:w-64 md:h-64', 'w-96 h-96'];
-  const cellSizes2 = [
-    'max-w-48 max-h-48',
-    ' max-w-36 max-h-36 md:max-w-64 md:max-h-64',
-    'max-w-96 max-h-96',
-  ];
-  const cellSizes3 = ['w-48', 'w-36 md:w-64', ' w-96'];
-
-  const curIndex = curSession.getScenes(scene.type).indexOf(
+export const SceneCell = observer(
+  ({
     scene,
-  );
-  const [{ isDragging }, drag, preview] = useDrag(
-    () => ({
-      type: 'scene',
-      item: { scene, curIndex, getImage, curSession, cellSize },
-      collect: (monitor) => {
-        const diff = monitor.getDifferenceFromInitialOffset();
-        if (diff) {
-          const dist = Math.sqrt(diff.x ** 2 + diff.y ** 2);
-          if (dist > 20) {
-            hideAll();
+    getImage,
+    setDisplayScene,
+    moveScene,
+    setEditingScene,
+    curSession,
+    cellSize,
+    style,
+  }: SceneCellProps) => {
+    const { show, hideAll } = useContextMenu({
+      id: ContextMenuType.Scene,
+    });
+    const [image, setImage] = useState<string | undefined>(undefined);
+
+    const cellSizes = ['w-48 h-48', 'w-36 h-36 md:w-64 md:h-64', 'w-96 h-96'];
+    const cellSizes2 = [
+      'max-w-48 max-h-48',
+      ' max-w-36 max-h-36 md:max-w-64 md:max-h-64',
+      'max-w-96 max-h-96',
+    ];
+    const cellSizes3 = ['w-48', 'w-36 md:w-64', ' w-96'];
+
+    const curIndex = curSession.getScenes(scene.type).indexOf(scene);
+    const [{ isDragging }, drag, preview] = useDrag(
+      () => ({
+        type: 'scene',
+        item: { scene, curIndex, getImage, curSession, cellSize },
+        collect: (monitor) => {
+          const diff = monitor.getDifferenceFromInitialOffset();
+          if (diff) {
+            const dist = Math.sqrt(diff.x ** 2 + diff.y ** 2);
+            if (dist > 20) {
+              hideAll();
+            }
           }
-        }
-        return {
-          isDragging: monitor.isDragging(),
-        };
-      },
-      end: (item, monitor) => {
-        // if (!isMobile) return;
-        const { scene: droppedScene, curIndex: droppedIndex } = item;
-        const didDrop = monitor.didDrop();
-        if (!didDrop) {
-          moveScene!(droppedScene, droppedIndex);
-        }
-      },
-    }),
-    [curIndex, scene, cellSize],
-  );
-
-  useEffect(() => {
-    preview(getEmptyImage(), { captureDraggingState: true });
-  }, [preview]);
-
-  const [{ isOver }, drop] = useDrop<any, any, any>(
-    () => ({
-      accept: 'scene',
-      canDrop: () => true,
-      collect: (monitor) => {
-        if (monitor.isOver()) {
           return {
-            isOver: true,
+            isDragging: monitor.isDragging(),
           };
-        }
-        return { isOver: false };
-      },
-      hover({
-        scene: draggedScene,
-        curIndex: draggedIndex,
-      }: {
-        scene: GenericScene;
-        curIndex: number;
-      }) {
-      },
-      drop: (item: any, monitor) => {
-        if (!isMobile || true) {
+        },
+        end: (item, monitor) => {
+          // if (!isMobile) return;
           const { scene: droppedScene, curIndex: droppedIndex } = item;
-          const overIndex = curSession.getScenes(scene.type).indexOf(scene);
-          moveScene!(droppedScene, overIndex);
-        }
-      },
-    }),
-    [moveScene],
-  );
-
-  const addToQueue = async (scene: GenericScene) => {
-    try {
-      queueWorkflow(
-        curSession,
-        appState.curSession?.selectedWorkflow!,
-        scene,
-        appState.samples,
-      )
-    } catch (e: any) {
-      appState.pushMessage('프롬프트 에러: ' + e.message);
-    }
-  };
-
-  const [_, rerender] = useState<{}>({});
-
-  const removeFromQueue = (scene: GenericScene) => {
-    taskQueueService.removeTasksFromScene(scene);
-  };
-
-  const getSceneQueueCount = (scene: GenericScene) => {
-    const stats = taskQueueService.statsTasksFromScene(curSession!, scene);
-    return stats.total - stats.done;
-  };
-
-  useEffect(() => {
-    const onUpdate = () => {
-      rerender({});
-    }
-    const refreshImage = async () => {
-      try {
-        const base64 = await getImage(scene);
-        setImage(base64!);
-      } catch (e: any) {
-        setImage(undefined);
-      }
-    };
-    refreshImage();
-    gameService.addEventListener('updated', refreshImage);
-    taskQueueService.addEventListener('progress', onUpdate);
-    const dispose = reaction(
-      () => scene.mains.join(''),
-      () => {
-        refreshImage();
-      },
+          const didDrop = monitor.didDrop();
+          if (!didDrop) {
+            moveScene!(droppedScene, droppedIndex);
+          }
+        },
+      }),
+      [curIndex, scene, cellSize],
     );
-    return () => {
-      gameService.removeEventListener('updated', refreshImage);
-      taskQueueService.removeEventListener('progress', onUpdate);
-      dispose();
-    };
-  }, [scene]);
 
-  return (
-    <div
-      className={
-        'relative m-2 p-1 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-500 ' +
-        (isDragging ? 'opacity-0 no-touch ' : '') +
-        (isOver ? ' outline outline-sky-500' : '')
+    useEffect(() => {
+      preview(getEmptyImage(), { captureDraggingState: true });
+    }, [preview]);
+
+    const [{ isOver }, drop] = useDrop<any, any, any>(
+      () => ({
+        accept: 'scene',
+        canDrop: () => true,
+        collect: (monitor) => {
+          if (monitor.isOver()) {
+            return {
+              isOver: true,
+            };
+          }
+          return { isOver: false };
+        },
+        hover({
+          scene: draggedScene,
+          curIndex: draggedIndex,
+        }: {
+          scene: GenericScene;
+          curIndex: number;
+        }) {},
+        drop: (item: any, monitor) => {
+          if (!isMobile || true) {
+            const { scene: droppedScene, curIndex: droppedIndex } = item;
+            const overIndex = curSession.getScenes(scene.type).indexOf(scene);
+            moveScene!(droppedScene, overIndex);
+          }
+        },
+      }),
+      [moveScene],
+    );
+
+    const addToQueue = async (scene: GenericScene) => {
+      try {
+        queueWorkflow(
+          curSession,
+          appState.curSession?.selectedWorkflow!,
+          scene,
+          appState.samples,
+        );
+      } catch (e: any) {
+        appState.pushMessage('프롬프트 에러: ' + e.message);
       }
-      style={style}
-      ref={(node) => drag(drop(node))}
-      onContextMenu={(e) => {
-        show({
-          event: e,
-          props: {
-            ctx: {
-              type: 'scene',
-              scene: scene,
-            },
-          },
-        });
-      }}
-    >
-      {getSceneQueueCount(scene) > 0 && (
-        <span className="absolute right-0 bg-yellow-400 dark:bg-indigo-400 inline-block mr-3 px-2 py-1 text-center align-middle rounded-md font-bold text-white">
-          {getSceneQueueCount(scene)}
-        </span>
-      )}
+    };
+
+    const [_, rerender] = useState<{}>({});
+
+    const removeFromQueue = (scene: GenericScene) => {
+      taskQueueService.removeTasksFromScene(scene);
+    };
+
+    const getSceneQueueCount = (scene: GenericScene) => {
+      const stats = taskQueueService.statsTasksFromScene(curSession!, scene);
+      return stats.total - stats.done;
+    };
+
+    useEffect(() => {
+      const onUpdate = () => {
+        rerender({});
+      };
+      const refreshImage = async () => {
+        try {
+          const base64 = await getImage(scene);
+          setImage(base64!);
+        } catch (e: any) {
+          setImage(undefined);
+        }
+      };
+      refreshImage();
+      gameService.addEventListener('updated', refreshImage);
+      taskQueueService.addEventListener('progress', onUpdate);
+      const dispose = reaction(
+        () => scene.mains.join(''),
+        () => {
+          refreshImage();
+        },
+      );
+      return () => {
+        gameService.removeEventListener('updated', refreshImage);
+        taskQueueService.removeEventListener('progress', onUpdate);
+        dispose();
+      };
+    }, [scene]);
+
+    return (
       <div
-        className="-z-10 clickable bg-white dark:bg-slate-800"
-        onClick={(event) => {
-          if (isDragging) return;
-          setDisplayScene?.(scene);
+        className={
+          'relative m-2 p-1 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-500 ' +
+          (isDragging ? 'opacity-0 no-touch ' : '') +
+          (isOver ? ' outline outline-sky-500' : '')
+        }
+        style={style}
+        ref={(node) => drag(drop(node))}
+        onContextMenu={(e) => {
+          show({
+            event: e,
+            props: {
+              ctx: {
+                type: 'scene',
+                scene: scene,
+              },
+            },
+          });
         }}
       >
+        {getSceneQueueCount(scene) > 0 && (
+          <span className="absolute right-0 bg-yellow-400 dark:bg-indigo-400 inline-block mr-3 px-2 py-1 text-center align-middle rounded-md font-bold text-white">
+            {getSceneQueueCount(scene)}
+          </span>
+        )}
         <div
-          className={'p-2 flex text-lg text-default ' + cellSizes3[cellSize]}
+          className="-z-10 clickable bg-white dark:bg-slate-800"
+          onClick={(event) => {
+            if (isDragging) return;
+            setDisplayScene?.(scene);
+          }}
         >
-          <div className="truncate flex-1">{scene.name}</div>
-          <div className="flex-none text-gray-400">
-            {gameService.getOutputs(curSession!, scene).length}{' '}
+          <div
+            className={'p-2 flex text-lg text-default ' + cellSizes3[cellSize]}
+          >
+            <div className="truncate flex-1">{scene.name}</div>
+            <div className="flex-none text-gray-400">
+              {gameService.getOutputs(curSession!, scene).length}{' '}
+            </div>
+          </div>
+          <div
+            className={
+              'relative image-cell flex-none overflow-hidden ' +
+              cellSizes[cellSize]
+            }
+          >
+            {image && (
+              <img
+                src={image}
+                draggable={false}
+                className={
+                  'w-auto h-auto object-scale-down z-0 bg-checkboard ' +
+                  cellSizes2[cellSize]
+                }
+              />
+            )}
           </div>
         </div>
-        <div
-          className={
-            'relative image-cell flex-none overflow-hidden ' +
-            cellSizes[cellSize]
-          }
-        >
-          {image && (
-            <img
-              src={image}
-              draggable={false}
-              className={
-                'w-auto h-auto object-scale-down z-0 bg-checkboard ' +
-                cellSizes2[cellSize]
-              }
-            />
-          )}
+        <div className="w-full flex mt-auto justify-center items-center gap-2 p-2">
+          <button
+            className={`round-button back-green`}
+            onClick={(e) => {
+              e.stopPropagation();
+              addToQueue(scene);
+            }}
+          >
+            <FaPlus />
+          </button>
+          <button
+            className={`round-button back-gray`}
+            onClick={(e) => {
+              e.stopPropagation();
+              removeFromQueue(scene);
+            }}
+          >
+            <FaRegCalendarTimes />
+          </button>
+          <button
+            className={`round-button back-orange`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingScene?.(scene);
+            }}
+          >
+            <FaEdit />
+          </button>
         </div>
       </div>
-      <div className="w-full flex mt-auto justify-center items-center gap-2 p-2">
-        <button
-          className={`round-button back-green`}
-          onClick={(e) => {
-            e.stopPropagation();
-            addToQueue(scene);
-          }}
-        >
-          <FaPlus />
-        </button>
-        <button
-          className={`round-button back-gray`}
-          onClick={(e) => {
-            e.stopPropagation();
-            removeFromQueue(scene);
-          }}
-        >
-          <FaRegCalendarTimes />
-        </button>
-        <button
-          className={`round-button back-orange`}
-          onClick={(e) => {
-            e.stopPropagation();
-            setEditingScene?.(scene);
-          }}
-        >
-          <FaEdit />
-        </button>
-      </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 interface QueueControlProps {
   type: 'scene' | 'inpaint';
@@ -330,7 +322,12 @@ const QueueControl = observer(
     const addAllToQueue = async () => {
       try {
         for (const scene of curSession.getScenes(type)) {
-          queueWorkflow(curSession, curSession.selectedWorkflow!, scene, appState.samples);
+          queueWorkflow(
+            curSession,
+            curSession.selectedWorkflow!,
+            scene,
+            appState.samples,
+          );
         }
       } catch (e: any) {
         appState.pushMessage('프롬프트 에러: ' + e.message);
@@ -355,15 +352,18 @@ const QueueControl = observer(
                     appState.pushMessage('이미 존재하는 씬 이름입니다.');
                     return;
                   }
-                  curSession.addScene(Scene.fromJSON({type: 'scene',
-                    name: inputValue,
-                    resolution: 'portrait',
-                    slots: [[{ id: v4(), prompt: '', enabled: true }]],
-                    mains: [],
-                    imageMap: [],
-                    round: undefined,
-                    game: undefined,
-                  }));
+                  curSession.addScene(
+                    Scene.fromJSON({
+                      type: 'scene',
+                      name: inputValue,
+                      resolution: 'portrait',
+                      slots: [[{ id: v4(), prompt: '', enabled: true }]],
+                      mains: [],
+                      imageMap: [],
+                      round: undefined,
+                      game: undefined,
+                    }),
+                  );
                 }
               }
             },
@@ -380,22 +380,21 @@ const QueueControl = observer(
         if (!image) throw new Error('No image available');
         return image;
       } else {
-        return await imageService.fetchVibeImage(curSession!, scene.preset.image);
+        return await imageService.fetchVibeImage(
+          curSession!,
+          scene.preset.image,
+        );
       }
     };
 
     const cellSizes = ['스몰뷰', '미디엄뷰', '라지뷰'];
 
-    const favButton =  {
+    const favButton = {
       text: (path: string) => {
         return isMainImage(path) ? '즐겨찾기 해제' : '즐겨찾기 지정';
       },
       className: 'back-orange',
-      onClick: async (
-        scene: Scene,
-        path: string,
-        close: () => void,
-      ) => {
+      onClick: async (scene: Scene, path: string, close: () => void) => {
         const filename = path.split('/').pop()!;
         if (isMainImage(path)) {
           scene.mains = scene.mains.filter((x) => x !== filename);
@@ -426,8 +425,13 @@ const QueueControl = observer(
                 }
                 const name = newName();
                 const job = await extractPromptDataFromBase64(image);
-                const preset = job ? createInpaintPreset('', '', job) : workFlowService.buildPreset('SDInpaint');
-                preset.image = await imageService.storeVibeImage(curSession!, image);
+                const preset = job
+                  ? createInpaintPreset('', '', job)
+                  : workFlowService.buildPreset('SDInpaint');
+                preset.image = await imageService.storeVibeImage(
+                  curSession!,
+                  image,
+                );
                 const newScene = InpaintScene.fromJSON({
                   type: 'inpaint',
                   name: name,
@@ -458,7 +462,11 @@ const QueueControl = observer(
               ) => {
                 let image = await imageService.fetchImage(path);
                 image = dataUriToBase64(image!);
-                await imageService.writeVibeImage(curSession!, scene.preset.image, image);
+                await imageService.writeVibeImage(
+                  curSession!,
+                  scene.preset.image,
+                  image,
+                );
                 close();
                 setInpaintEditScene(scene as InpaintScene);
               },
@@ -501,7 +509,9 @@ const QueueControl = observer(
         // @ts-ignore
         onClick: async (scene: Scene, path: string, close: () => void) => {
           if (!localAIService.ready) {
-            appState.pushMessage('환경설정에서 배경 제거 기능을 활성화해주세요');
+            appState.pushMessage(
+              '환경설정에서 배경 제거 기능을 활성화해주세요',
+            );
             return;
           }
           let image = await imageService.fetchImage(path);
@@ -600,9 +610,7 @@ const QueueControl = observer(
 
     const isMainImage = (path: string) => {
       const filename = path.split('/').pop()!;
-      return !!(
-        displayScene && displayScene.mains.includes(filename)
-      );
+      return !!(displayScene && displayScene.mains.includes(filename));
     };
 
     const onFilenameChange = (src: string, dst: string) => {
@@ -683,7 +691,12 @@ const QueueControl = observer(
               >
                 {isMobile ? '' : '이미지 '}내보내기
               </button>
-              <button className={`round-button back-gray`} onClick={()=>{appState.openBatchProcessMenu(type, setSceneSelector)}}>
+              <button
+                className={`round-button back-gray`}
+                onClick={() => {
+                  appState.openBatchProcessMenu(type, setSceneSelector);
+                }}
+              >
                 대량 작업
               </button>
             </div>
@@ -699,7 +712,8 @@ const QueueControl = observer(
         )}
         <div className="flex flex-1 overflow-hidden">
           <div className="flex flex-wrap overflow-auto justify-start items-start content-start">
-            {curSession.getScenes(type)
+            {curSession
+              .getScenes(type)
               .filter((x) => {
                 if (!filterFunc) return true;
                 return filterFunc(x);
