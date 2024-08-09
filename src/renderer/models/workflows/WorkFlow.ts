@@ -17,7 +17,7 @@ export interface WorkFlowDef {
   createPrompt?: WFCreatePrompt;
 }
 
-export type WFHandler = (session: Session, scene: GenericScene, prompt: PromptNode, preset: any, shared: any, samples: number, onComplete?: (img: string) => void) => void | Promise<void>;
+export type WFHandler = (session: Session, scene: GenericScene, prompt: PromptNode, preset: any, shared: any, samples: number, onComplete?: (img: string) => void, nodelay?: boolean) => void | Promise<void>;
 export type WFCreatePrompt = (session: Session, scene: GenericScene, preset: any, shared: any) => PromptNode[] | Promise<PromptNode[]>;
 
 export interface WFAbstractVar {
