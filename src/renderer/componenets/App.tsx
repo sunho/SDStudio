@@ -196,7 +196,7 @@ export const App = observer(() => {
       },
     );
     const removeZipProgressListener = backend.onZipProgress((progress: any) => {
-      setProgressDialog({
+      appState.setProgressDialog({
         text: '압축파일 생성 중..',
         done: progress.done,
         total: progress.total,
@@ -263,10 +263,6 @@ export const App = observer(() => {
     };
   }, [appState.curSession]);
 
-  const [progressDialog, setProgressDialog] = useState<
-    ProgressDialog | undefined
-  >(undefined);
-
   const tabs = [
     {
       label: '이미지생성',
@@ -274,7 +270,7 @@ export const App = observer(() => {
       emoji: <FaImages />,
     },
     {
-      label: '인페인트',
+      label: '이미지변형',
       content: <QueueControl type="inpaint" showPannel />,
       emoji: <FaPenFancy />,
     },
@@ -355,7 +351,7 @@ export const App = observer(() => {
         </ErrorBoundary>
         <AlertWindow/>
         <ConfirmWindow/>
-        {progressDialog && <ProgressWindow dialog={progressDialog} />}
+        {appState.progressDialog && <ProgressWindow dialog={appState.progressDialog} />}
         <PromptTooltip />
       </div>
     </DndProvider>

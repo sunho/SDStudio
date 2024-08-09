@@ -27,7 +27,6 @@ let brushSizeSaved = 10;
 
 const InPaintEditor = observer(({ editingScene, onConfirm, onDelete }: Props) => {
   const { curSession, pushDialog } = appState;
-
   const resolutionOptions = Object.entries(resolutionMap)
     .map(([key, value]) => {
       return { label: `${value.width}x${value.height}`, value: key };
@@ -40,6 +39,7 @@ const InPaintEditor = observer(({ editingScene, onConfirm, onDelete }: Props) =>
   const [mask, setMask] = useState<string | undefined>(undefined);
   const [brushSize, setBrushSize] = useState(brushSizeSaved);
   const [brushing, setBrushing] = useState(true);
+  const def = workFlowService.getDef(editingScene.workflowType);
   useEffect(() => {
     if (isMobile) {
       setBrushing(false);
@@ -64,17 +64,16 @@ const InPaintEditor = observer(({ editingScene, onConfirm, onDelete }: Props) =>
     }
     async function loadMask() {
       try {
-        const data = await imageService.fetchImage(
-          sessionService.getInpaintMaskPath(
-            curSession!,
-            editingScene as InPaintScene,
-          ),
+        const data = await imageService.fetchVibeImage(
+          curSession!,
+          editingScene.preset.mask
         );
         setMask(dataUriToBase64(data!));
       } catch (e) {}
     }
     loadImage();
-    loadMask();
+    if (def.hasMask)
+      loadMask();
     imageService.addEventListener('image-cache-invalidated', loadImage);
     return () => {
       imageService.removeEventListener('image-cache-invalidated', loadImage);
@@ -109,7 +108,14 @@ const InPaintEditor = observer(({ editingScene, onConfirm, onDelete }: Props) =>
   };
 
   const confirm = async () => {
-
+    if (def.hasMask) {
+      const mask = await brushTool.current!.getMaskBase64();
+      if (!editingScene.preset.mask) {
+        editingScene.preset.mask = await imageService.storeVibeImage(curSession!, mask);
+      } else {
+        await imageService.writeVibeImage(curSession!, editingScene.preset.mask, mask);
+      }
+    }
     onConfirm();
   };
 
@@ -172,7 +178,7 @@ const InPaintEditor = observer(({ editingScene, onConfirm, onDelete }: Props) =>
             middlePromptMode={false}
           />
         </div>
-        <div className="flex items-center gap-2 md:gap-4 md:ml-auto pb-2 overflow-hidden w-full">
+        {def.hasMask&&<div className="flex items-center gap-2 md:gap-4 md:ml-auto pb-2 overflow-hidden w-full">
           {
             <button
               className={`rounded-full h-8 w-8 back-gray flex-none flex items-center justify-center clickable`}
@@ -215,9 +221,9 @@ const InPaintEditor = observer(({ editingScene, onConfirm, onDelete }: Props) =>
           >
             {isMobile ? '' : '마스크'}초기화
           </button>
-        </div>
+        </div>}
       </div>
-      <TransformWrapper disabled={brushing} centerOnInit={true}>
+      <TransformWrapper disabled={def.hasMask && brushing} centerOnInit={true}>
         <TransformComponent wrapperClass="wrapper flex-none items-center justify-center">
           <BrushTool
             brushSize={brushSize}
@@ -228,7 +234,7 @@ const InPaintEditor = observer(({ editingScene, onConfirm, onDelete }: Props) =>
             imageHeight={height}
           />
         </TransformComponent>
-        {!isMobile && (
+        {!isMobile && def.hasMask && (
           <div className="canvas-tooltip dark:text-white dark:bg-gray-600">
             ctrl+z 로 실행 취소 가능
           </div>

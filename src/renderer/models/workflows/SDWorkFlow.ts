@@ -1,9 +1,10 @@
 import { NoiseSchedule, Sampling } from "../../backends/imageGen";
 import { WFDefBuilder, wfiGroup, wfiInlineInput, wfiMiddlePlaceholderInput, wfiPresetSelect, wfiProfilePresetSelect, wfiPush, wfiStack, WFVarBuilder } from "./WorkFlow";
-import { Session, GenericScene, SDJob, Scene, SDAbstractJob, PromptNode } from "../types";
-import { createSDPrompts } from "../PromptService";
+import { Session, GenericScene, SDJob, Scene, SDAbstractJob, PromptNode, SDInpaintJob } from "../types";
+import { createSDPrompts, defaultBPrompt, defaultFPrompt, defaultUC } from "../PromptService";
 import { imageService, taskQueueService, workFlowService } from "..";
 import { TaskParam } from "../TaskQueueService";
+import { dataUriToBase64 } from "../ImageService";
 
 const SDImageGenPreset = new WFVarBuilder()
   .addIntVar('cfgRescale', 0, 1, 0.01, 0)
@@ -12,9 +13,9 @@ const SDImageGenPreset = new WFVarBuilder()
   .addBoolVar('smea', false)
   .addBoolVar('dyn', false)
   .addSamplingVar('sampling', Sampling.KEulerAncestral)
-  .addPromptVar('frontPrompt', '')
-  .addPromptVar('backPrompt', '')
-  .addPromptVar('uc', '')
+  .addPromptVar('frontPrompt', defaultFPrompt)
+  .addPromptVar('backPrompt', defaultBPrompt)
+  .addPromptVar('uc', defaultUC)
   .addNoiseScheduleVar('noiseSchedule', NoiseSchedule.Native);
 
 const SDImageGenShared = new WFVarBuilder()
@@ -57,6 +58,7 @@ const SDImageGenEasyUI = wfiStack([
 
 const SDImageGenEasyInnerUI = wfiStack([
   wfiInlineInput('상위 프롬프트', 'frontPrompt', true, 'flex-1'),
+  wfiMiddlePlaceholderInput('중간 프롬프트 (이 창에만 적용됨)'),
   wfiInlineInput('하위 프롬프트', 'backPrompt', true, 'flex-1'),
   wfiInlineInput('네거티브 프롬프트', 'uc', true, 'flex-1'),
   wfiGroup('샘플링 설정', [
@@ -140,13 +142,12 @@ const SDInpaintPreset = new WFVarBuilder()
   .addVibeSetVar('vibes')
   .addNullIntVar('seed');
 
-
 const SDInpaintUI = wfiStack([
   wfiInlineInput('이미지', 'image', true, 'flex-none'),
+  wfiInlineInput('인페인트 강도', 'strength', true, 'flex-none'),
+  wfiInlineInput('비마스크 영역 편집 방지', 'originalImage', true, 'flex-none'),
   wfiInlineInput('프롬프트', 'prompt', true, 'flex-1'),
   wfiInlineInput('네거티브 프롬프트', 'uc', true, 'flex-1'),
-  wfiInlineInput('비마스크 영역 편집 방지', 'originalImage', true, 'flex-none'),
-  wfiInlineInput('인페인트 강도', 'strength', true, 'flex-none'),
   wfiGroup('샘플링 설정', [
     wfiPush('top'),
     wfiInlineInput('CFG 리스케일', 'cfgRescale', true, 'flex-none'),
@@ -157,17 +158,49 @@ const SDInpaintUI = wfiStack([
     wfiInlineInput('노이즈 스케줄', 'noiseSchedule', true, 'flex-none'),
   ]),
   wfiInlineInput('바이브 설정', 'vibes', true, 'flex-none'),
-  wfiInlineInput('시드', 'seed', true, 'flex-none'),
+  // wfiInlineInput('시드', 'seed', true, 'flex-none'),
 ]);
+
+const SDInpaintHandler = async (session: Session, scene: GenericScene, prompt: PromptNode, preset: any, shared: any, samples: number, onComplete?: (img: string) => void) => {
+  const image = dataUriToBase64((await imageService.fetchVibeImage(session, preset.image))!);
+  const mask = dataUriToBase64((await imageService.fetchVibeImage(session, preset.mask))!);
+  const job: SDInpaintJob = {
+    type: 'sd_inpaint',
+    cfgRescale: preset.cfgRescale,
+    steps: preset.steps,
+    promptGuidance: preset.promptGuidance,
+    smea: preset.smea,
+    dyn: preset.dyn,
+    prompt: {type:'text',text:preset.prompt},
+    sampling: preset.sampling,
+    uc: preset.uc,
+    noiseSchedule: preset.noiseSchedule,
+    backend: preset.backend,
+    vibes: preset.vibes,
+    strength: preset.strength,
+    originalImage: preset.originalImage,
+    image: image,
+    mask: mask,
+  };
+  const param: TaskParam = {
+    session: session,
+    job: job,
+    scene: scene,
+    outputPath: imageService.getOutputDir(session, scene),
+    onComplete: onComplete,
+  };
+  taskQueueService.addTask(param, samples);
+};
 
 export const SDInpaintDef = new WFDefBuilder('SDInpaint')
   .setTitle('인페인트')
   .setBackendType('image')
   .setI2I(true)
+  .setHasMask(true)
   .setPresetVars(SDInpaintPreset.build())
   .setSharedVars(new WFVarBuilder().build())
   .setEditor(SDInpaintUI)
-  .setHandler(SDImageGenHandler)
+  .setHandler(SDInpaintHandler)
   .build();
 
 export function createInpaintPreset(image: string, mask: string, job: SDAbstractJob<string>): any {

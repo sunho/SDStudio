@@ -4,9 +4,9 @@ import { Scene, GenericScene } from '../models/types';
 
 interface SceneSelectorProps {
   text: string;
-  scenes: Scene[];
+  scenes: GenericScene[];
   getImage: (scene: GenericScene) => Promise<string | null>;
-  onConfirm: (selectedScenes: Scene[]) => void;
+  onConfirm: (selectedScenes: GenericScene[]) => void;
 }
 
 const SceneImage: React.FC<{
@@ -43,9 +43,9 @@ const SceneSelector: React.FC<SceneSelectorProps> = ({
   getImage,
   onConfirm,
 }) => {
-  const [selectedScenes, setSelectedScenes] = useState<Scene[]>([]);
+  const [selectedScenes, setSelectedScenes] = useState<GenericScene[]>([]);
 
-  const toggleSceneSelection = (scene: Scene) => {
+  const toggleSceneSelection = (scene: GenericScene) => {
     const isSelected = selectedScenes.some(
       (selected) => selected.name === scene.name,
     );

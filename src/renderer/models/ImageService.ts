@@ -179,6 +179,7 @@ export class ImageService extends EventTarget {
   async writeVibeImage(session:Session, name: string, data: string) {
     const path = imageService.getVibesDir(session) + '/' + name;
     await backend.writeDataFile(path, data);
+    await imageService.invalidateCache(path);
   }
 
   async fetchImage(path: string, holdMutex = true) {
@@ -479,18 +480,18 @@ export function getMainImagePath(session: Session, scene: Scene) {
 
 export async function getMainImage(
   session: Session,
-  scene: Scene,
+  scene: GenericScene,
   size: number,
 ) {
   if (scene.mains.length) {
     const path =
-      imageService.getImageDir(session, scene) + '/' + scene.mains[0];
+      imageService.getOutputDir(session, scene) + '/' + scene.mains[0];
     const base64 = await imageService.fetchImageSmall(path, size);
     return base64;
   }
   const images = gameService.getOutputs(session, scene);
   if (images.length) {
-    const path = imageService.getImageDir(session, scene) + '/' + images[0];
+    const path = imageService.getOutputDir(session, scene) + '/' + images[0];
     return await imageService.fetchImageSmall(path, size);
   }
   return undefined;

@@ -5,16 +5,18 @@ import { convertDenDenData, isValidDenDenDataFormat } from './compat';
 import { dataUriToBase64, deleteImageFiles } from './ImageService';
 import { importStyle } from './SessionService';
 import { action, observable } from 'mobx';
-import { isValidPieceLibrary, isValidSession, PieceLibrary, Scene, Session } from './types';
+import { GenericScene, isValidPieceLibrary, isValidSession, PieceLibrary, Scene, Session } from './types';
 import { getFirstFile } from './util';
 import { ImageOptimizeMethod } from '../backend';
 import { v4 } from 'uuid';
 import { queueRemoveBg } from './TaskQueueService';
 import { Resolution, resolutionMap } from '../backends/imageGen';
+import { ProgressDialog } from '../componenets/ProgressWindow';
 
 export interface SceneSelectorItem {
+  type: 'scene' | 'inpaint';
   text: string;
-  callback: (scenes: Scene[]) => void;
+  callback: (scenes: GenericScene[]) => void;
 }
 
 export class AppState {
@@ -22,6 +24,7 @@ export class AppState {
   @observable accessor messages: string[] = [];
   @observable accessor dialogs: Dialog[] = [];
   @observable accessor samples: number = 10;
+  @observable accessor progressDialog: ProgressDialog | undefined = undefined;
 
   @action
   addMessage(message: string): void {
@@ -58,8 +61,8 @@ export class AppState {
     });
   }
 
-  setProgressDialog(dialog: any) {
-    this.dialogs.push(dialog);
+  setProgressDialog(dialog: ProgressDialog | undefined) {
+    this.progressDialog = dialog;
   }
 
   handleFile(file: File) {
@@ -321,7 +324,7 @@ export class AppState {
         },
       });
     }
-    async exportPackage(selected?: Scene[])  {
+    async exportPackage(type: 'scene' | 'inpaint', selected?: GenericScene[])  {
       const exportImpl = async (
         prefix: string,
         fav: boolean,
@@ -330,7 +333,7 @@ export class AppState {
       ) => {
         const paths = [];
         await imageService.refreshBatch(this.curSession!);
-        const scenes = selected ?? Object.values(this.curSession!.scenes);
+        const scenes = selected ?? this.curSession!.getScenes(type);
         for (const scene of scenes) {
           await gameService.refreshList(this.curSession!, scene);
           const cands = gameService.getOutputs(this.curSession!, scene);
@@ -358,12 +361,12 @@ export class AppState {
             const path = images[i];
             if (images.length === 1) {
               paths.push({
-                path: imageService.getImageDir(this.curSession!, scene) + '/' + path,
+                path: imageService.getOutputDir(this.curSession!, scene) + '/' + path,
                 name: prefix + scene.name + '.png',
               });
             } else {
               paths.push({
-                path: imageService.getImageDir(this.curSession!, scene) + '/' + path,
+                path: imageService.getOutputDir(this.curSession!, scene) + '/' + path,
                 name: prefix + scene.name + '.' + (i + 1).toString() + '.png',
               });
             }
@@ -493,10 +496,8 @@ export class AppState {
     }
 
     @action
-    openBatchProcessMenu(setSceneSelector: (item: SceneSelectorItem | undefined) => void) {
-
-
-      const removeBg = async (selected: Scene[]) => {
+    openBatchProcessMenu(type: 'scene' | 'inpaint', setSceneSelector: (item: SceneSelectorItem | undefined) => void) {
+      const removeBg = async (selected: GenericScene[]) => {
         if (!localAIService.ready) {
           appState.pushMessage('환경설정에서 배경 제거 기능을 활성화해주세요');
           return;
@@ -506,7 +507,7 @@ export class AppState {
             const images = gameService.getOutputs(this.curSession!, scene);
             if (!images.length) continue;
             let image = await imageService.fetchImage(
-              imageService.getImageDir(this.curSession!, scene) + '/' + images[0],
+              imageService.getOutputDir(this.curSession!, scene) + '/' + images[0],
             );
             image = dataUriToBase64(image!);
             queueRemoveBg(this.curSession!, scene, image);
@@ -514,7 +515,7 @@ export class AppState {
             const mains = scene.mains;
             for (const main of mains) {
               const path =
-                imageService.getImageDir(this.curSession!, scene) + '/' + main;
+                imageService.getOutputDir(this.curSession!, scene) + '/' + main;
               let image = await imageService.fetchImage(path);
               image = dataUriToBase64(image!);
               queueRemoveBg(this.curSession!, scene, image, (newPath: string) => {
@@ -529,8 +530,8 @@ export class AppState {
           }
         }
       };
-      const handleBatchProcess = async (value: string, selected: Scene[]) => {
-        const isMain = (scene: Scene, path: string) => {
+      const handleBatchProcess = async (value: string, selected: GenericScene[]) => {
+        const isMain = (scene: GenericScene, path: string) => {
           const filename = path.split('/').pop()!;
           return !!(scene && scene.mains.includes(filename));
         };
@@ -563,7 +564,7 @@ export class AppState {
                         .getOutputs(this.curSession!, scene)
                         .map(
                           (x) =>
-                            imageService.getImageDir(this.curSession!, scene!) +
+                            imageService.getOutputDir(this.curSession!, scene!) +
                             '/' +
                             x,
                         );
@@ -582,7 +583,7 @@ export class AppState {
                           .getOutputs(this.curSession!, scene)
                           .map(
                             (x) =>
-                              imageService.getImageDir(this.curSession!, scene!) +
+                              imageService.getOutputDir(this.curSession!, scene!) +
                               '/' +
                               x,
                           );
@@ -605,7 +606,7 @@ export class AppState {
                         .getOutputs(this.curSession!, scene)
                         .map(
                           (x) =>
-                            imageService.getImageDir(this.curSession!, scene!) +
+                            imageService.getOutputDir(this.curSession!, scene!) +
                             '/' +
                             x,
                         );
@@ -683,7 +684,7 @@ export class AppState {
         } else if (value === 'removeBg') {
           removeBg(selected);
         } else if (value === 'export') {
-          this.exportPackage(selected);
+          this.exportPackage(type, selected);
         } else {
           console.log('Not implemented');
         }
@@ -708,6 +709,7 @@ export class AppState {
           items: items,
           callback: (value, text) => {
             setSceneSelector({
+              type: type,
               text: text!,
               callback: (selected) => {
                 setSceneSelector(undefined);

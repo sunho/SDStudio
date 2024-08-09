@@ -341,7 +341,7 @@ export const SlotPiece = observer(({
         <label className="gray-label">활성화</label>
         <input
           type="checkbox"
-          checked={piece.enabled}
+          checked={piece.enabled == undefined || piece.enabled}
           onChange={(e) => {
             if (!moveSlotPiece) return;
             piece.enabled = e.currentTarget.checked;
@@ -617,7 +617,7 @@ const SceneEditor = observer(({ scene, onClosed, onDeleted }: Props) => {
                 onClick: () => {
                   (async () => {
                     try {
-                      const prompts = await workFlowService.createPrompts(type, curSession!, preset, shared, scene)
+                      const prompts = await workFlowService.createPrompts(type, curSession!, scene, preset, shared);
                       setPreviews(prompts);
                     } catch (e: any) {
                       setPreviewError(e.message);
