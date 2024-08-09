@@ -19,7 +19,6 @@ import PieceEditor, { PieceCell } from './PieceEditor';
 import PromptTooltip from './PromptTooltip';
 import ConfirmWindow, { Dialog } from './ConfirmWindow';
 import QueueControl from './SceneQueueControl';
-import { convertDenDenData, isValidDenDenDataFormat } from '../models/compat';
 import { FloatViewProvider } from './FloatView';
 import { observer, useObserver } from 'mobx-react-lite';
 import {
@@ -58,19 +57,7 @@ import {
   imageService,
   isMobile,
 } from '../models';
-import { dataUriToBase64 } from '../models/ImageService';
-import { importStyle, embedJSONInPNG } from '../models/SessionService';
-import {
-  isValidSession,
-  SceneContextAlt,
-  ImageContextAlt,
-  StyleContextAlt,
-  ContextMenuType,
-  Session,
-  GenericScene,
-} from '../models/types';
 import { appState } from '../models/AppService';
-import { getSnapshot } from 'mobx-state-tree';
 import { AppContextMenu } from './AppContextMenu';
 
 import { configure } from 'mobx';

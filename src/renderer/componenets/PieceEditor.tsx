@@ -220,6 +220,7 @@ const PieceEditor = observer(() => {
                 curSession!.library.set(
                   name,
                   PieceLibrary.fromJSON({
+                    version: 1,
                     pieces: [],
                     name: name,
                   }),

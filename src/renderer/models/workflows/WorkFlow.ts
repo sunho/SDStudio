@@ -373,6 +373,7 @@ export class WFWorkFlow {
   buildPreset() {
     let newVars = this.def.presetVars.concat([
       { type: 'string', name: 'name', default: '' },
+      { type: 'string', name: 'profile', default: '' },
     ]);
     if (this.def.backendType === 'none') {
       return materializeWFObj(this.def.type, newVars);

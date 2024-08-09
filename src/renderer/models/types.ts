@@ -122,16 +122,19 @@ export class Piece implements IPiece {
 }
 
 export interface IPieceLibrary {
+  version: number;
   name: string;
   pieces: IPiece[];
 }
 
 export class PieceLibrary implements IPieceLibrary {
+  @observable accessor version: number = 1;
   @observable accessor name: string = '';
   @observable accessor pieces: Piece[] = [];
 
   static fromJSON(json: IPieceLibrary): PieceLibrary {
     const library = new PieceLibrary();
+    library.version = json.version;
     library.name = json.name;
     library.pieces = json.pieces.map((piece) => Piece.fromJSON(piece));
     return library;
@@ -140,6 +143,7 @@ export class PieceLibrary implements IPieceLibrary {
   toJSON(): IPieceLibrary {
     return {
       name: this.name,
+      version: this.version,
       pieces: this.pieces.map((piece) => piece.toJSON()),
     };
   }
@@ -303,6 +307,7 @@ export interface SelectedWorkflow {
 }
 
 export interface ISession {
+  version: number;
   name: string;
   selectedWorkflow?: SelectedWorkflow;
   presets: Record<string, any[]>;
@@ -313,6 +318,7 @@ export interface ISession {
 }
 
 export class Session implements Serealizable {
+  @observable accessor version: number = 1;
   @observable accessor name: string = '';
   @observable accessor selectedWorkflow: SelectedWorkflow | undefined =
     undefined;
@@ -418,6 +424,7 @@ export class Session implements Serealizable {
   static fromJSON(json: ISession): Session {
     const session = new Session();
     session.name = json.name;
+    session.version = json.version;
     session.selectedWorkflow = json.selectedWorkflow;
     session.presets = new Map(
       Object.entries(json.presets).map(([key, value]) => [
@@ -459,6 +466,7 @@ export class Session implements Serealizable {
   toJSON(): ISession {
     return {
       name: this.name,
+      version: this.version,
       selectedWorkflow: this.selectedWorkflow,
       presets: Object.fromEntries(
         Array.from(this.presets.entries()).map(([key, value]) => [

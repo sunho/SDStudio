@@ -10,10 +10,11 @@ import {
 } from '.';
 import { Dialog } from '../componenets/ConfirmWindow';
 import { dataUriToBase64, deleteImageFiles } from './ImageService';
-import { importStyle } from './SessionService';
+import { importPreset } from './SessionService';
 import { action, observable } from 'mobx';
 import {
   GenericScene,
+  ISession,
   isValidPieceLibrary,
   isValidSession,
   PieceLibrary,
@@ -100,9 +101,12 @@ export class AppState {
         reader.onload = async (e: any) => {
           try {
             const base64 = dataUriToBase64(e.target.result);
-            const preset = await importStyle(this.curSession!, base64);
+            const preset = await importPreset(this.curSession!, base64);
             if (preset) {
-              // setSelectedPreset(preset);
+              this.curSession!.selectedWorkflow = {
+                workflowType: preset.type,
+                presetName: preset.name,
+              };
               this.pushDialog({
                 type: 'yes-only',
                 text: '그림체를 임포트 했습니다',
@@ -119,11 +123,11 @@ export class AppState {
       if (name.endsWith('.json')) {
         name = name.slice(0, -5);
       }
-      const handleAddSession = async (json: Session) => {
+      const handleAddSession = async (json: any) => {
         const importCool = async () => {
           const sess = await sessionService.get(json.name);
           if (!sess) {
-            await sessionService.importSessionShallow(json, json.name);
+            await sessionService.importSessionShallow(json as ISession, json.name);
             const newSession = (await sessionService.get(json.name))!;
             this.curSession = newSession;
             this.pushDialog({
@@ -139,7 +143,7 @@ export class AppState {
                   return;
                 }
                 try {
-                  await sessionService.importSessionShallow(json, value);
+                  await sessionService.importSessionShallow(json as ISession, value);
                   const newSession = (await sessionService.get(value))!;
                   this.curSession = newSession;
                 } catch (e) {
@@ -193,7 +197,7 @@ export class AppState {
         }
       };
       if (isValidSession(json)) {
-        handleAddSession(json as Session);
+        handleAddSession(json);
       } else if (isValidPieceLibrary(json)) {
         if (!this.curSession) {
           this.pushMessage('세션을 먼저 선택해주세요.');

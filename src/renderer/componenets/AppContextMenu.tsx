@@ -4,7 +4,7 @@ import { Item, Menu } from 'react-contexify';
 import { sessionService, backend, imageService, isMobile } from '../models';
 import { appState } from '../models/AppService';
 import { dataUriToBase64 } from '../models/ImageService';
-import { embedJSONInPNG } from '../models/SessionService';
+import { createImageWithText, embedJSONInPNG } from '../models/SessionService';
 import {
   SceneContextAlt,
   ImageContextAlt,
@@ -13,6 +13,7 @@ import {
   Scene,
   genericSceneFromJSON,
 } from '../models/types';
+import { Resolution } from '../backends/imageGen';
 
 export const AppContextMenu = observer(() => {
   const duplicateScene = async (ctx: SceneContextAlt) => {
@@ -107,13 +108,12 @@ export const AppContextMenu = observer(() => {
     }
   };
   const exportStyle = async (ctx: StyleContextAlt) => {
-    const pngData = dataUriToBase64(
-      await backend.readDataFile(
-        imageService.getVibesDir(appState.curSession!) +
-          '/' +
-          ctx.preset.profile,
-      ),
-    );
+    let pngData;
+    if (ctx.preset.profile) {
+      pngData = dataUriToBase64((await imageService.fetchVibeImage(appState.curSession!, ctx.preset.profile))!);
+    } else {
+      pngData = await createImageWithText(832, 1216, ctx.preset.name);
+    }
     const newPngData = embedJSONInPNG(pngData, ctx.preset);
     const path =
       'exports/' + ctx.preset.name + '_' + Date.now().toString() + '.png';
