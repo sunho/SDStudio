@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useContext, useEffect, useState } from 'react';
-import * as mobx from 'mobx'
+import * as mobx from 'mobx';
 import {
   TextAreaWithUndo,
   NumberSelect,
@@ -10,7 +10,14 @@ import {
 } from './UtilComponents';
 import { NoiseSchedule, Resolution, Sampling } from '../backends/imageGen';
 import PromptEditTextArea from './PromptEditTextArea';
-import { FaCopy, FaFont, FaImage, FaPlus, FaTrash, FaTrashAlt } from 'react-icons/fa';
+import {
+  FaCopy,
+  FaFont,
+  FaImage,
+  FaPlus,
+  FaTrash,
+  FaTrashAlt,
+} from 'react-icons/fa';
 import { FloatView } from './FloatView';
 import { v4 } from 'uuid';
 import { BigPromptEditor, SlotPiece } from './SceneEditor';
@@ -31,60 +38,63 @@ import {
   workFlowService,
   isMobile,
 } from '../models';
-import {
-  toPARR,
-} from '../models/PromptService';
+import { toPARR } from '../models/PromptService';
 import { appState } from '../models/AppService';
 import { observer } from 'mobx-react-lite';
-import { WFAbstractVar, WFIElement, WFIGroup, WFIInlineInput, WFIMiddlePlaceholderInput, WFIPush, WFIStack, WFVar, WorkFlowDef } from '../models/workflows/WorkFlow';
+import {
+  WFAbstractVar,
+  WFIElement,
+  WFIGroup,
+  WFIInlineInput,
+  WFIMiddlePlaceholderInput,
+  WFIPush,
+  WFIStack,
+  WFVar,
+  WorkFlowDef,
+} from '../models/workflows/WorkFlow';
 import { StackFixed, StackGrow, VerticalStack } from './LayoutComponents';
 
-const ImageSelect = observer(({
- input
-}: {
-  input: WFIInlineInput;
-}) => {
+const ImageSelect = observer(({ input }: { input: WFIInlineInput }) => {
   const { curSession } = appState;
   const { type, preset, shared, editVibe } = useContext(WFElementContext)!;
   const getField = () => {
-    if (input.preset)
-      return preset[input.field];
+    if (input.preset) return preset[input.field];
     return shared[input.field];
   };
   const setField = (val: any) => {
-    if (input.preset)
-      preset[input.field] = val;
-    else
-      shared[input.field] = val;
+    if (input.preset) preset[input.field] = val;
+    else shared[input.field] = val;
   };
-  return <div className="inline-flex md:flex gap-3 items-center flex-none text-eplsis overflow-hidden gap-3 mb-1">
-    <span className="gray-label">{input.label}: </span>
-    <div className="w-24 md:w-48">
-      <FileUploadBase64
-        onFileSelect={async (file: string) => {
-          if (!getField()) {
-            const path = await imageService.storeVibeImage(curSession!, file);
-            setField(path);
-          } else {
-            await imageService.writeVibeImage(curSession!, getField(), file);
-          }
-        }}
-      ></FileUploadBase64>
+  return (
+    <div className="inline-flex md:flex gap-3 items-center flex-none text-eplsis overflow-hidden gap-3 mb-1">
+      <span className="gray-label">{input.label}: </span>
+      <div className="w-24 md:w-48">
+        <FileUploadBase64
+          onFileSelect={async (file: string) => {
+            if (!getField()) {
+              const path = await imageService.storeVibeImage(curSession!, file);
+              setField(path);
+            } else {
+              await imageService.writeVibeImage(curSession!, getField(), file);
+            }
+          }}
+        ></FileUploadBase64>
+      </div>
+      {!isMobile && (
+        <button
+          className={`round-button back-sky`}
+          onClick={() => {
+            if (!getField()) return;
+            const path = imageService.getVibeImagePath(curSession!, getField());
+            backend.openImageEditor(path);
+            backend.watchImage(path);
+          }}
+        >
+          {input.label} 편집
+        </button>
+      )}
     </div>
-    {!isMobile && (
-      <button
-        className={`round-button back-sky`}
-        onClick={() => {
-          if (!getField()) return;
-          const path = imageService.getVibeImagePath(curSession!, getField());
-          backend.openImageEditor(path);
-          backend.watchImage(path);
-        }}
-      >
-        {input.label} 편집
-      </button>
-    )}
-  </div>
+  );
 });
 
 const VibeImage = ({
@@ -117,18 +127,17 @@ interface VibeEditorProps {
 
 export const VibeEditor = observer(({ disabled }: VibeEditorProps) => {
   const { curSession } = appState;
-  const { preset, shared, editVibe, setEditVibe } = useContext(WFElementContext)!;
+  const { preset, shared, editVibe, setEditVibe } =
+    useContext(WFElementContext)!;
 
   const getField = () => {
-    if (editVibe!.preset)
-      return preset[editVibe!.field];
+    if (editVibe!.preset) return preset[editVibe!.field];
     return shared[editVibe!.field];
-  }
+  };
   const setField = (val: any) => {
-    if (editVibe!.preset)
-      preset[editVibe!.field] = val;
+    if (editVibe!.preset) preset[editVibe!.field] = val;
     shared[editVibe!.field] = val;
-  }
+  };
   const vibeChange = async (vibe: string) => {
     if (!vibe) return;
     const path = imageService.storeVibeImage(curSession!, vibe);
@@ -136,114 +145,114 @@ export const VibeEditor = observer(({ disabled }: VibeEditorProps) => {
   };
 
   return (
-    editVibe && <div className="w-full h-full overflow-hidden flex flex-col">
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full overflow-auto">
-          {getField().map((vibe: VibeItem) => (
-            <div className="border border-gray-300 mt-2 p-2 flex gap-2 items-begin">
-              <VibeImage
-                path={vibe.path}
-                className="flex-none w-28 h-28 object-cover"
-              />
-              <div className="flex flex-col gap-2 w-full">
-                <div className="flex w-full items-center md:flex-row flex-col">
-                  <div
-                    className={
-                      'whitespace-nowrap flex-none mr-auto md:mr-0 gray-label'
-                    }
-                  >
-                    정보 추출률 (IS):
-                  </div>
-                  <div className="flex flex-1 md:w-auto w-full gap-1">
-                    <input
-                      className="flex-1"
-                      type="range"
-                      step="0.01"
-                      min="0"
-                      max="1"
-                      value={vibe.info}
-                      onChange={(e) => {
-                        vibe.info = parseFloat(e.target.value);
-                      }}
-                      disabled={disabled}
-                    />
-                    <div className="w-11 flex-none text-lg text-center back-lllgray">
-                      {vibe.info}
+    editVibe && (
+      <div className="w-full h-full overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-hidden">
+          <div className="h-full overflow-auto">
+            {getField().map((vibe: VibeItem) => (
+              <div className="border border-gray-300 mt-2 p-2 flex gap-2 items-begin">
+                <VibeImage
+                  path={vibe.path}
+                  className="flex-none w-28 h-28 object-cover"
+                />
+                <div className="flex flex-col gap-2 w-full">
+                  <div className="flex w-full items-center md:flex-row flex-col">
+                    <div
+                      className={
+                        'whitespace-nowrap flex-none mr-auto md:mr-0 gray-label'
+                      }
+                    >
+                      정보 추출률 (IS):
+                    </div>
+                    <div className="flex flex-1 md:w-auto w-full gap-1">
+                      <input
+                        className="flex-1"
+                        type="range"
+                        step="0.01"
+                        min="0"
+                        max="1"
+                        value={vibe.info}
+                        onChange={(e) => {
+                          vibe.info = parseFloat(e.target.value);
+                        }}
+                        disabled={disabled}
+                      />
+                      <div className="w-11 flex-none text-lg text-center back-lllgray">
+                        {vibe.info}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex w-full md:flex-row flex-col items-center">
-                  <div
-                    className={
-                      'whitepace-nowrap flex-none mr-auto md:mr-0 gray-label'
-                    }
-                  >
-                    레퍼런스 강도 (RS):
-                  </div>
-                  <div className="flex flex-1 md:w-auto w-full gap-1">
-                    <input
-                      className="flex-1"
-                      type="range"
-                      step="0.01"
-                      min="0"
-                      max="1"
-                      value={vibe.strength}
-                      onChange={(e) => {
-                        vibe.strength = parseFloat(e.target.value);
-                      }}
-                      disabled={disabled}
-                    />
-                    <div className="w-11 flex-none text-lg text-center back-lllgray">
-                      {vibe.strength}
+                  <div className="flex w-full md:flex-row flex-col items-center">
+                    <div
+                      className={
+                        'whitepace-nowrap flex-none mr-auto md:mr-0 gray-label'
+                      }
+                    >
+                      레퍼런스 강도 (RS):
+                    </div>
+                    <div className="flex flex-1 md:w-auto w-full gap-1">
+                      <input
+                        className="flex-1"
+                        type="range"
+                        step="0.01"
+                        min="0"
+                        max="1"
+                        value={vibe.strength}
+                        onChange={(e) => {
+                          vibe.strength = parseFloat(e.target.value);
+                        }}
+                        disabled={disabled}
+                      />
+                      <div className="w-11 flex-none text-lg text-center back-lllgray">
+                        {vibe.strength}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex-none flex ml-auto mt-auto">
-                  <button
-                    className={
-                      `round-button h-8 px-8 ml-auto ` +
-                      (disabled ? 'back-gray' : 'back-red')
-                    }
-                    onClick={() => {
-                      if (disabled) return;
-                      setField(getField().filter((x:any) => x !== vibe));
-                    }}
-                  >
-                    <FaTrash />
-                  </button>
+                  <div className="flex-none flex ml-auto mt-auto">
+                    <button
+                      className={
+                        `round-button h-8 px-8 ml-auto ` +
+                        (disabled ? 'back-gray' : 'back-red')
+                      }
+                      onClick={() => {
+                        if (disabled) return;
+                        setField(getField().filter((x: any) => x !== vibe));
+                      }}
+                    >
+                      <FaTrash />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        </div>
+        <div className="flex-none mt-auto pt-2 flex gap-2 items-center">
+          <FileUploadBase64
+            notext
+            disabled={disabled}
+            onFileSelect={vibeChange}
+          ></FileUploadBase64>
+          <button
+            className={`round-button back-gray h-8 w-full`}
+            onClick={() => {
+              setEditVibe(undefined);
+            }}
+          >
+            바이브 설정 닫기
+          </button>
         </div>
       </div>
-      <div className="flex-none mt-auto pt-2 flex gap-2 items-center">
-        <FileUploadBase64
-          notext
-          disabled={disabled}
-          onFileSelect={vibeChange}
-        ></FileUploadBase64>
-        <button
-          className={`round-button back-gray h-8 w-full`}
-          onClick={()=>{
-            setEditVibe(undefined);
-          }}
-        >
-          바이브 설정 닫기
-        </button>
-      </div>
-    </div>
+    )
   );
 });
 
-export const VibeButton = ({ input }: {
-  input: WFIInlineInput;
- }) => {
-  const { editVibe, setEditVibe, preset, shared } = useContext(WFElementContext)!;
+export const VibeButton = ({ input }: { input: WFIInlineInput }) => {
+  const { editVibe, setEditVibe, preset, shared } =
+    useContext(WFElementContext)!;
   const getField = () => {
     console.log(input.field);
-    if (input.preset)
-      return preset[input.field];
+    if (input.preset) return preset[input.field];
     return shared[input.field];
   };
   const onClick = () => {
@@ -314,14 +323,10 @@ const InlineEditorField = ({
 interface InnerEditorProps {
   type: string;
   shared: any;
-  preset: any,
+  preset: any;
 }
 
-const InnerEditor: React.FC<InnerEditorProps> = ({
-  type,
-  shared,
-  preset,
-}) => {
+const InnerEditor: React.FC<InnerEditorProps> = ({ type, shared, preset }) => {
   const { curSession } = appState;
   const prompt = React.useRef<string>('');
   const presets = curSession!.presets.get(type)!;
@@ -330,18 +335,41 @@ const InnerEditor: React.FC<InnerEditorProps> = ({
     prompt.current = txt;
   };
   const [name, setName] = useState(preset.name);
-  const queueprompt = async (middle: string, callback: (path: string) => void) => {
-    let scene = curSession!.getScene('scene', 'style_test') as Scene | undefined;
+  const queueprompt = async (
+    middle: string,
+    callback: (path: string) => void,
+  ) => {
+    let scene = curSession!.getScene('scene', 'style_test') as
+      | Scene
+      | undefined;
     if (!scene) {
       scene = new Scene();
       scene.name = 'style_test';
       curSession!.addScene(scene);
     }
     scene.resolution = 'portrait';
-    scene.slots = [[PromptPiece.fromJSON({ enabled: true, prompt: middle, id: v4() })]];
+    scene.slots = [
+      [PromptPiece.fromJSON({ enabled: true, prompt: middle, id: v4() })],
+    ];
     const dummyShared = workFlowService.buildShared(type);
-    const prompts = await workFlowService.createPrompts(type, curSession!, scene, preset, dummyShared);
-    await workFlowService.pushJob(type, curSession!, scene, prompts[0], preset, dummyShared, 1, callback, true);
+    const prompts = await workFlowService.createPrompts(
+      type,
+      curSession!,
+      scene,
+      preset,
+      dummyShared,
+    );
+    await workFlowService.pushJob(
+      type,
+      curSession!,
+      scene,
+      prompts[0],
+      preset,
+      dummyShared,
+      1,
+      callback,
+      true,
+    );
     taskQueueService.run();
   };
   const setMainImage = async (path: string) => {
@@ -363,26 +391,26 @@ const InnerEditor: React.FC<InnerEditorProps> = ({
             }}
           />
         </div>
-          <button
-            className={`round-button back-sky`}
-            onClick={async () => {
-              if (presets.find((x) => x.name === name)) {
-                appState.pushMessage('이미 존재하는 그림체 이름입니다');
-                return;
-              }
-              if (curSession!.selectedWorkflow?.presetName === preset.name) {
-                preset.name = name;
-                curSession!.selectedWorkflow = {
-                  workflowType: type,
-                  presetName: name
-                };
-              } else {
-                preset.name = name;
-              }
-            }}
-          >
-            이름변경
-          </button>
+        <button
+          className={`round-button back-sky`}
+          onClick={async () => {
+            if (presets.find((x) => x.name === name)) {
+              appState.pushMessage('이미 존재하는 그림체 이름입니다');
+              return;
+            }
+            if (curSession!.selectedWorkflow?.presetName === preset.name) {
+              preset.name = name;
+              curSession!.selectedWorkflow = {
+                workflowType: type,
+                presetName: name,
+              };
+            } else {
+              preset.name = name;
+            }
+          }}
+        >
+          이름변경
+        </button>
       </div>
       <div className="flex-1 overflow-hidden p-2">
         <BigPromptEditor
@@ -404,7 +432,8 @@ const InnerEditor: React.FC<InnerEditorProps> = ({
 
 const ProfilePreSetSelect = observer(({}) => {
   const { curSession } = appState;
-  const { preset, type, shared, middlePromptMode } = useContext(WFElementContext)!;
+  const { preset, type, shared, middlePromptMode } =
+    useContext(WFElementContext)!;
   const presets = curSession!.presets.get(type)!;
   const [selected, setSelected] = useState<any | undefined>(undefined);
   const { show, hideAll } = useContextMenu({
@@ -422,33 +451,29 @@ const ProfilePreSetSelect = observer(({}) => {
     };
   });
 
-  return <div
-    ref={containerRef}
-    className={
-      'mt-2 overflow-hidden min-h-0 ' +
-      (middlePromptMode ? 'h-1/5' : 'h-1/3')
-    }
-  >
-    {selected && <FloatView priority={1}
-        onEscape={() => {
-          setSelected(undefined);
-        }}
+  return (
+    <div
+      ref={containerRef}
+      className={
+        'mt-2 overflow-hidden min-h-0 ' + (middlePromptMode ? 'h-1/5' : 'h-1/3')
+      }
     >
-      <InnerEditor
-        type={type}
-        shared={shared}
-        preset={selected}
-      />
-    </FloatView>}
-    <div className="h-full w-full flex overflow-auto gap-2">
-      {presets
-        .map((x) => (
+      {selected && (
+        <FloatView
+          priority={1}
+          onEscape={() => {
+            setSelected(undefined);
+          }}
+        >
+          <InnerEditor type={type} shared={shared} preset={selected} />
+        </FloatView>
+      )}
+      <div className="h-full w-full flex overflow-auto gap-2">
+        {presets.map((x) => (
           <div
             className={
               'h-full relative flex-none hover:brightness-95 active:brightness-90 cursor-pointer ' +
-              (x == preset
-                ? 'border-2 border-sky-500'
-                : 'border-2 line-color')
+              (x == preset ? 'border-2 border-sky-500' : 'border-2 line-color')
             }
             key={x.name}
             onContextMenu={(e) => {
@@ -459,7 +484,7 @@ const ProfilePreSetSelect = observer(({}) => {
                     type: 'style',
                     preset: preset,
                     session: curSession!,
-                    container: containerRef.current!
+                    container: containerRef.current!,
                   },
                 },
               });
@@ -467,18 +492,20 @@ const ProfilePreSetSelect = observer(({}) => {
             onClick={() => {
               curSession!.selectedWorkflow = {
                 workflowType: type,
-                presetName: x.name
+                presetName: x.name,
               };
             }}
           >
-            {x.profile && <VibeImage
-              path={
-                imageService.getVibesDir(curSession!) +
-                '/' +
-                x.profile.split('/').pop()!
-              }
-              className="w-auto h-full"
-            />}
+            {x.profile && (
+              <VibeImage
+                path={
+                  imageService.getVibesDir(curSession!) +
+                  '/' +
+                  x.profile.split('/').pop()!
+                }
+                className="w-auto h-full"
+              />
+            )}
             {!x.profile && <div className="w-40 h-full"></div>}
             <div
               className="absolute bottom-0 right-0 bg-gray-700 opacity-80 text-sm text-white p-1 rounded-xl m-2 truncate select-none"
@@ -488,29 +515,30 @@ const ProfilePreSetSelect = observer(({}) => {
             </div>
           </div>
         ))}
-      <div className="h-full relative flex-none flex flex-col">
-        <div
-          className="flex-1 w-10 flex m-4 items-center justify-center rounded-xl clickable back-lllgray"
-          onClick={async () => {
-            const name = await appState.pushDialogAsync({
-              type: 'input-confirm',
-              text: '그림체 이름을 입력하세요',
-            });
-            if (!name) return;
-            if (presets.find((x) => x.name === name)) {
-              appState.pushMessage('이미 존재하는 그림체 이름입니다');
-              return;
-            }
-            const newPreset = workFlowService.buildPreset(type);
-            newPreset.name = name;
-            presets.push(newPreset);
-          }}
-        >
-          <FaPlus />
+        <div className="h-full relative flex-none flex flex-col">
+          <div
+            className="flex-1 w-10 flex m-4 items-center justify-center rounded-xl clickable back-lllgray"
+            onClick={async () => {
+              const name = await appState.pushDialogAsync({
+                type: 'input-confirm',
+                text: '그림체 이름을 입력하세요',
+              });
+              if (!name) return;
+              if (presets.find((x) => x.name === name)) {
+                appState.pushMessage('이미 존재하는 그림체 이름입니다');
+                return;
+              }
+              const newPreset = workFlowService.buildPreset(type);
+              newPreset.name = name;
+              presets.push(newPreset);
+            }}
+          >
+            <FaPlus />
+          </div>
         </div>
       </div>
     </div>
-  </div>
+  );
 });
 
 const IntSliderInput = ({
@@ -520,7 +548,7 @@ const IntSliderInput = ({
   disabled,
   step,
   min,
-  max
+  max,
 }: {
   label: string;
   value: number;
@@ -532,11 +560,7 @@ const IntSliderInput = ({
 }) => {
   return (
     <div className="flex w-full items-center md:flex-row flex-col mt-2 gap-2">
-      <div
-        className={
-          'whitespace-nowrap flex-none mr-auto md:mr-0 gray-label'
-        }
-      >
+      <div className={'whitespace-nowrap flex-none mr-auto md:mr-0 gray-label'}>
         {label}:
       </div>
       <div className="flex flex-1 md:w-auto w-full gap-1">
@@ -558,39 +582,34 @@ const IntSliderInput = ({
       </div>
     </div>
   );
-}
+};
 
-const PreSetSelect = observer(({
-  workflowType
-}: {
-  workflowType: string;
-}) => {
+const PreSetSelect = observer(({ workflowType }: { workflowType: string }) => {
   const curSession = appState.curSession!;
   const [isOpen, setIsOpen] = useState(false);
   const clicked = React.useRef(false);
   const presets = curSession.presets.get(workflowType)!;
   const { preset } = useContext(WFElementContext)!;
-  useEffect(()=>{
+  useEffect(() => {
     const close = () => {
-      if (!clicked.current)
-        setIsOpen(false);
-      else
-        clicked.current = false;
-    }
+      if (!clicked.current) setIsOpen(false);
+      else clicked.current = false;
+    };
     window.addEventListener('click', close);
-    return ()=>{
+    return () => {
       window.removeEventListener('click', close);
-    }
-  })
+    };
+  });
   return (
     <div className="flex gap-2 mt-2 items-center relative">
       <div className="flex-none gray-label">사전세팅선택:</div>
-      <div className="round-button back-gray h-9 w-full" onClick={
-        ()=>{
+      <div
+        className="round-button back-gray h-9 w-full"
+        onClick={() => {
           setIsOpen(!isOpen);
           clicked.current = true;
-        }
-      }>
+        }}
+      >
         {curSession.selectedWorkflow?.presetName}
       </div>
       <button
@@ -610,7 +629,7 @@ const PreSetSelect = observer(({
           curSession.addPreset(newPreset);
           curSession.selectedWorkflow = {
             workflowType: workflowType,
-            presetName: name
+            presetName: name,
           };
         }}
       >
@@ -619,12 +638,15 @@ const PreSetSelect = observer(({
       {isOpen && (
         <ul className="left-0 top-10 absolute max-h-60 z-20 w-full mt-1 bg-white border-2 border-gray-300 dark:border-slate-600 rounded-md shadow-lg overflow-auto dark:bg-slate-700">
           {presets.map((option) => (
-            <li key={option.name} className="text-default flex items-center justify-between p-2 clickable bg-white dark:bg-slate-700">
+            <li
+              key={option.name}
+              className="text-default flex items-center justify-between p-2 clickable bg-white dark:bg-slate-700"
+            >
               <button
                 onClick={() => {
                   curSession.selectedWorkflow = {
                     workflowType: workflowType,
-                    presetName: option.name
+                    presetName: option.name,
                   };
                 }}
                 className="w-full text-left"
@@ -633,21 +655,25 @@ const PreSetSelect = observer(({
               </button>
               <div className="flex">
                 <button
-                  onClick={async ()=>{
+                  onClick={async () => {
                     const newName = await appState.pushDialogAsync({
                       type: 'input-confirm',
                       text: '새 사전 세팅 이름을 입력하세요',
                     });
                     if (!newName) return;
                     if (presets.find((x) => x.name === newName)) {
-                      appState.pushMessage('이미 존재하는 사전 세팅 이름입니다');
+                      appState.pushMessage(
+                        '이미 존재하는 사전 세팅 이름입니다',
+                      );
                       return;
                     }
-                    if (curSession.selectedWorkflow?.presetName === option.name) {
+                    if (
+                      curSession.selectedWorkflow?.presetName === option.name
+                    ) {
                       option.name = newName;
                       curSession.selectedWorkflow = {
                         workflowType: workflowType,
-                        presetName: newName
+                        presetName: newName,
                       };
                     } else {
                       option.name = newName;
@@ -655,14 +681,21 @@ const PreSetSelect = observer(({
                   }}
                   className="p-2 mx-1 icon-button bg-green-500"
                 >
-                  <FaFont/>
+                  <FaFont />
                 </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    const newPreset = workFlowService.presetFromJSON(preset.toJSON());
+                    const newPreset = workFlowService.presetFromJSON(
+                      preset.toJSON(),
+                    );
                     let num = 1;
-                    while (presets.find((x) => x.name === preset.name + ' copy ' + num.toString())) {
+                    while (
+                      presets.find(
+                        (x) =>
+                          x.name === preset.name + ' copy ' + num.toString(),
+                      )
+                    ) {
                       num++;
                     }
                     const newName = preset.name + ' copy ' + num.toString();
@@ -671,12 +704,14 @@ const PreSetSelect = observer(({
                   }}
                   className="p-2 mx-1 icon-button bg-sky-500"
                 >
-                  <FaCopy/>
+                  <FaCopy />
                 </button>
                 <button
                   onClick={() => {
                     if (presets.length === 1) {
-                      appState.pushMessage('마지막 사전 세팅은 삭제할 수 없습니다');
+                      appState.pushMessage(
+                        '마지막 사전 세팅은 삭제할 수 없습니다',
+                      );
                       return;
                     }
                     appState.pushDialog({
@@ -686,14 +721,14 @@ const PreSetSelect = observer(({
                         curSession!.removePreset(workflowType, option.name);
                         curSession!.selectedWorkflow = {
                           workflowType: workflowType,
-                          presetName: undefined
+                          presetName: undefined,
                         };
                       },
                     });
                   }}
                   className="p-2 mx-1 icon-button bg-red-500"
                 >
-                  <FaTrash/>
+                  <FaTrash />
                 </button>
               </div>
             </li>
@@ -706,30 +741,37 @@ const PreSetSelect = observer(({
 
 interface NullIntInputProps {
   label: string;
-  value: number|null;
+  value: number | null;
   disabled: boolean;
   onChange: (val: number | undefined) => void;
 }
 
-const NullIntInput = ({ label, value, onChange, disabled }: NullIntInputProps) => {
-  return <input
-    className={`w-full gray-input`}
-    disabled={disabled}
-    value={value ? value.toString() : ''}
-    onChange={(e) => {
-      try {
-        const num = parseInt(e.target.value);
-        if (e.target.value === '') throw new Error('No seed');
-        if (isNaN(num)) throw new Error('Invalid seed');
-        if (!Number.isInteger(num))
-          throw new Error('Seed must be an integer');
-        if (num <= 0) throw new Error('Seed must be positive');
-        onChange(num);
-      } catch (e) {
-        onChange(undefined);
-      }
-    }}
-  />
+const NullIntInput = ({
+  label,
+  value,
+  onChange,
+  disabled,
+}: NullIntInputProps) => {
+  return (
+    <input
+      className={`w-full gray-input`}
+      disabled={disabled}
+      value={value ? value.toString() : ''}
+      onChange={(e) => {
+        try {
+          const num = parseInt(e.target.value);
+          if (e.target.value === '') throw new Error('No seed');
+          if (isNaN(num)) throw new Error('Invalid seed');
+          if (!Number.isInteger(num))
+            throw new Error('Seed must be an integer');
+          if (num <= 0) throw new Error('Seed must be positive');
+          onChange(num);
+        } catch (e) {
+          onChange(undefined);
+        }
+      }}
+    />
+  );
 };
 
 interface IWFElementContext {
@@ -757,107 +799,130 @@ interface IWFGroupContext {
 
 const WFGroupContext = React.createContext<IWFGroupContext | null>(null);
 
-const WFRenderElement = observer(({
-  element,
-}: WFElementProps) => {
+const WFRenderElement = observer(({ element }: WFElementProps) => {
   switch (element.type) {
-  case 'stack':
-    return <WFRStack element={element} />;
-  case 'inline':
-    return <WFRInline element={element} />;
-  case 'group':
-    return <WFRGroup element={element} />;
-  case 'presetSelect':
-    return <WFRPresetSelect element={element} />;
-  case 'profilePresetSelect':
-    return <WFRProfilePresetSelect element={element} />;
-  case 'push':
-    return <WFRPush element={element} />;
-  case 'middlePlaceholder':
-    return <WFRMiddlePlaceholder element={element} />;
+    case 'stack':
+      return <WFRStack element={element} />;
+    case 'inline':
+      return <WFRInline element={element} />;
+    case 'group':
+      return <WFRGroup element={element} />;
+    case 'presetSelect':
+      return <WFRPresetSelect element={element} />;
+    case 'profilePresetSelect':
+      return <WFRProfilePresetSelect element={element} />;
+    case 'push':
+      return <WFRPush element={element} />;
+    case 'middlePlaceholder':
+      return <WFRMiddlePlaceholder element={element} />;
   }
 });
 
-const WFRMiddlePlaceholder = observer(({element}:WFElementProps) => {
-  const { editVibe, showGroup, getMiddlePrompt, onMiddlePromptChange } = useContext(WFElementContext)!;
+const WFRMiddlePlaceholder = observer(({ element }: WFElementProps) => {
+  const { editVibe, showGroup, getMiddlePrompt, onMiddlePromptChange } =
+    useContext(WFElementContext)!;
   const input = element as WFIMiddlePlaceholderInput;
-  if (!getMiddlePrompt || !onMiddlePromptChange) { return <></> }
-  if (showGroup || editVibe) { return <></>}
-  return <EditorField label={input.label} full={true} bold>
-    <PromptEditTextArea
-      value={getMiddlePrompt!()}
-      disabled={false}
-      onChange={onMiddlePromptChange!}
-    ></PromptEditTextArea>
-  </EditorField>
+  if (!getMiddlePrompt || !onMiddlePromptChange) {
+    return <></>;
+  }
+  if (showGroup || editVibe) {
+    return <></>;
+  }
+  return (
+    <EditorField label={input.label} full={true} bold>
+      <PromptEditTextArea
+        value={getMiddlePrompt!()}
+        disabled={false}
+        onChange={onMiddlePromptChange!}
+      ></PromptEditTextArea>
+    </EditorField>
+  );
 });
 
-const WFRProfilePresetSelect = observer(({element}:WFElementProps) => {
+const WFRProfilePresetSelect = observer(({ element }: WFElementProps) => {
   const { type } = useContext(WFElementContext)!;
   return <ProfilePreSetSelect />;
 });
 
-const WFRPresetSelect = observer(({element}:WFElementProps) => {
+const WFRPresetSelect = observer(({ element }: WFElementProps) => {
   const { type } = useContext(WFElementContext)!;
   return <PreSetSelect workflowType={type} />;
 });
 
-const WFRGroup = observer(({element}:WFElementProps) => {
+const WFRGroup = observer(({ element }: WFElementProps) => {
   const grp = element as WFIGroup;
-  const { type, setShowGroup, showGroup, editVibe } = useContext(WFElementContext)!;
+  const { type, setShowGroup, showGroup, editVibe } =
+    useContext(WFElementContext)!;
   const { curGroup } = useContext(WFGroupContext)!;
   if (editVibe != undefined) {
-    return <></>
+    return <></>;
   }
-  return <>
-    {grp.label !== showGroup && <button
-      className={`round-button back-gray h-8 w-full mt-2`}
-      onClick={() => {setShowGroup(grp.label)}}
-    >
-      {grp.label} 열기
-    </button>}
-    {grp.label === showGroup && <WFGroupContext.Provider value={{curGroup: grp.label}}>
-        <VerticalStack>
-        {grp.inputs.map(x => <WFRenderElement element={x} />)}
+  return (
+    <>
+      {grp.label !== showGroup && (
         <button
+          className={`round-button back-gray h-8 w-full mt-2`}
+          onClick={() => {
+            setShowGroup(grp.label);
+          }}
+        >
+          {grp.label} 열기
+        </button>
+      )}
+      {grp.label === showGroup && (
+        <WFGroupContext.Provider value={{ curGroup: grp.label }}>
+          <VerticalStack>
+            {grp.inputs.map((x) => (
+              <WFRenderElement element={x} />
+            ))}
+            <button
               className={`round-button back-gray h-8 w-full mt-2`}
-              onClick={() => {setShowGroup(undefined)}}
+              onClick={() => {
+                setShowGroup(undefined);
+              }}
             >
               {grp.label} 닫기
             </button>
-      </VerticalStack>
-    </WFGroupContext.Provider>}
-  </>
+          </VerticalStack>
+        </WFGroupContext.Provider>
+      )}
+    </>
+  );
 });
 
-const WFRStack = observer(({element}:WFElementProps) => {
+const WFRStack = observer(({ element }: WFElementProps) => {
   const stk = element as WFIStack;
-  return <VerticalStack>
-    {stk.inputs.map(x => <WFRenderElement element={x} />)}
-  </VerticalStack>
+  return (
+    <VerticalStack>
+      {stk.inputs.map((x) => (
+        <WFRenderElement element={x} />
+      ))}
+    </VerticalStack>
+  );
 });
 
-const WFRPush = observer(({element}:WFElementProps) => {
+const WFRPush = observer(({ element }: WFElementProps) => {
   const { showGroup, editVibe } = useContext(WFElementContext)!;
   const { curGroup } = useContext(WFGroupContext)!;
   const push = element as WFIPush;
   if (curGroup !== showGroup || editVibe != undefined) {
-    return <></>
+    return <></>;
   }
 
   if (push.direction === 'top') {
-    return <div className="mt-auto"></div>
+    return <div className="mt-auto"></div>;
   } else if (push.direction === 'bottom') {
-    return <div className="mb-auto"></div>
+    return <div className="mb-auto"></div>;
   } else if (push.direction === 'left') {
-    return <div className="ml-auto"></div>
+    return <div className="ml-auto"></div>;
   } else if (push.direction === 'right') {
-    return <div className="mr-auto"></div>
+    return <div className="mr-auto"></div>;
   }
 });
 
-const WFRInline = observer(({element}:WFElementProps) => {
-  const { editVibe, type, showGroup, preset, shared } = useContext(WFElementContext)!;
+const WFRInline = observer(({ element }: WFElementProps) => {
+  const { editVibe, type, showGroup, preset, shared } =
+    useContext(WFElementContext)!;
   const { curGroup } = useContext(WFGroupContext)!;
   const input = element as WFIInlineInput;
   const field = workFlowService.getVarDef(type, input.preset, input.field)!;
@@ -876,78 +941,99 @@ const WFRInline = observer(({element}:WFElementProps) => {
     }
   };
   if (curGroup !== showGroup || editVibe != undefined) {
-    return <></>
+    return <></>;
   }
   const key = `${type}_${preset.name}_${input.field}`;
   switch (field.type) {
-  case 'prompt':
-    return <EditorField label={input.label} full={input.flex === 'flex-1'}>
-        <PromptEditTextArea
-          key={key}
+    case 'prompt':
+      return (
+        <EditorField label={input.label} full={input.flex === 'flex-1'}>
+          <PromptEditTextArea
+            key={key}
+            value={getField()}
+            disabled={false}
+            onChange={setField}
+          ></PromptEditTextArea>
+        </EditorField>
+      );
+    case 'nullInt':
+      return (
+        <InlineEditorField label={input.label}>
+          <NullIntInput
+            label={input.label}
+            value={getField()}
+            disabled={false}
+            onChange={(val) => setField(val)}
+            key={key}
+          />
+        </InlineEditorField>
+      );
+    case 'vibeSet':
+      return <VibeButton input={input} key={key} />;
+    case 'bool':
+      return (
+        <InlineEditorField label={input.label}>
+          <input
+            key={key}
+            type="checkbox"
+            checked={getField()}
+            onChange={(e) => setField(e.target.checked)}
+          />
+        </InlineEditorField>
+      );
+    case 'int':
+      return (
+        <IntSliderInput
+          label={input.label}
           value={getField()}
-          disabled={false}
           onChange={setField}
-        ></PromptEditTextArea>
-      </EditorField>
-  case 'nullInt':
-    return <InlineEditorField label={input.label}>
-      <NullIntInput label={input.label} value={getField()} disabled={false} onChange={
-        (val) => setField(val)
-      }
+          disabled={false}
+          min={field.min}
+          max={field.max}
+          step={field.step}
           key={key}
-      />
-    </InlineEditorField>
-  case 'vibeSet':
-    return <VibeButton input={input} key={key}/>
-  case 'bool':
-    return <InlineEditorField label={input.label} >
-      <input
-        key={key}
-        type="checkbox"
-        checked={getField()}
-        onChange={(e) => setField(e.target.checked)}
-      />
-    </InlineEditorField>
-  case 'int':
-    return <IntSliderInput label={input.label} value={getField()} onChange={setField} disabled={false} min={field.min} max={field.max} step={field.step} key={key}/>
-  case 'sampling':
-    return  <InlineEditorField label={input.label}>
-      <DropdownSelect
-        key={key}
-        selectedOption={getField()}
-        disabled={false}
-        menuPlacement="top"
-        options={Object.values(Sampling).map((x) => ({
-          label: x,
-          value: x,
-        }))}
-        onSelect={(opt) => {
-          setField(opt.value);
-        }}
-      />
-    </InlineEditorField>
-  case 'noiseSchedule':
-    return <InlineEditorField label={input.label}>
-      <DropdownSelect
-        key={key}
-        selectedOption={getField()}
-        disabled={false}
-        menuPlacement="top"
-        options={Object.values(NoiseSchedule).map((x) => ({
-          label: x,
-          value: x,
-        }))}
-        onSelect={(opt) => {
-          setField(opt.value);
-        }}
-      />
-    </InlineEditorField>
-  case 'image':
-    return <ImageSelect input={input} key={key}/>
+        />
+      );
+    case 'sampling':
+      return (
+        <InlineEditorField label={input.label}>
+          <DropdownSelect
+            key={key}
+            selectedOption={getField()}
+            disabled={false}
+            menuPlacement="top"
+            options={Object.values(Sampling).map((x) => ({
+              label: x,
+              value: x,
+            }))}
+            onSelect={(opt) => {
+              setField(opt.value);
+            }}
+          />
+        </InlineEditorField>
+      );
+    case 'noiseSchedule':
+      return (
+        <InlineEditorField label={input.label}>
+          <DropdownSelect
+            key={key}
+            selectedOption={getField()}
+            disabled={false}
+            menuPlacement="top"
+            options={Object.values(NoiseSchedule).map((x) => ({
+              label: x,
+              value: x,
+            }))}
+            onSelect={(opt) => {
+              setField(opt.value);
+            }}
+          />
+        </InlineEditorField>
+      );
+    case 'image':
+      return <ImageSelect input={input} key={key} />;
   }
-  return <InlineEditorField label={input.label}>
-    asdf
-  </InlineEditorField>
+  return <InlineEditorField label={input.label}>asdf</InlineEditorField>;
 });
 
 interface ImplProps {
@@ -960,34 +1046,48 @@ interface ImplProps {
   onMiddlePromptChange?: (txt: string) => void;
 }
 
-export const PreSetEditorImpl = observer(({type, shared, preset, element, middlePromptMode, getMiddlePrompt, onMiddlePromptChange }: ImplProps) => {
-  const [editVibe, setEditVibe] = useState<WFIInlineInput|undefined>(undefined);
-  const [showGroup, setShowGroup] = useState<string | undefined>(undefined);
-  useEffect(() => {
-    setShowGroup(undefined);
-  }, [type]);
-  return  <StackGrow>
-      <WFElementContext.Provider value={{
-        preset: preset,
-        shared: shared,
-        showGroup: showGroup,
-        editVibe: editVibe,
-        setEditVibe: setEditVibe,
-        setShowGroup: setShowGroup,
-        type: type,
-        middlePromptMode,
-        getMiddlePrompt,
-        onMiddlePromptChange,
-      }}>
-        <WFGroupContext.Provider value={{}}>
-          <VibeEditor disabled={false}/>
-          <WFRenderElement
-            element={element}
-          />
-        </WFGroupContext.Provider>
-      </WFElementContext.Provider>
-  </StackGrow>
-});
+export const PreSetEditorImpl = observer(
+  ({
+    type,
+    shared,
+    preset,
+    element,
+    middlePromptMode,
+    getMiddlePrompt,
+    onMiddlePromptChange,
+  }: ImplProps) => {
+    const [editVibe, setEditVibe] = useState<WFIInlineInput | undefined>(
+      undefined,
+    );
+    const [showGroup, setShowGroup] = useState<string | undefined>(undefined);
+    useEffect(() => {
+      setShowGroup(undefined);
+    }, [type]);
+    return (
+      <StackGrow>
+        <WFElementContext.Provider
+          value={{
+            preset: preset,
+            shared: shared,
+            showGroup: showGroup,
+            editVibe: editVibe,
+            setEditVibe: setEditVibe,
+            setShowGroup: setShowGroup,
+            type: type,
+            middlePromptMode,
+            getMiddlePrompt,
+            onMiddlePromptChange,
+          }}
+        >
+          <WFGroupContext.Provider value={{}}>
+            <VibeEditor disabled={false} />
+            <WFRenderElement element={element} />
+          </WFGroupContext.Provider>
+        </WFElementContext.Provider>
+      </StackGrow>
+    );
+  },
+);
 
 interface InnerProps {
   type: string;
@@ -1010,19 +1110,32 @@ interface UnionProps {
   onMiddlePromptChange?: (txt: string) => void;
 }
 
-export const InnerPreSetEditor = observer(({type, shared, preset, element, middlePromptMode, getMiddlePrompt, onMiddlePromptChange, nopad}: InnerProps) => {
-  return <VerticalStack className={nopad ? "" : "p-3"}>
-    <PreSetEditorImpl
-      type={type}
-      shared={shared}
-      preset={preset}
-      element={element}
-      middlePromptMode={middlePromptMode}
-      getMiddlePrompt={getMiddlePrompt}
-      onMiddlePromptChange={onMiddlePromptChange}
-      />
-  </VerticalStack>
-});
+export const InnerPreSetEditor = observer(
+  ({
+    type,
+    shared,
+    preset,
+    element,
+    middlePromptMode,
+    getMiddlePrompt,
+    onMiddlePromptChange,
+    nopad,
+  }: InnerProps) => {
+    return (
+      <VerticalStack className={nopad ? '' : 'p-3'}>
+        <PreSetEditorImpl
+          type={type}
+          shared={shared}
+          preset={preset}
+          element={element}
+          middlePromptMode={middlePromptMode}
+          getMiddlePrompt={getMiddlePrompt}
+          onMiddlePromptChange={onMiddlePromptChange}
+        />
+      </VerticalStack>
+    );
+  },
+);
 
 interface Props {
   middlePromptMode: boolean;
@@ -1030,87 +1143,106 @@ interface Props {
   onMiddlePromptChange?: (txt: string) => void;
 }
 
-const PreSetEditor = observer(({
-  middlePromptMode,
-  getMiddlePrompt,
-  onMiddlePromptChange,
-}: Props) => {
-  const [_, rerender] = useState<{}>({});
-  const curSession = appState.curSession!;
-  const workflowType = curSession.selectedWorkflow?.workflowType;
-  const shared = curSession.presetShareds?.get(workflowType!);
-  const presets = curSession.presets?.get(workflowType!);
-  if (!workflowType) {
-    curSession.selectedWorkflow = {
-      workflowType: workFlowService.generalFlows[0].getType(),
+const PreSetEditor = observer(
+  ({ middlePromptMode, getMiddlePrompt, onMiddlePromptChange }: Props) => {
+    const [_, rerender] = useState<{}>({});
+    const curSession = appState.curSession!;
+    const workflowType = curSession.selectedWorkflow?.workflowType;
+    const shared = curSession.presetShareds?.get(workflowType!);
+    const presets = curSession.presets?.get(workflowType!);
+    if (!workflowType) {
+      curSession.selectedWorkflow = {
+        workflowType: workFlowService.generalFlows[0].getType(),
+      };
+      rerender({});
+    } else {
+      if (!presets) {
+        const preset = workFlowService.buildPreset(workflowType);
+        preset.name = 'default';
+        curSession.presets.set(workflowType, [preset]);
+        rerender({});
+      } else if (!shared) {
+        curSession.presetShareds.set(
+          workflowType,
+          workFlowService.buildShared(workflowType),
+        );
+        rerender({});
+      } else if (
+        !curSession.selectedWorkflow!.presetName ||
+        !presets.find((x) => x.name === curSession.selectedWorkflow!.presetName)
+      ) {
+        curSession.selectedWorkflow!.presetName = presets[0].name;
+        rerender({});
+      }
     }
-    rerender({});
-  } else {
-    if (!presets) {
-      const preset = workFlowService.buildPreset(workflowType);
-      preset.name = 'default';
-      curSession.presets.set(workflowType, [
-        preset
-      ]);
-      rerender({});
-    } else if (!shared) {
-      curSession.presetShareds.set(workflowType, workFlowService.buildShared(workflowType));
-      rerender({});
-    } else if (!curSession.selectedWorkflow!.presetName || !presets.find(x=>x.name === curSession.selectedWorkflow!.presetName)) {
-      curSession.selectedWorkflow!.presetName = presets[0].name;
-      rerender({});
-    }
-  }
-  return workflowType && shared && curSession.selectedWorkflow!.presetName && <VerticalStack className="p-3">
-    <StackFixed className="flex gap-2 items-center">
-      <span className={'flex-none gray-label'}>작업모드: </span>
-      <DropdownSelect
-        selectedOption={workflowType}
-        menuPlacement="bottom"
-        options={workFlowService.generalFlows.map(x=>({
-          value: x.getType(),
-          label: x.getTitle()
-        }))}
-        onSelect={(opt) => {
-          curSession.selectedWorkflow = {
-            workflowType: opt.value
-          }
-        }}
-      />
-    </StackFixed>
-    <PreSetEditorImpl
-      type={workflowType}
-      shared={shared}
-      preset={presets!.find(x=>x.name === curSession.selectedWorkflow!.presetName)!}
-      middlePromptMode={middlePromptMode}
-      element={workFlowService.getGeneralEditor(workflowType)}
-      getMiddlePrompt={getMiddlePrompt}
-      onMiddlePromptChange={onMiddlePromptChange}
-      />
-  </VerticalStack>
-});
+    return (
+      workflowType &&
+      shared &&
+      curSession.selectedWorkflow!.presetName && (
+        <VerticalStack className="p-3">
+          <StackFixed className="flex gap-2 items-center">
+            <span className={'flex-none gray-label'}>작업모드: </span>
+            <DropdownSelect
+              selectedOption={workflowType}
+              menuPlacement="bottom"
+              options={workFlowService.generalFlows.map((x) => ({
+                value: x.getType(),
+                label: x.getTitle(),
+              }))}
+              onSelect={(opt) => {
+                curSession.selectedWorkflow = {
+                  workflowType: opt.value,
+                };
+              }}
+            />
+          </StackFixed>
+          <PreSetEditorImpl
+            type={workflowType}
+            shared={shared}
+            preset={
+              presets!.find(
+                (x) => x.name === curSession.selectedWorkflow!.presetName,
+              )!
+            }
+            middlePromptMode={middlePromptMode}
+            element={workFlowService.getGeneralEditor(workflowType)}
+            getMiddlePrompt={getMiddlePrompt}
+            onMiddlePromptChange={onMiddlePromptChange}
+          />
+        </VerticalStack>
+      )
+    );
+  },
+);
 
-export const UnionPreSetEditor = observer(({
-  general,
-  type,
-  shared,
-  preset,
-  middlePromptMode,
-  getMiddlePrompt,
-  onMiddlePromptChange,
-}: UnionProps) => {
-  return general ? <PreSetEditor
-    middlePromptMode={middlePromptMode}
-    getMiddlePrompt={getMiddlePrompt}
-    onMiddlePromptChange={onMiddlePromptChange}/> :
-    <InnerPreSetEditor
-      type={type!}
-      shared={shared!}
-      preset={preset!}
-      element={workFlowService.getInnerEditor(type!)}
-      middlePromptMode={middlePromptMode}
-      getMiddlePrompt={getMiddlePrompt}
-      onMiddlePromptChange={onMiddlePromptChange}/>
-});
+export const UnionPreSetEditor = observer(
+  ({
+    general,
+    type,
+    shared,
+    preset,
+    middlePromptMode,
+    getMiddlePrompt,
+    onMiddlePromptChange,
+  }: UnionProps) => {
+    return general ? (
+      <PreSetEditor
+        middlePromptMode={middlePromptMode}
+        getMiddlePrompt={getMiddlePrompt}
+        onMiddlePromptChange={onMiddlePromptChange}
+      />
+    ) : (
+      <InnerPreSetEditor
+        type={type!}
+        shared={shared!}
+        preset={preset!}
+        element={workFlowService.getInnerEditor(type!)}
+        middlePromptMode={middlePromptMode}
+        getMiddlePrompt={getMiddlePrompt}
+        onMiddlePromptChange={onMiddlePromptChange}
+      />
+    );
+  },
+);
 
 export default PreSetEditor;

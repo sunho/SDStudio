@@ -161,7 +161,7 @@ export class GameService extends EventTarget {
     for (let i = 0; i < game.length - 1; i++) {
       if (game[i].rank != i) {
         const round: Round = {
-          players: matchPlayers.map(x => x.path),
+          players: matchPlayers.map((x) => x.path),
           winMask: matchPlayers.map(() => false),
           curPlayer: 0,
         };

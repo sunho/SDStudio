@@ -21,7 +21,7 @@ import ConfirmWindow, { Dialog } from './ConfirmWindow';
 import QueueControl from './SceneQueueControl';
 import { convertDenDenData, isValidDenDenDataFormat } from '../models/compat';
 import { FloatViewProvider } from './FloatView';
-import { observer, useObserver } from "mobx-react-lite"
+import { observer, useObserver } from 'mobx-react-lite';
 import {
   FaImage,
   FaImages,
@@ -73,10 +73,10 @@ import { appState } from '../models/AppService';
 import { getSnapshot } from 'mobx-state-tree';
 import { AppContextMenu } from './AppContextMenu';
 
-import { configure } from "mobx"
+import { configure } from 'mobx';
 configure({
-  enforceActions: 'never'
-})
+  enforceActions: 'never',
+});
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -306,20 +306,16 @@ export const App = observer(() => {
           }}
         >
           <FloatViewProvider>
-            <AppContextMenu/>
+            <AppContextMenu />
             <VerticalStack>
               <StackFixed>
-                <TobBar
-                />
+                <TobBar />
               </StackFixed>
               <StackGrow className="flex">
                 {appState.curSession && (
                   <>
                     <StackGrow outerClassName="hidden md:block">
-                      <PreSetEditor
-                        key={editorKey}
-                        middlePromptMode={false}
-                      />
+                      <PreSetEditor key={editorKey} middlePromptMode={false} />
                     </StackGrow>
                     <StackGrow>
                       <TabComponent
@@ -341,17 +337,19 @@ export const App = observer(() => {
           <StackFixed>
             <div className="px-3 py-2 border-t flex gap-3 items-center line-color">
               <div className="hidden md:block flex-1">
-                <SessionSelect/>
+                <SessionSelect />
               </div>
               <div className="flex flex-none gap-4 ml-auto">
-                <TaskQueueControl/>
+                <TaskQueueControl />
               </div>
             </div>
           </StackFixed>
         </ErrorBoundary>
-        <AlertWindow/>
-        <ConfirmWindow/>
-        {appState.progressDialog && <ProgressWindow dialog={appState.progressDialog} />}
+        <AlertWindow />
+        <ConfirmWindow />
+        {appState.progressDialog && (
+          <ProgressWindow dialog={appState.progressDialog} />
+        )}
         <PromptTooltip />
       </div>
     </DndProvider>

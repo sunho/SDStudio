@@ -1,11 +1,7 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { DropdownSelect, Option } from './UtilComponents';
-import {
-  FaPlus,
-  FaShare,
-  FaTrashAlt,
-} from 'react-icons/fa';
+import { FaPlus, FaShare, FaTrashAlt } from 'react-icons/fa';
 import { sessionService, imageService, backend, zipService } from '../models';
 import { appState } from '../models/AppService';
 import { observer } from 'mobx-react-lite';
@@ -81,7 +77,9 @@ const SessionSelect = observer(() => {
       </button>
       <button
         className={`icon-button nback-orange mx-1`}
-        onClick={()=>{appState.projectBackupMenu();}}
+        onClick={() => {
+          appState.projectBackupMenu();
+        }}
       >
         <FaShare />
       </button>

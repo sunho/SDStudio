@@ -1,5 +1,16 @@
-import { AugmentMethod, NoiseSchedule, Resolution, Sampling } from '../backends/imageGen';
-import { types, Instance, cast, SnapshotIn, SnapshotOut } from "mobx-state-tree"
+import {
+  AugmentMethod,
+  NoiseSchedule,
+  Resolution,
+  Sampling,
+} from '../backends/imageGen';
+import {
+  types,
+  Instance,
+  cast,
+  SnapshotIn,
+  SnapshotOut,
+} from 'mobx-state-tree';
 import { action, observable, makeObservable } from 'mobx';
 import { Serealizable } from './ResourceSyncService';
 import { workFlowService } from '.';
@@ -38,8 +49,7 @@ export interface ModelBackend {
   model?: string;
 }
 
-export interface AbstractJob {
-}
+export interface AbstractJob {}
 
 export interface SDAbstractJob<T> extends AbstractJob {
   cfgRescale: number;
@@ -123,14 +133,14 @@ export class PieceLibrary implements IPieceLibrary {
   static fromJSON(json: IPieceLibrary): PieceLibrary {
     const library = new PieceLibrary();
     library.name = json.name;
-    library.pieces = json.pieces.map(piece => Piece.fromJSON(piece));
+    library.pieces = json.pieces.map((piece) => Piece.fromJSON(piece));
     return library;
   }
 
   toJSON(): IPieceLibrary {
     return {
       name: this.name,
-      pieces: this.pieces.map(piece => piece.toJSON()),
+      pieces: this.pieces.map((piece) => piece.toJSON()),
     };
   }
 }
@@ -230,7 +240,9 @@ export class Scene extends AbstractScene implements IScene {
     const scene = new Scene();
     Object.assign(scene, json);
     scene.type = 'scene';
-    scene.slots = json.slots.map(slot => slot.map(piece => PromptPiece.fromJSON(piece)));
+    scene.slots = json.slots.map((slot) =>
+      slot.map((piece) => PromptPiece.fromJSON(piece)),
+    );
     return scene;
   }
 
@@ -238,7 +250,7 @@ export class Scene extends AbstractScene implements IScene {
     return {
       ...super.toJSON(),
       type: this.type,
-      slots: this.slots.map(slot => slot.map(piece => piece.toJSON())),
+      slots: this.slots.map((slot) => slot.map((piece) => piece.toJSON())),
     };
   }
 }
@@ -302,7 +314,8 @@ export interface ISession {
 
 export class Session implements Serealizable {
   @observable accessor name: string = '';
-  @observable accessor selectedWorkflow: SelectedWorkflow | undefined = undefined;
+  @observable accessor selectedWorkflow: SelectedWorkflow | undefined =
+    undefined;
   @observable accessor presets: Map<string, any[]> = new Map();
   @observable accessor inpaints: Map<string, InpaintScene> = new Map();
   @observable accessor scenes: Map<string, Scene> = new Map();
@@ -322,7 +335,7 @@ export class Session implements Serealizable {
 
   @action
   addScene(scene: GenericScene): void {
-    console.log("name", scene.name)
+    console.log('name', scene.name);
     if (scene.type === 'scene') {
       this.scenes.set(scene.name, scene);
     } else {
@@ -362,11 +375,13 @@ export class Session implements Serealizable {
   }
 
   hasPreset(type: string, name: string): boolean {
-    return this.presets.get(type)?.some(preset => preset.name === name) ?? false;
+    return (
+      this.presets.get(type)?.some((preset) => preset.name === name) ?? false
+    );
   }
 
   getPreset(type: string, name: string): any | undefined {
-    return this.presets.get(type)?.find(preset => preset.name === name);
+    return this.presets.get(type)?.find((preset) => preset.name === name);
   }
 
   @action
@@ -379,7 +394,10 @@ export class Session implements Serealizable {
   @action
   removePreset(type: string, name: string): void {
     const presets = this.presets.get(type) || [];
-    this.presets.set(type, presets.filter(preset => preset.name !== name));
+    this.presets.set(
+      type,
+      presets.filter((preset) => preset.name !== name),
+    );
   }
 
   getScenes(type: 'scene' | 'inpaint'): GenericScene[] {
@@ -397,25 +415,39 @@ export class Session implements Serealizable {
     return [type, preset, shared, def];
   }
 
-
   static fromJSON(json: ISession): Session {
     const session = new Session();
     session.name = json.name;
     session.selectedWorkflow = json.selectedWorkflow;
     session.presets = new Map(
-      Object.entries(json.presets).map(([key, value]) => [key, value.map(preset => workFlowService.presetFromJSON(preset))])
+      Object.entries(json.presets).map(([key, value]) => [
+        key,
+        value.map((preset) => workFlowService.presetFromJSON(preset)),
+      ]),
     );
     session.inpaints = new Map(
-      Object.entries(json.inpaints).map(([key, value]) => [key, InpaintScene.fromJSON(value)])
+      Object.entries(json.inpaints).map(([key, value]) => [
+        key,
+        InpaintScene.fromJSON(value),
+      ]),
     );
     session.scenes = new Map(
-      Object.entries(json.scenes).map(([key, value]) => [key, Scene.fromJSON(value)])
+      Object.entries(json.scenes).map(([key, value]) => [
+        key,
+        Scene.fromJSON(value),
+      ]),
     );
     session.library = new Map(
-      Object.entries(json.library).map(([key, value]) => [key, PieceLibrary.fromJSON(value)])
+      Object.entries(json.library).map(([key, value]) => [
+        key,
+        PieceLibrary.fromJSON(value),
+      ]),
     );
     session.presetShareds = new Map(
-      Object.entries(json.presetShareds).map(([key, value]) => [key, workFlowService.sharedFromJSON(value)])
+      Object.entries(json.presetShareds).map(([key, value]) => [
+        key,
+        workFlowService.sharedFromJSON(value),
+      ]),
     );
     return session;
   }
@@ -429,23 +461,38 @@ export class Session implements Serealizable {
       name: this.name,
       selectedWorkflow: this.selectedWorkflow,
       presets: Object.fromEntries(
-        Array.from(this.presets.entries()).map(([key, value]) => [key, value.map(preset => preset.toJSON())])
+        Array.from(this.presets.entries()).map(([key, value]) => [
+          key,
+          value.map((preset) => preset.toJSON()),
+        ]),
       ),
       inpaints: Object.fromEntries(
-        Array.from(this.inpaints.entries()).map(([key, value]) => [key, value.toJSON()])
+        Array.from(this.inpaints.entries()).map(([key, value]) => [
+          key,
+          value.toJSON(),
+        ]),
       ),
       scenes: Object.fromEntries(
-        Array.from(this.scenes.entries()).map(([key, value]) => [key, value.toJSON()])
+        Array.from(this.scenes.entries()).map(([key, value]) => [
+          key,
+          value.toJSON(),
+        ]),
       ),
       library: Object.fromEntries(
-        Array.from(this.library.entries()).map(([key, value]) => [key, value.toJSON()])
+        Array.from(this.library.entries()).map(([key, value]) => [
+          key,
+          value.toJSON(),
+        ]),
       ),
       presetShareds: Object.fromEntries(
-        Array.from(this.presetShareds.entries()).map(([key, value]) => [key, value.toJSON()])
+        Array.from(this.presetShareds.entries()).map(([key, value]) => [
+          key,
+          value.toJSON(),
+        ]),
       ),
     };
   }
-};
+}
 
 export interface PromptGroupNode {
   type: 'group';
@@ -485,7 +532,7 @@ export interface SceneContextAlt {
 export interface StyleContextAlt {
   type: 'style';
   preset: any;
-  container: any
+  container: any;
   session: Session;
 }
 
@@ -505,8 +552,5 @@ export const isValidSession = (session: any) => {
 };
 
 export const isValidPieceLibrary = (library: any) => {
-  return (
-    typeof library.name === 'string' &&
-    Array.isArray(library.pieces)
-  );
-}
+  return typeof library.name === 'string' && Array.isArray(library.pieces);
+};

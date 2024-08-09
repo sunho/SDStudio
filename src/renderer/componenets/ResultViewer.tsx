@@ -37,8 +37,20 @@ import { FaPlus } from 'react-icons/fa6';
 import { useContextMenu } from 'react-contexify';
 import { useDrag, useDrop } from 'react-dnd';
 import { getEmptyImage } from 'react-dnd-html5-backend';
-import { ContextMenuType, GenericScene, Scene, SelectedWorkflow } from '../models/types';
-import { imageService, sessionService, isMobile, gameService, backend, taskQueueService } from '../models';
+import {
+  ContextMenuType,
+  GenericScene,
+  Scene,
+  SelectedWorkflow,
+} from '../models/types';
+import {
+  imageService,
+  sessionService,
+  isMobile,
+  gameService,
+  backend,
+  taskQueueService,
+} from '../models';
 import { dataUriToBase64, deleteImageFiles } from '../models/ImageService';
 import { getResultDirectory } from '../models/SessionService';
 import { queueI2IWorkflow, queueWorkflow } from '../models/TaskQueueService';
@@ -448,273 +460,281 @@ interface ResultDetailViewProps {
   buttons: ResultDetailViewButton[];
   onClose: () => void;
 }
-const ResultDetailView = observer(({
-  scene,
-  buttons,
-  getPaths,
-  initialSelectedIndex,
-  onClose,
-}: ResultDetailViewProps) => {
-  const { curSession } = appState;
-  const [selectedIndex, setSelectedIndex] =
-    useState<number>(initialSelectedIndex);
-  const [paths, setPaths] = useState<string[]>(getPaths());
-  const [filename, setFilename] = useState<string>(
-    paths[selectedIndex].split('/').pop()!,
-  );
-  const filenameRef = useRef<string>(filename);
-  const [image, setImage] = useState<string | undefined>(undefined);
-  const watchedImages = useRef(new Set<string>());
-  const [middlePrompt, setMiddlePrompt] = useState<string>('');
-  const [seed, setSeed] = useState<string>('');
-  const [scale, setScale] = useState<string>('');
-  const [sampler, setSampler] = useState<string>('');
-  const [steps, setSteps] = useState<string>('');
-  const [uc, setUc] = useState<string>('');
-  const [_, forceUpdate] = useState<{}>({});
-  useEffect(() => {
-    const fetchImage = async () => {
-      try {
-        let base64Image = await imageService.fetchImage(paths[selectedIndex])!;
-        setImage(base64Image!);
-        base64Image = dataUriToBase64(base64Image!);
-        const job = await extractPromptDataFromBase64(base64Image);
-        if (job) {
-          const {prompt, seed, promptGuidance, sampling, steps, uc} = job;
-          setMiddlePrompt(prompt);
-          setSeed(seed?.toString() ?? '');
-          setScale(promptGuidance.toString());
-          setSampler(sampling);
-          setSteps(steps.toString());
-          setUc(uc);
-        } else {
+const ResultDetailView = observer(
+  ({
+    scene,
+    buttons,
+    getPaths,
+    initialSelectedIndex,
+    onClose,
+  }: ResultDetailViewProps) => {
+    const { curSession } = appState;
+    const [selectedIndex, setSelectedIndex] =
+      useState<number>(initialSelectedIndex);
+    const [paths, setPaths] = useState<string[]>(getPaths());
+    const [filename, setFilename] = useState<string>(
+      paths[selectedIndex].split('/').pop()!,
+    );
+    const filenameRef = useRef<string>(filename);
+    const [image, setImage] = useState<string | undefined>(undefined);
+    const watchedImages = useRef(new Set<string>());
+    const [middlePrompt, setMiddlePrompt] = useState<string>('');
+    const [seed, setSeed] = useState<string>('');
+    const [scale, setScale] = useState<string>('');
+    const [sampler, setSampler] = useState<string>('');
+    const [steps, setSteps] = useState<string>('');
+    const [uc, setUc] = useState<string>('');
+    const [_, forceUpdate] = useState<{}>({});
+    useEffect(() => {
+      const fetchImage = async () => {
+        try {
+          let base64Image = await imageService.fetchImage(
+            paths[selectedIndex],
+          )!;
+          setImage(base64Image!);
+          base64Image = dataUriToBase64(base64Image!);
+          const job = await extractPromptDataFromBase64(base64Image);
+          if (job) {
+            const { prompt, seed, promptGuidance, sampling, steps, uc } = job;
+            setMiddlePrompt(prompt);
+            setSeed(seed?.toString() ?? '');
+            setScale(promptGuidance.toString());
+            setSampler(sampling);
+            setSteps(steps.toString());
+            setUc(uc);
+          } else {
+            setMiddlePrompt('');
+            setSeed('');
+            setScale('');
+            setSampler('');
+            setSteps('');
+            setUc('');
+          }
+          setFilename(paths[selectedIndex].split('/').pop()!);
+        } catch (e: any) {
+          console.log(e);
+          setImage(undefined);
           setMiddlePrompt('');
           setSeed('');
           setScale('');
           setSampler('');
           setSteps('');
           setUc('');
+          setFilename('');
         }
-        setFilename(paths[selectedIndex].split('/').pop()!);
-      } catch (e: any) {
-        console.log(e);
-        setImage(undefined);
-        setMiddlePrompt('');
-        setSeed('');
-        setScale('');
-        setSampler('');
-        setSteps('');
-        setUc('');
-        setFilename('');
-      }
-    };
-    const rerender = () => {
-      forceUpdate({});
-    };
-    fetchImage();
-    filenameRef.current = paths[selectedIndex].split('/').pop()!;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        setSelectedIndex((selectedIndex - 1 + paths.length) % paths.length);
-      } else if (e.key === 'ArrowRight') {
-        setSelectedIndex((selectedIndex + 1) % paths.length);
-      } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        appState.pushDialog({
-          type: 'confirm',
-          text: '정말로 파일을 삭제하시겠습니까?',
-          callback: async () => {
-            await deleteImageFiles(curSession!, [paths[selectedIndex]], scene);
-          },
+      };
+      const rerender = () => {
+        forceUpdate({});
+      };
+      fetchImage();
+      filenameRef.current = paths[selectedIndex].split('/').pop()!;
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'ArrowLeft') {
+          setSelectedIndex((selectedIndex - 1 + paths.length) % paths.length);
+        } else if (e.key === 'ArrowRight') {
+          setSelectedIndex((selectedIndex + 1) % paths.length);
+        } else if (e.key === 'Delete' || e.key === 'Backspace') {
+          appState.pushDialog({
+            type: 'confirm',
+            text: '정말로 파일을 삭제하시겠습니까?',
+            callback: async () => {
+              await deleteImageFiles(
+                curSession!,
+                [paths[selectedIndex]],
+                scene,
+              );
+            },
+          });
+        }
+      };
+      const refreshPaths = () => {
+        const newPaths = getPaths();
+        if (newPaths.length === 0) onClose();
+        else {
+          let newIndex = newPaths.indexOf(
+            imageService.getOutputDir(curSession!, scene) +
+              '/' +
+              filenameRef.current,
+          );
+          if (newIndex !== -1) {
+            setSelectedIndex(newIndex);
+          }
+          setPaths(newPaths);
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      sessionService.addEventListener('main-image-updated', rerender);
+      imageService.addEventListener('image-cache-invalidated', fetchImage);
+      gameService.addEventListener('updated', refreshPaths);
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+        sessionService.removeEventListener('main-image-updated', rerender);
+        imageService.removeEventListener('image-cache-invalidated', fetchImage);
+        gameService.removeEventListener('updated', refreshPaths);
+      };
+    }, [selectedIndex, paths]);
+
+    useEffect(() => {
+      return () => {
+        watchedImages.current.forEach((path) => {
+          // invoke('unwatch-image', path);
         });
-      }
-    };
-    const refreshPaths = () => {
-      const newPaths = getPaths();
-      if (newPaths.length === 0) onClose();
-      else {
-        let newIndex = newPaths.indexOf(
-          imageService.getOutputDir(curSession!, scene) +
-            '/' +
-            filenameRef.current,
-        );
-        if (newIndex !== -1) {
-          setSelectedIndex(newIndex);
-        }
-        setPaths(newPaths);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    sessionService.addEventListener('main-image-updated', rerender);
-    imageService.addEventListener('image-cache-invalidated', fetchImage);
-    gameService.addEventListener('updated', refreshPaths);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      sessionService.removeEventListener('main-image-updated', rerender);
-      imageService.removeEventListener('image-cache-invalidated', fetchImage);
-      gameService.removeEventListener('updated', refreshPaths);
-    };
-  }, [selectedIndex, paths]);
+      };
+    });
 
-  useEffect(() => {
-    return () => {
-      watchedImages.current.forEach((path) => {
-        // invoke('unwatch-image', path);
-      });
-    };
-  });
+    const [showPrompt, setShowPrompt] = useState<boolean>(false);
+    const { show, hideAll } = useContextMenu({
+      id: ContextMenuType.Image,
+    });
 
-  const [showPrompt, setShowPrompt] = useState<boolean>(false);
-  const { show, hideAll } = useContextMenu({
-    id: ContextMenuType.Image,
-  });
-
-  return (
-    <div className="z-10 bg-white dark:bg-slate-900 w-full h-full flex overflow-hidden flex-col md:flex-row">
-      <div className="flex-none md:w-1/3 p-2 md:p-4">
-        <div className="flex gap-2 md:gap-3 mb-2 md:mb-6 flex-wrap w-full">
-          <button
-            className={`round-button back-sky`}
-            onClick={async () => {
-              if (isMobile) {
-                await backend.copyToDownloads(paths[selectedIndex]);
-              } else {
-                await backend.showFile(paths[selectedIndex]);
-              }
-            }}
-          >
-            {!isMobile ? '파일 위치 열기' : '파일 다운로드'}
-          </button>
-          {!isMobile && (
+    return (
+      <div className="z-10 bg-white dark:bg-slate-900 w-full h-full flex overflow-hidden flex-col md:flex-row">
+        <div className="flex-none md:w-1/3 p-2 md:p-4">
+          <div className="flex gap-2 md:gap-3 mb-2 md:mb-6 flex-wrap w-full">
             <button
               className={`round-button back-sky`}
               onClick={async () => {
-                await backend.openImageEditor(paths[selectedIndex]);
-                watchedImages.current.add(paths[selectedIndex]);
-                backend.watchImage(paths[selectedIndex]);
+                if (isMobile) {
+                  await backend.copyToDownloads(paths[selectedIndex]);
+                } else {
+                  await backend.showFile(paths[selectedIndex]);
+                }
               }}
             >
-              이미지 편집
+              {!isMobile ? '파일 위치 열기' : '파일 다운로드'}
             </button>
-          )}
-          <button
-            className={`round-button back-red`}
-            onClick={() => {
-              appState.pushDialog({
-                type: 'confirm',
-                text: '정말로 파일을 삭제하시겠습니까?',
-                callback: async () => {
-                  await deleteImageFiles(curSession!, [paths[selectedIndex]]);
-                },
-              });
-            }}
-          >
-            파일 삭제
-          </button>
-          {buttons.map((button, index) => (
+            {!isMobile && (
+              <button
+                className={`round-button back-sky`}
+                onClick={async () => {
+                  await backend.openImageEditor(paths[selectedIndex]);
+                  watchedImages.current.add(paths[selectedIndex]);
+                  backend.watchImage(paths[selectedIndex]);
+                }}
+              >
+                이미지 편집
+              </button>
+            )}
             <button
-              key={index}
-              className={`round-button ${button.className}`}
+              className={`round-button back-red`}
               onClick={() => {
-                button.onClick(scene, paths[selectedIndex], onClose);
+                appState.pushDialog({
+                  type: 'confirm',
+                  text: '정말로 파일을 삭제하시겠습니까?',
+                  callback: async () => {
+                    await deleteImageFiles(curSession!, [paths[selectedIndex]]);
+                  },
+                });
               }}
             >
-              {button.text instanceof Function
-                ? button.text(paths[selectedIndex])
-                : button.text}
+              파일 삭제
             </button>
-          ))}
+            {buttons.map((button, index) => (
+              <button
+                key={index}
+                className={`round-button ${button.className}`}
+                onClick={() => {
+                  button.onClick(scene, paths[selectedIndex], onClose);
+                }}
+              >
+                {button.text instanceof Function
+                  ? button.text(paths[selectedIndex])
+                  : button.text}
+              </button>
+            ))}
+          </div>
+          <button
+            className={`round-button back-gray md:hidden`}
+            onClick={() => setShowPrompt(!showPrompt)}
+          >
+            {!showPrompt ? '자세한 정보 보기' : '자세한 정보 숨기기'}
+          </button>
+          <div
+            className={
+              'mt-2 md:mt-0 md:block ' + (showPrompt ? 'block' : 'hidden')
+            }
+          >
+            <div className="max-w-full mb-2 text-sub">
+              <span className="gray-label">파일이름: </span>
+              <span>{filename}</span>
+            </div>
+            <div className="w-full mb-2">
+              <div className="gray-label">프롬프트 </div>
+              <PromptHighlighter
+                text={middlePrompt}
+                className="w-full h-24 overflow-auto"
+              />
+            </div>
+            <div className="w-full mb-2">
+              <div className="gray-label">네거티브 프롬프트 </div>
+              <PromptHighlighter
+                text={uc}
+                className="w-full h-24 overflow-auto"
+              />
+            </div>
+            <div className="w-full mb-2 text-sub">
+              <span className="gray-label">시드: </span>
+              {seed}
+            </div>
+            <div className="w-full mb-2 text-sub">
+              <span className="gray-label">프롬프트 가이던스: </span>
+              {scale}
+            </div>
+            <div className="w-full mb-2 text-sub">
+              <span className="gray-label">샘플러: </span>
+              {sampler}
+            </div>
+            <div className="w-full mb-2 text-sub">
+              <span className="gray-label">스텝: </span>
+              {steps}
+            </div>
+          </div>
         </div>
-        <button
-          className={`round-button back-gray md:hidden`}
-          onClick={() => setShowPrompt(!showPrompt)}
-        >
-          {!showPrompt ? '자세한 정보 보기' : '자세한 정보 숨기기'}
-        </button>
-        <div
-          className={
-            'mt-2 md:mt-0 md:block ' + (showPrompt ? 'block' : 'hidden')
-          }
-        >
-          <div className="max-w-full mb-2 text-sub">
-            <span className="gray-label">파일이름: </span>
-            <span>{filename}</span>
-          </div>
-          <div className="w-full mb-2">
-            <div className="gray-label">프롬프트 </div>
-            <PromptHighlighter
-              text={middlePrompt}
-              className="w-full h-24 overflow-auto"
-            />
-          </div>
-          <div className="w-full mb-2">
-            <div className="gray-label">네거티브 프롬프트 </div>
-            <PromptHighlighter
-              text={uc}
-              className="w-full h-24 overflow-auto"
-            />
-          </div>
-          <div className="w-full mb-2 text-sub">
-            <span className="gray-label">시드: </span>
-            {seed}
-          </div>
-          <div className="w-full mb-2 text-sub">
-            <span className="gray-label">프롬프트 가이던스: </span>
-            {scale}
-          </div>
-          <div className="w-full mb-2 text-sub">
-            <span className="gray-label">샘플러: </span>
-            {sampler}
-          </div>
-          <div className="w-full mb-2 text-sub">
-            <span className="gray-label">스텝: </span>
-            {steps}
-          </div>
-        </div>
-      </div>
-      <div className="flex-1 overflow-hidden">
-        {image && (
-          <img
-            src={image}
-            onContextMenu={(e) => {
-              show({
-                event: e,
-                props: {
-                  ctx: {
-                    type: 'image',
-                    path: paths[selectedIndex],
-                    scene: scene.name,
-                    starable: true,
+        <div className="flex-1 overflow-hidden">
+          {image && (
+            <img
+              src={image}
+              onContextMenu={(e) => {
+                show({
+                  event: e,
+                  props: {
+                    ctx: {
+                      type: 'image',
+                      path: paths[selectedIndex],
+                      scene: scene.name,
+                      starable: true,
+                    },
                   },
-                },
-              });
-            }}
-            className="w-full h-full object-contain bg-checkboard"
-          />
-        )}
-        <div className="absolute bottom-0 md:bottom-auto right-0 md:top-10 flex gap-3 p-4 w-full md:w-auto">
-          <button
-            className={`round-button  ml-0 md:ml-auto h-10 md:h-8 w-20 md:w-auto bg-gray-300 text-gray-700 mr-auto md:mr-0 text-xl md:text-base`}
-            onClick={() => {
-              setSelectedIndex(
-                (selectedIndex - 1 + paths.length) % paths.length,
-              );
-            }}
-          >
-            <FaArrowLeft />
-          </button>
-          <button
-            className={`round-button h-10 md:h-8 w-20 md:w-auto bg-gray-300 text-xl text-gray-700 md:text-base`}
-            onClick={() => {
-              setSelectedIndex((selectedIndex + 1) % paths.length);
-            }}
-          >
-            <FaArrowRight />
-          </button>
+                });
+              }}
+              className="w-full h-full object-contain bg-checkboard"
+            />
+          )}
+          <div className="absolute bottom-0 md:bottom-auto right-0 md:top-10 flex gap-3 p-4 w-full md:w-auto">
+            <button
+              className={`round-button  ml-0 md:ml-auto h-10 md:h-8 w-20 md:w-auto bg-gray-300 text-gray-700 mr-auto md:mr-0 text-xl md:text-base`}
+              onClick={() => {
+                setSelectedIndex(
+                  (selectedIndex - 1 + paths.length) % paths.length,
+                );
+              }}
+            >
+              <FaArrowLeft />
+            </button>
+            <button
+              className={`round-button h-10 md:h-8 w-20 md:w-auto bg-gray-300 text-xl text-gray-700 md:text-base`}
+              onClick={() => {
+                setSelectedIndex((selectedIndex + 1) % paths.length);
+              }}
+            >
+              <FaArrowRight />
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 interface ResultVieweRef {
   setImageTab: () => void;
@@ -755,7 +775,10 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
     ];
     const [imageSize, setImageSize] = useState<number>(1);
     const [selectedTab, setSelectedTab] = useState<number>(0);
-    const tabNames = scene.type === 'scene' ? ['이미지', '즐겨찾기', '인페인트 씬'] : ['이미지', '즐겨찾기'];
+    const tabNames =
+      scene.type === 'scene'
+        ? ['이미지', '즐겨찾기', '인페인트 씬']
+        : ['이미지', '즐겨찾기'];
     useEffect(() => {
       imageService.refresh(curSession!, scene);
     }, []);
@@ -853,7 +876,8 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
           (path) => imageService.getOutputDir(curSession!, scene) + '/' + path,
         );
       return selectedTab === 0
-        ? paths : paths.filter((path) => isMainImage && isMainImage(path));
+        ? paths
+        : paths.filter((path) => isMainImage && isMainImage(path));
     };
 
     return (
@@ -907,9 +931,20 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
                 className={`round-button back-green`}
                 onClick={async () => {
                   if (scene.type === 'scene') {
-                    await queueWorkflow(curSession!, curSession!.selectedWorkflow!, scene, appState.samples);
+                    await queueWorkflow(
+                      curSession!,
+                      curSession!.selectedWorkflow!,
+                      scene,
+                      appState.samples,
+                    );
                   } else {
-                    await queueI2IWorkflow(curSession!, scene.workflowType, scene.preset, scene, appState.samples);
+                    await queueI2IWorkflow(
+                      curSession!,
+                      scene.workflowType,
+                      scene.preset,
+                      scene,
+                      appState.samples,
+                    );
                   }
                 }}
               >

@@ -900,34 +900,12 @@ interface EditTextAreaRef {
   undo(): void;
 }
 
-const EmulatedEditTextArea = observer(forwardRef<EditTextAreaRef, any>(
-  (
-    {
-      value,
-      disabled,
-      highlight,
-      onUpdated,
-      history,
-      redo,
-      onUpArrow,
-      onDownArrow,
-      onEnter,
-      onEsc,
-      closeAutoComplete,
-    }: EditTextAreaProps,
-    ref: any,
-  ) => {
-    const editorRef = useRef<any>(null);
-    const containerRef = useRef<any>(null);
-    const clipboardRef = useRef<any>(null);
-    const editorModelRef = useRef<any>(null);
-
-    useEffect(() => {
-      if (!editorRef.current) return;
-      const editor = new CursorMemorizeEditor(
-        containerRef.current,
-        editorRef.current,
-        clipboardRef.current,
+const EmulatedEditTextArea = observer(
+  forwardRef<EditTextAreaRef, any>(
+    (
+      {
+        value,
+        disabled,
         highlight,
         onUpdated,
         history,
@@ -936,515 +914,549 @@ const EmulatedEditTextArea = observer(forwardRef<EditTextAreaRef, any>(
         onDownArrow,
         onEnter,
         onEsc,
-      );
-      editorModelRef.current = editor;
-      editor.updateCurText(value);
-      editor.updateDOM(value, 0, false);
-      const handleKeyDown = (e: any) => editor.handleKeyDown(e);
-      editorRef.current.addEventListener('keydown', handleKeyDown);
-      const handleBeforeInput = (e: any) => editor.handleBeforeInput(e);
-      editorRef.current.addEventListener('beforeinput', handleBeforeInput);
-      const handleCompositionUpdate = (e: any) =>
-        editor.handleCompositionUpdate(e);
-      if (!isMacPlatform()) {
-        editorRef.current.addEventListener(
-          'compositionupdate',
-          handleCompositionUpdate,
+        closeAutoComplete,
+      }: EditTextAreaProps,
+      ref: any,
+    ) => {
+      const editorRef = useRef<any>(null);
+      const containerRef = useRef<any>(null);
+      const clipboardRef = useRef<any>(null);
+      const editorModelRef = useRef<any>(null);
+
+      useEffect(() => {
+        if (!editorRef.current) return;
+        const editor = new CursorMemorizeEditor(
+          containerRef.current,
+          editorRef.current,
+          clipboardRef.current,
+          highlight,
+          onUpdated,
+          history,
+          redo,
+          onUpArrow,
+          onDownArrow,
+          onEnter,
+          onEsc,
         );
-      }
-      const handlePaste = (e: any) => editor.handlePaste(e);
-      editorRef.current.addEventListener('paste', handlePaste);
-      const handleWindowMouseDown = (e: any) => {
-        closeAutoComplete();
-        editor.handleWindowMouseDown(e);
-      };
-      window.addEventListener('mousedown', handleWindowMouseDown);
-      const handleMouseDown = (e: any) => editor.handleMouseDown(e);
-      editorRef.current.addEventListener('mousedown', handleMouseDown);
-      return () => {
-        window.removeEventListener('mousedown', handleWindowMouseDown);
-        if (editorRef.current === null) return;
-        editorRef.current.removeEventListener('keydown', handleKeyDown);
-        editorRef.current.removeEventListener('beforeinput', handleBeforeInput);
+        editorModelRef.current = editor;
+        editor.updateCurText(value);
+        editor.updateDOM(value, 0, false);
+        const handleKeyDown = (e: any) => editor.handleKeyDown(e);
+        editorRef.current.addEventListener('keydown', handleKeyDown);
+        const handleBeforeInput = (e: any) => editor.handleBeforeInput(e);
+        editorRef.current.addEventListener('beforeinput', handleBeforeInput);
+        const handleCompositionUpdate = (e: any) =>
+          editor.handleCompositionUpdate(e);
         if (!isMacPlatform()) {
-          editorRef.current.removeEventListener(
+          editorRef.current.addEventListener(
             'compositionupdate',
             handleCompositionUpdate,
           );
         }
-        editorRef.current.removeEventListener('paste', handlePaste);
-        editorRef.current.removeEventListener('mousedown', handleMouseDown);
-      };
-    }, []);
+        const handlePaste = (e: any) => editor.handlePaste(e);
+        editorRef.current.addEventListener('paste', handlePaste);
+        const handleWindowMouseDown = (e: any) => {
+          closeAutoComplete();
+          editor.handleWindowMouseDown(e);
+        };
+        window.addEventListener('mousedown', handleWindowMouseDown);
+        const handleMouseDown = (e: any) => editor.handleMouseDown(e);
+        editorRef.current.addEventListener('mousedown', handleMouseDown);
+        return () => {
+          window.removeEventListener('mousedown', handleWindowMouseDown);
+          if (editorRef.current === null) return;
+          editorRef.current.removeEventListener('keydown', handleKeyDown);
+          editorRef.current.removeEventListener(
+            'beforeinput',
+            handleBeforeInput,
+          );
+          if (!isMacPlatform()) {
+            editorRef.current.removeEventListener(
+              'compositionupdate',
+              handleCompositionUpdate,
+            );
+          }
+          editorRef.current.removeEventListener('paste', handlePaste);
+          editorRef.current.removeEventListener('mousedown', handleMouseDown);
+        };
+      }, []);
 
-    useImperativeHandle(ref, () => ({
-      onCloseAutoComplete: () => {
-        editorModelRef.current.autocomplete = false;
-      },
-      onOpenAutoComplete: () => {
-        editorModelRef.current.autocomplete = true;
-      },
-      setCurWord: (word: string) => {
-        editorModelRef.current.setCurWord(word);
-      },
-      getCaretCoords: async () => {
-        let selection = window.getSelection()!;
-        if (selection.rangeCount === 0) return;
-        let range = selection.getRangeAt(0);
-        let rect = range.getBoundingClientRect();
-        if (rect.right === 0 && rect.top === 0) {
-          await new Promise((resolve) => requestAnimationFrame(resolve));
-          selection = window.getSelection()!;
-          range = selection.getRangeAt(0);
-          rect = range.getBoundingClientRect();
+      useImperativeHandle(ref, () => ({
+        onCloseAutoComplete: () => {
+          editorModelRef.current.autocomplete = false;
+        },
+        onOpenAutoComplete: () => {
+          editorModelRef.current.autocomplete = true;
+        },
+        setCurWord: (word: string) => {
+          editorModelRef.current.setCurWord(word);
+        },
+        getCaretCoords: async () => {
+          let selection = window.getSelection()!;
+          if (selection.rangeCount === 0) return;
+          let range = selection.getRangeAt(0);
+          let rect = range.getBoundingClientRect();
+          if (rect.right === 0 && rect.top === 0) {
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+            selection = window.getSelection()!;
+            range = selection.getRangeAt(0);
+            rect = range.getBoundingClientRect();
+          }
+          return [rect.right, rect.top];
+        },
+        undo() {
+          editorModelRef.current.handleKeyDown({ key: 'z', metaKey: true });
+        },
+      }));
+
+      useEffect(() => {
+        if (!editorRef.current) return;
+        if (value !== editorModelRef.current.curText) {
+          editorModelRef.current.updateCurText(value, false);
+          editorModelRef.current.updateDOM(value, 0, false);
         }
-        return [rect.right, rect.top];
-      },
-      undo() {
-        editorModelRef.current.handleKeyDown({ key: 'z', metaKey: true });
-      },
-    }));
+      }, [value]);
 
-    useEffect(()=>{
-      if (!editorRef.current) return;
-      if (value !== editorModelRef.current.curText) {
-        editorModelRef.current.updateCurText(value, false);
-        editorModelRef.current.updateDOM(value, 0, false);
-      }
-    },[value]);
+      return (
+        <>
+          <div ref={containerRef} className="overflow-auto h-full">
+            <div
+              className={
+                'w-full min-h-full focus:outline-0 whitespace-pre-wrap align-middle'
+              }
+              ref={editorRef}
+              contentEditable={disabled ? 'false' : 'true'}
+            ></div>
+          </div>
+          <textarea
+            className="absolute top-0 left-0 opacity-0 w-0 h-0"
+            disabled={disabled}
+            ref={clipboardRef}
+            value=""
+            onChange={(e) => {
+              e.target.value = '';
+            }}
+          ></textarea>
+        </>
+      );
+    },
+  ),
+);
 
-    return (
-      <>
-        <div ref={containerRef} className="overflow-auto h-full">
-          <div
-            className={
-              'w-full min-h-full focus:outline-0 whitespace-pre-wrap align-middle'
-            }
-            ref={editorRef}
-            contentEditable={disabled ? 'false' : 'true'}
-          ></div>
-        </div>
-        <textarea
-          className="absolute top-0 left-0 opacity-0 w-0 h-0"
-          disabled={disabled}
-          ref={clipboardRef}
-          value=""
-          onChange={(e) => {
-            e.target.value = '';
-          }}
-        ></textarea>
-      </>
-    );
-  },
-));
+const NativeEditTextArea = observer(
+  forwardRef(
+    (
+      {
+        value,
+        disabled,
+        highlight,
+        onUpdated,
+        history,
+        redo,
+        onUpArrow,
+        onDownArrow,
+        onEnter,
+        onEsc,
+        closeAutoComplete,
+        onFocus,
+        onBlur,
+      }: EditTextAreaProps,
+      ref,
+    ) => {
+      const textareaRef = useRef<any>(null);
+      const highlightRef = useRef<any>(null);
+      const containerRef = useRef<any>(null);
+      const isAutoComplete = useRef(false);
 
-const NativeEditTextArea = observer(forwardRef(
-  (
-    {
-      value,
-      disabled,
-      highlight,
-      onUpdated,
-      history,
-      redo,
-      onUpArrow,
-      onDownArrow,
-      onEnter,
-      onEsc,
-      closeAutoComplete,
-      onFocus,
-      onBlur,
-    }: EditTextAreaProps,
-    ref,
-  ) => {
-    const textareaRef = useRef<any>(null);
-    const highlightRef = useRef<any>(null);
-    const containerRef = useRef<any>(null);
-    const isAutoComplete = useRef(false);
-
-    const getCurWord = () => {
-      let start = textareaRef.current.selectionStart;
-      const curText = textareaRef.current.value;
-      let startIdx = start;
-      while (startIdx > 0 && !',\n'.includes(curText[startIdx - 1])) {
-        startIdx--;
-      }
-      return curText.substring(startIdx, start).trim();
-    };
-
-    const renderText = () => {
-      const text = textareaRef.current.value;
-      highlightRef.current.innerHTML =
-        highlight(text, getCurWord(), true) + '<span></span><br>';
-    };
-
-    const pushHistory = () => {
-      const text = textareaRef.current.value;
-      const start = textareaRef.current.selectionStart;
-      const end = textareaRef.current.selectionEnd;
-      if (history.length > MAX_HISTORY_SIZE) {
-        history.shift();
-      }
-      history.push({ text, cursorPos: [start, end], copmositionBuffer: [] });
-      redo.clear();
-    };
-
-    const doUndo = () => {
-      if (history.length > 1) {
-        const prev = history.pop()!;
-        redo.push(prev);
-        const entry = history.peekBack()!;
-        textareaRef.current.value = entry.text;
-        onUpdated(entry.text);
-        if (!isMobile) {
-          textareaRef.current.selectionStart = entry.cursorPos[0];
-          textareaRef.current.selectionEnd = entry.cursorPos[1];
-        }
-        const text = textareaRef.current.value;
-        highlightRef.current.innerHTML =
-          highlight(text, getCurWord(), false) + '<span></span><br>';
-      }
-    };
-
-    const doRedo = () => {
-      if (redo.length > 0) {
-        const entry = redo.pop()!;
-        history.push(entry);
-        textareaRef.current.value = entry.text;
-        onUpdated(entry.text);
-        textareaRef.current.selectionStart = entry.cursorPos[0];
-        textareaRef.current.selectionEnd = entry.cursorPos[1];
-        renderText();
-      }
-    };
-
-    useEffect(() => {
-      if (!textareaRef.current || !highlightRef.current) return;
-      const handleInput = () => {
-        const text = textareaRef.current.value;
-        renderText();
-        pushHistory();
-        onUpdated(text);
-      };
-
-      textareaRef.current.addEventListener('input', handleInput);
-      textareaRef.current.addEventListener('focus', onFocus);
-      textareaRef.current.addEventListener('blur', onBlur);
-
-      handleInput();
-
-      const handleWindowMouseDown = (e: any) => {
-        closeAutoComplete();
-      };
-      window.addEventListener('mousedown', handleWindowMouseDown);
-      return () => {
-        window.removeEventListener('mousedown', handleWindowMouseDown);
-        if (!textareaRef.current) return;
-        textareaRef.current.removeEventListener('input', handleInput);
-        textareaRef.current.removeEventListener('focus', onFocus);
-        textareaRef.current.removeEventListener('blur', onBlur);
-      };
-    }, []);
-
-    useImperativeHandle(ref, () => ({
-      onCloseAutoComplete: () => {
-        isAutoComplete.current = false;
-      },
-      onOpenAutoComplete: () => {
-        isAutoComplete.current = true;
-      },
-      setCurWord: (word: string) => {
-        const start = textareaRef.current.selectionStart;
-        let curText = textareaRef.current.value;
+      const getCurWord = () => {
+        let start = textareaRef.current.selectionStart;
+        const curText = textareaRef.current.value;
         let startIdx = start;
         while (startIdx > 0 && !',\n'.includes(curText[startIdx - 1])) {
           startIdx--;
         }
-        if (startIdx !== 0 && curText[startIdx - 1] !== '\n') word = ' ' + word;
-        const newText =
-          curText.substring(0, startIdx) + word + curText.substring(start);
-        textareaRef.current.value = newText;
-        onUpdated(newText);
-        textareaRef.current.selectionEnd = startIdx + word.length;
+        return curText.substring(startIdx, start).trim();
+      };
+
+      const renderText = () => {
+        const text = textareaRef.current.value;
         highlightRef.current.innerHTML =
-          highlight(newText, '', false) + '<span></span><br>';
+          highlight(text, getCurWord(), true) + '<span></span><br>';
+      };
+
+      const pushHistory = () => {
+        const text = textareaRef.current.value;
+        const start = textareaRef.current.selectionStart;
+        const end = textareaRef.current.selectionEnd;
+        if (history.length > MAX_HISTORY_SIZE) {
+          history.shift();
+        }
+        history.push({ text, cursorPos: [start, end], copmositionBuffer: [] });
+        redo.clear();
+      };
+
+      const doUndo = () => {
+        if (history.length > 1) {
+          const prev = history.pop()!;
+          redo.push(prev);
+          const entry = history.peekBack()!;
+          textareaRef.current.value = entry.text;
+          onUpdated(entry.text);
+          if (!isMobile) {
+            textareaRef.current.selectionStart = entry.cursorPos[0];
+            textareaRef.current.selectionEnd = entry.cursorPos[1];
+          }
+          const text = textareaRef.current.value;
+          highlightRef.current.innerHTML =
+            highlight(text, getCurWord(), false) + '<span></span><br>';
+        }
+      };
+
+      const doRedo = () => {
+        if (redo.length > 0) {
+          const entry = redo.pop()!;
+          history.push(entry);
+          textareaRef.current.value = entry.text;
+          onUpdated(entry.text);
+          textareaRef.current.selectionStart = entry.cursorPos[0];
+          textareaRef.current.selectionEnd = entry.cursorPos[1];
+          renderText();
+        }
+      };
+
+      useEffect(() => {
+        if (!textareaRef.current || !highlightRef.current) return;
+        const handleInput = () => {
+          const text = textareaRef.current.value;
+          renderText();
+          pushHistory();
+          onUpdated(text);
+        };
+
+        textareaRef.current.addEventListener('input', handleInput);
+        textareaRef.current.addEventListener('focus', onFocus);
+        textareaRef.current.addEventListener('blur', onBlur);
+
+        handleInput();
+
+        const handleWindowMouseDown = (e: any) => {
+          closeAutoComplete();
+        };
+        window.addEventListener('mousedown', handleWindowMouseDown);
+        return () => {
+          window.removeEventListener('mousedown', handleWindowMouseDown);
+          if (!textareaRef.current) return;
+          textareaRef.current.removeEventListener('input', handleInput);
+          textareaRef.current.removeEventListener('focus', onFocus);
+          textareaRef.current.removeEventListener('blur', onBlur);
+        };
+      }, []);
+
+      useImperativeHandle(ref, () => ({
+        onCloseAutoComplete: () => {
+          isAutoComplete.current = false;
+        },
+        onOpenAutoComplete: () => {
+          isAutoComplete.current = true;
+        },
+        setCurWord: (word: string) => {
+          const start = textareaRef.current.selectionStart;
+          let curText = textareaRef.current.value;
+          let startIdx = start;
+          while (startIdx > 0 && !',\n'.includes(curText[startIdx - 1])) {
+            startIdx--;
+          }
+          if (startIdx !== 0 && curText[startIdx - 1] !== '\n')
+            word = ' ' + word;
+          const newText =
+            curText.substring(0, startIdx) + word + curText.substring(start);
+          textareaRef.current.value = newText;
+          onUpdated(newText);
+          textareaRef.current.selectionEnd = startIdx + word.length;
+          highlightRef.current.innerHTML =
+            highlight(newText, '', false) + '<span></span><br>';
+          pushHistory();
+        },
+        getCaretCoords: async () => {
+          const caret = getCaretCoordinates(
+            textareaRef.current!,
+            textareaRef.current!.selectionEnd,
+          );
+          const rect = textareaRef.current!.getBoundingClientRect();
+          return [caret.left + rect.left, caret.top + rect.top];
+        },
+        undo() {
+          doUndo();
+        },
+      }));
+
+      useEffect(() => {
+        if (!textareaRef.current || !highlightRef.current) return;
+        const text = textareaRef.current.value;
+        highlightRef.current.innerHTML =
+          highlight(text, getCurWord(), false) + '<span></span><br>';
         pushHistory();
-      },
-      getCaretCoords: async () => {
-        const caret = getCaretCoordinates(
-          textareaRef.current!,
-          textareaRef.current!.selectionEnd,
-        );
-        const rect = textareaRef.current!.getBoundingClientRect();
-        return [caret.left + rect.left, caret.top + rect.top];
-      },
-      undo() {
-        doUndo();
-      },
-    }));
+      }, [value]);
+
+      return (
+        <div className="w-full h-full overflow-auto">
+          <div ref={containerRef} className="native-text-area-container">
+            <div
+              ref={highlightRef}
+              className="native-text-area-highlight select-none"
+            ></div>
+            <textarea
+              ref={textareaRef}
+              className="native-text-area-input native-text-area-highlight"
+              defaultValue={value}
+              disabled={disabled}
+              onKeyDown={(e: any) => {
+                if (e.key === 'ArrowUp') {
+                  if (isAutoComplete.current) {
+                    e.preventDefault();
+                  }
+                  onUpArrow();
+                } else if (e.key === 'ArrowDown') {
+                  if (isAutoComplete.current) {
+                    e.preventDefault();
+                  }
+                  onDownArrow();
+                } else if (e.key === 'Enter') {
+                  if (isAutoComplete.current) e.preventDefault();
+                  onEnter();
+                } else if (e.key === 'Escape') onEsc();
+                else if (
+                  (e.key === 'z' || e.key === 'Z') &&
+                  (e.metaKey || e.ctrlKey)
+                ) {
+                  e.preventDefault();
+                  if (e.shiftKey) doRedo();
+                  else doUndo();
+                } else if (e.key === 'y' && (e.metaKey || e.ctrlKey)) {
+                  e.preventDefault();
+                  doRedo();
+                }
+              }}
+            ></textarea>
+          </div>
+        </div>
+      );
+    },
+  ),
+);
+
+const PromptEditTextArea = observer(
+  ({
+    value,
+    onChange,
+    disabled,
+    whiteBg,
+    lineHighlight,
+    innerRef,
+  }: PromptEditTextAreaProps) => {
+    const { curSession } = appState;
+    const editorRef = useRef<EditTextAreaRef | null>(null);
+    const historyRef = useRef<Denque<HistoryEntry>>(new Denque<HistoryEntry>());
+    const redoRef = useRef<Denque<HistoryEntry>>(new Denque<HistoryEntry>());
+    const [tags, setTags] = useState<any[]>([]);
+    const [selectedTag, setSelectedTag] = useState<number>(0);
+    const [curWord, setCurWord] = useState<string>('');
+    const [clientX, setClientX] = useState(0);
+    const [clientY, setClientY] = useState(0);
+    const tagsRef = useLatest(tags);
+    const [id, setId] = useState(0);
+    const cntRef = useRef(0);
+    const selectedTagRef = useLatest(selectedTag);
+    const curWordRef = useLatest(curWord);
+    const [fullScreen, setFullScreen] = useState(false);
+    const EditTextAreaImpl = isMobile
+      ? NativeEditTextArea
+      : EmulatedEditTextArea;
+
+    const closeAutoComplete = () => {
+      setTags([]);
+      setSelectedTag(0);
+      editorRef.current!.onCloseAutoComplete();
+      setId((id) => id + 1);
+    };
+
+    const onUpArrow = () => {
+      if (tagsRef.current.length === 0) return;
+      setSelectedTag(
+        (selectedTagRef.current - 1 + tagsRef.current.length) %
+          tagsRef.current.length,
+      );
+    };
+    const onDownArrow = () => {
+      if (tagsRef.current.length === 0) return;
+      setSelectedTag((selectedTagRef.current + 1) % tagsRef.current.length);
+    };
+    const onEsc = () => {
+      closeAutoComplete();
+    };
+    const onUpdated = (text: string) => {
+      onChange(text);
+    };
+    const highlight = (
+      text: string,
+      word: string,
+      updateAutoComplete: boolean,
+    ) => {
+      if (updateAutoComplete) {
+        if (word === '') {
+          closeAutoComplete();
+        } else {
+          const action = word.startsWith('<')
+            ? backend.searchPieces.bind(backend)
+            : backend.searchTags.bind(backend);
+          cntRef.current++;
+          const myId = cntRef.current;
+          action(trimByBraces(word)).then(async (tags: any[]) => {
+            if (myId !== cntRef.current) return;
+            if (tags.length > 0) {
+              const [x, y] = await editorRef.current!.getCaretCoords();
+              setClientX(x);
+              setClientY(y);
+              setSelectedTag(0);
+              setCurWord(word);
+              setTags(tags);
+              editorRef.current!.onOpenAutoComplete();
+            } else {
+              closeAutoComplete();
+            }
+          });
+        }
+      }
+      return highlightPrompt(curSession!, text, lineHighlight ?? false);
+    };
+    const onEnter = () => {
+      if (tagsRef.current.length === 0) return;
+      const tag = tagsRef.current[selectedTagRef.current];
+      const tagWord =
+        tag.redirect.trim() !== 'null' ? tag.redirect.trim() : tag.word;
+      const newWord = replaceMiddleWord(curWordRef.current, tagWord);
+      editorRef.current!.setCurWord(newWord);
+      closeAutoComplete();
+    };
+
+    const onSelectTag = (idx: number) => {
+      if (tagsRef.current.length === 0) return;
+      const tag = tagsRef.current[idx];
+      const tagWord =
+        tag.redirect.trim() !== 'null' ? tag.redirect.trim() : tag.word;
+      const newWord = replaceMiddleWord(curWordRef.current, tagWord);
+      editorRef.current!.setCurWord(newWord);
+      closeAutoComplete();
+    };
+
+    const onFoucs = () => {
+      if (isMobile) {
+        setFullScreen(true);
+      }
+    };
+
+    const onBlur = () => {};
+
+    const flagRef = useRef(false);
+    const handleClick = (event: any) => {
+      flagRef.current = true;
+    };
 
     useEffect(() => {
-      if (!textareaRef.current || !highlightRef.current) return;
-      const text = textareaRef.current.value;
-      highlightRef.current.innerHTML =
-        highlight(text, getCurWord(), false) + '<span></span><br>';
-      pushHistory();
-    }, [value]);
+      const handleWindowClick = () => {
+        if (flagRef.current) {
+          flagRef.current = false;
+          return;
+        }
+        if (isMobile) {
+          setFullScreen(false);
+        }
+      };
+
+      window.addEventListener('click', handleWindowClick);
+      return () => {
+        window.removeEventListener('click', handleWindowClick);
+      };
+    }, []);
+
+    let bgColor = whiteBg
+      ? 'bg-gray-100 dark:bg-slate-700'
+      : 'bg-gray-200 dark:bg-slate-700';
+    if (fullScreen) bgColor = 'bg-white dark:bg-slate-600 shadow-lg';
 
     return (
-      <div className="w-full h-full overflow-auto">
-        <div ref={containerRef} className="native-text-area-container">
-          <div
-            ref={highlightRef}
-            className="native-text-area-highlight select-none"
-          ></div>
-          <textarea
-            ref={textareaRef}
-            className="native-text-area-input native-text-area-highlight"
-            defaultValue={value}
+      <>
+        <div
+          ref={innerRef}
+          onClick={handleClick}
+          spellCheck={false}
+          draggable={true}
+          onDragStart={(event) => event.preventDefault()}
+          className={
+            bgColor +
+            (!fullScreen
+              ? ' overflow-hidden h-full relative'
+              : ' left-0 m-4 p-2 overflow-hidden fixed z-30 h-96 prompt-full')
+          }
+        >
+          <div className="absolute right-0 top-0 z-10">
+            <button
+              onClick={() => {
+                if (!disabled) setFullScreen(!fullScreen);
+              }}
+              className="text-gray-500 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-300 opacity-50 mr-1 mt-1"
+            >
+              {!fullScreen ? <FaExpand></FaExpand> : <FaTimes></FaTimes>}
+            </button>
+          </div>
+          <EditTextAreaImpl
+            ref={editorRef}
+            value={value}
             disabled={disabled}
-            onKeyDown={(e: any) => {
-              if (e.key === 'ArrowUp') {
-                if (isAutoComplete.current) {
-                  e.preventDefault();
-                }
-                onUpArrow();
-              } else if (e.key === 'ArrowDown') {
-                if (isAutoComplete.current) {
-                  e.preventDefault();
-                }
-                onDownArrow();
-              } else if (e.key === 'Enter') {
-                if (isAutoComplete.current) e.preventDefault();
-                onEnter();
-              } else if (e.key === 'Escape') onEsc();
-              else if (
-                (e.key === 'z' || e.key === 'Z') &&
-                (e.metaKey || e.ctrlKey)
-              ) {
-                e.preventDefault();
-                if (e.shiftKey) doRedo();
-                else doUndo();
-              } else if (e.key === 'y' && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                doRedo();
-              }
-            }}
-          ></textarea>
+            highlight={highlight}
+            onUpdated={onUpdated}
+            history={historyRef.current}
+            redo={redoRef.current}
+            onUpArrow={onUpArrow}
+            onDownArrow={onDownArrow}
+            onEnter={onEnter}
+            onEsc={onEsc}
+            closeAutoComplete={closeAutoComplete}
+            onFocus={onFoucs}
+            onBlur={onBlur}
+          />
+          {isMobile && fullScreen && (
+            <div className="absolute right-0 bottom-0 z-10 p-1 active:brightness-90">
+              <FaUndo
+                size={20}
+                className="opacity-50 mr-1 mb-1"
+                onClick={() => {
+                  editorRef.current!.undo();
+                }}
+              />
+            </div>
+          )}
         </div>
-      </div>
+        <PromptAutoComplete
+          key={id}
+          curWord={curWord}
+          tags={tags}
+          clientX={clientX}
+          clientY={clientY}
+          selectedTag={selectedTag}
+          onSelectTag={onSelectTag}
+        />
+        {fullScreen && (
+          <div
+            className="fixed bg-black opacity-15 w-screen h-screen top-0 left-0 z-20"
+            onClick={() => {
+              setFullScreen(false);
+            }}
+          ></div>
+        )}
+      </>
     );
   },
-));
-
-const PromptEditTextArea = observer(({
-  value,
-  onChange,
-  disabled,
-  whiteBg,
-  lineHighlight,
-  innerRef,
-}: PromptEditTextAreaProps) => {
-  const { curSession } = appState;
-  const editorRef = useRef<EditTextAreaRef | null>(null);
-  const historyRef = useRef<Denque<HistoryEntry>>(new Denque<HistoryEntry>());
-  const redoRef = useRef<Denque<HistoryEntry>>(new Denque<HistoryEntry>());
-  const [tags, setTags] = useState<any[]>([]);
-  const [selectedTag, setSelectedTag] = useState<number>(0);
-  const [curWord, setCurWord] = useState<string>('');
-  const [clientX, setClientX] = useState(0);
-  const [clientY, setClientY] = useState(0);
-  const tagsRef = useLatest(tags);
-  const [id, setId] = useState(0);
-  const cntRef = useRef(0);
-  const selectedTagRef = useLatest(selectedTag);
-  const curWordRef = useLatest(curWord);
-  const [fullScreen, setFullScreen] = useState(false);
-  const EditTextAreaImpl = isMobile ? NativeEditTextArea : EmulatedEditTextArea;
-
-  const closeAutoComplete = () => {
-    setTags([]);
-    setSelectedTag(0);
-    editorRef.current!.onCloseAutoComplete();
-    setId((id) => id + 1);
-  };
-
-  const onUpArrow = () => {
-    if (tagsRef.current.length === 0) return;
-    setSelectedTag(
-      (selectedTagRef.current - 1 + tagsRef.current.length) %
-        tagsRef.current.length,
-    );
-  };
-  const onDownArrow = () => {
-    if (tagsRef.current.length === 0) return;
-    setSelectedTag((selectedTagRef.current + 1) % tagsRef.current.length);
-  };
-  const onEsc = () => {
-    closeAutoComplete();
-  };
-  const onUpdated = (text: string) => {
-    onChange(text);
-  };
-  const highlight = (
-    text: string,
-    word: string,
-    updateAutoComplete: boolean,
-  ) => {
-    if (updateAutoComplete) {
-      if (word === '') {
-        closeAutoComplete();
-      } else {
-        const action = word.startsWith('<')
-          ? backend.searchPieces.bind(backend)
-          : backend.searchTags.bind(backend);
-        cntRef.current++;
-        const myId = cntRef.current;
-        action(trimByBraces(word)).then(async (tags: any[]) => {
-          if (myId !== cntRef.current) return;
-          if (tags.length > 0) {
-            const [x, y] = await editorRef.current!.getCaretCoords();
-            setClientX(x);
-            setClientY(y);
-            setSelectedTag(0);
-            setCurWord(word);
-            setTags(tags);
-            editorRef.current!.onOpenAutoComplete();
-          } else {
-            closeAutoComplete();
-          }
-        });
-      }
-    }
-    return highlightPrompt(curSession!, text, lineHighlight ?? false);
-  };
-  const onEnter = () => {
-    if (tagsRef.current.length === 0) return;
-    const tag = tagsRef.current[selectedTagRef.current];
-    const tagWord =
-      tag.redirect.trim() !== 'null' ? tag.redirect.trim() : tag.word;
-    const newWord = replaceMiddleWord(curWordRef.current, tagWord);
-    editorRef.current!.setCurWord(newWord);
-    closeAutoComplete();
-  };
-
-  const onSelectTag = (idx: number) => {
-    if (tagsRef.current.length === 0) return;
-    const tag = tagsRef.current[idx];
-    const tagWord =
-      tag.redirect.trim() !== 'null' ? tag.redirect.trim() : tag.word;
-    const newWord = replaceMiddleWord(curWordRef.current, tagWord);
-    editorRef.current!.setCurWord(newWord);
-    closeAutoComplete();
-  };
-
-  const onFoucs = () => {
-    if (isMobile) {
-      setFullScreen(true);
-    }
-  };
-
-  const onBlur = () => {};
-
-  const flagRef = useRef(false);
-  const handleClick = (event: any) => {
-    flagRef.current = true;
-  };
-
-  useEffect(() => {
-    const handleWindowClick = () => {
-      if (flagRef.current) {
-        flagRef.current = false;
-        return;
-      }
-      if (isMobile) {
-        setFullScreen(false);
-      }
-    };
-
-    window.addEventListener('click', handleWindowClick);
-    return () => {
-      window.removeEventListener('click', handleWindowClick);
-    };
-  }, []);
-
-  let bgColor = whiteBg
-    ? 'bg-gray-100 dark:bg-slate-700'
-    : 'bg-gray-200 dark:bg-slate-700';
-  if (fullScreen) bgColor = 'bg-white dark:bg-slate-600 shadow-lg';
-
-  return (
-    <>
-      <div
-        ref={innerRef}
-        onClick={handleClick}
-        spellCheck={false}
-        draggable={true}
-        onDragStart={(event) => event.preventDefault()}
-        className={
-          bgColor +
-          (!fullScreen
-            ? ' overflow-hidden h-full relative'
-            : ' left-0 m-4 p-2 overflow-hidden fixed z-30 h-96 prompt-full')
-        }
-      >
-        <div className="absolute right-0 top-0 z-10">
-          <button
-            onClick={() => {
-              if (!disabled) setFullScreen(!fullScreen);
-            }}
-            className="text-gray-500 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-300 opacity-50 mr-1 mt-1"
-          >
-            {!fullScreen ? <FaExpand></FaExpand> : <FaTimes></FaTimes>}
-          </button>
-        </div>
-        <EditTextAreaImpl
-          ref={editorRef}
-          value={value}
-          disabled={disabled}
-          highlight={highlight}
-          onUpdated={onUpdated}
-          history={historyRef.current}
-          redo={redoRef.current}
-          onUpArrow={onUpArrow}
-          onDownArrow={onDownArrow}
-          onEnter={onEnter}
-          onEsc={onEsc}
-          closeAutoComplete={closeAutoComplete}
-          onFocus={onFoucs}
-          onBlur={onBlur}
-        />
-        {isMobile && fullScreen && (
-          <div className="absolute right-0 bottom-0 z-10 p-1 active:brightness-90">
-            <FaUndo
-              size={20}
-              className="opacity-50 mr-1 mb-1"
-              onClick={() => {
-                editorRef.current!.undo();
-              }}
-            />
-          </div>
-        )}
-      </div>
-      <PromptAutoComplete
-        key={id}
-        curWord={curWord}
-        tags={tags}
-        clientX={clientX}
-        clientY={clientY}
-        selectedTag={selectedTag}
-        onSelectTag={onSelectTag}
-      />
-      {fullScreen && (
-        <div
-          className="fixed bg-black opacity-15 w-screen h-screen top-0 left-0 z-20"
-          onClick={() => {
-            setFullScreen(false);
-          }}
-        ></div>
-      )}
-    </>
-  );
-});
+);
 
 export default PromptEditTextArea;

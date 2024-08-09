@@ -7,11 +7,7 @@ import {
   loginService,
   sessionService,
 } from '../models';
-import {
-  Config,
-  ImageEditor,
-  RemoveBgQuality,
-} from '../../main/config';
+import { Config, ImageEditor, RemoveBgQuality } from '../../main/config';
 import { observer } from 'mobx-react-lite';
 import { appState } from '../models/AppService';
 

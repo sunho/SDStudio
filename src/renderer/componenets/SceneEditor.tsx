@@ -44,10 +44,7 @@ import {
   workFlowService,
 } from '../models';
 import { getMainImagePath } from '../models/ImageService';
-import {
-  highlightPrompt,
-  lowerPromptNode,
-} from '../models/PromptService';
+import { highlightPrompt, lowerPromptNode } from '../models/PromptService';
 import { renameScene } from '../models/SessionService';
 import {
   Scene,
@@ -68,21 +65,20 @@ interface PromptHighlighterProps {
   className?: string;
 }
 
-export const PromptHighlighter = observer(({
-  className,
-  text,
-}: PromptHighlighterProps) => {
-  const { curSession } = appState;
-  return (
-    <div
-      className={
-        'max-w-full break-words bg-gray-200 dark:bg-slate-700 ' +
-        (className ?? '')
-      }
-      dangerouslySetInnerHTML={{ __html: highlightPrompt(curSession!, text) }}
-    ></div>
-  );
-});
+export const PromptHighlighter = observer(
+  ({ className, text }: PromptHighlighterProps) => {
+    const { curSession } = appState;
+    return (
+      <div
+        className={
+          'max-w-full break-words bg-gray-200 dark:bg-slate-700 ' +
+          (className ?? '')
+        }
+        dangerouslySetInnerHTML={{ __html: highlightPrompt(curSession!, text) }}
+      ></div>
+    );
+  },
+);
 
 interface SlotEditorProps {
   scene: Scene;
@@ -101,167 +97,171 @@ interface BigPromptEditorProps {
   initialImagePath?: string;
 }
 
-export const BigPromptEditor = observer(({
-  general,
-  type,
-  shared,
-  preset,
-  getMiddlePrompt,
-  setMiddlePrompt,
-  initialImagePath,
-  queuePrompt,
-  setMainImage,
-}: BigPromptEditorProps) => {
-  const { curSession, pushMessage } = appState;
-  const [image, setImage] = useState<string | undefined>(undefined);
-  const [path, setPath] = useState<string | undefined>(initialImagePath);
-  const [_, rerender] = useState<{}>({});
-  useEffect(() => {
-    setImage(undefined);
-    (async () => {
-      if (path) {
-        const dataUri = await imageService.fetchImage(path);
-        setImage(dataUri!);
-      }
-    })();
-  }, [path]);
-  useEffect(() => {
-    const handleProgress = () => {
-      rerender({});
-    };
-    taskQueueService.addEventListener('start', handleProgress);
-    taskQueueService.addEventListener('stop', handleProgress);
-    taskQueueService.addEventListener('progress', handleProgress);
-    return () => {
-      taskQueueService.removeEventListener('start', handleProgress);
-      taskQueueService.removeEventListener('stop', handleProgress);
-      taskQueueService.removeEventListener('progress', handleProgress);
-    };
-  });
+export const BigPromptEditor = observer(
+  ({
+    general,
+    type,
+    shared,
+    preset,
+    getMiddlePrompt,
+    setMiddlePrompt,
+    initialImagePath,
+    queuePrompt,
+    setMainImage,
+  }: BigPromptEditorProps) => {
+    const { curSession, pushMessage } = appState;
+    const [image, setImage] = useState<string | undefined>(undefined);
+    const [path, setPath] = useState<string | undefined>(initialImagePath);
+    const [_, rerender] = useState<{}>({});
+    useEffect(() => {
+      setImage(undefined);
+      (async () => {
+        if (path) {
+          const dataUri = await imageService.fetchImage(path);
+          setImage(dataUri!);
+        }
+      })();
+    }, [path]);
+    useEffect(() => {
+      const handleProgress = () => {
+        rerender({});
+      };
+      taskQueueService.addEventListener('start', handleProgress);
+      taskQueueService.addEventListener('stop', handleProgress);
+      taskQueueService.addEventListener('progress', handleProgress);
+      return () => {
+        taskQueueService.removeEventListener('start', handleProgress);
+        taskQueueService.removeEventListener('stop', handleProgress);
+        taskQueueService.removeEventListener('progress', handleProgress);
+      };
+    });
 
-  const [promptOpen, setPromptOpen] = useState(false);
-  const [editDisabled, setEditDisabled] = useState(true);
+    const [promptOpen, setPromptOpen] = useState(false);
+    const [editDisabled, setEditDisabled] = useState(true);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setEditDisabled(false);
-    }, 100);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, []);
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        setEditDisabled(false);
+      }, 100);
+      return () => {
+        clearTimeout(timer);
+      };
+    }, []);
 
-  return (
-    <div className="flex h-full flex-col md:flex-row">
-      {promptOpen && (
-        <FloatView
-          key="float"
-          priority={0}
-          onEscape={() => {
-            setPromptOpen(false);
-          }}
+    return (
+      <div className="flex h-full flex-col md:flex-row">
+        {promptOpen && (
+          <FloatView
+            key="float"
+            priority={0}
+            onEscape={() => {
+              setPromptOpen(false);
+            }}
+          >
+            <UnionPreSetEditor
+              general={general}
+              type={type}
+              preset={preset}
+              shared={shared}
+              middlePromptMode={true}
+              getMiddlePrompt={getMiddlePrompt}
+              onMiddlePromptChange={setMiddlePrompt}
+            />
+          </FloatView>
+        )}
+        <div
+          className={
+            'overflow-auto flex-none h-1/3 md:h-auto md:w-1/3 md:h-full'
+          }
         >
-          <UnionPreSetEditor
-            general={general}
-            type={type}
-            preset={preset}
-            shared={shared}
-            middlePromptMode={true}
-            getMiddlePrompt={getMiddlePrompt}
-            onMiddlePromptChange={setMiddlePrompt}
-          />
-        </FloatView>
-      )}
-      <div
-        className={'overflow-auto flex-none h-1/3 md:h-auto md:w-1/3 md:h-full'}
-      >
-        <div className={'hidden md:block h-full '}>
-          <UnionPreSetEditor
-            general={general}
-            type={type}
-            preset={preset}
-            shared={shared}
-            middlePromptMode={true}
-            getMiddlePrompt={getMiddlePrompt}
-            onMiddlePromptChange={setMiddlePrompt}
-          />
-        </div>
-        <div className="h-full flex flex-col p-2 overflow-hidden block md:hidden">
-          <div className="flex-none font-bold text-sub">
-            중위 프롬프트 (이 씬에만 적용됨):
-          </div>
-          <div className="flex-1 p-2 overflow-hidden">
-            <PromptEditTextArea
-              disabled={editDisabled}
-              onChange={setMiddlePrompt}
-              value={getMiddlePrompt()}
+          <div className={'hidden md:block h-full '}>
+            <UnionPreSetEditor
+              general={general}
+              type={type}
+              preset={preset}
+              shared={shared}
+              middlePromptMode={true}
+              getMiddlePrompt={getMiddlePrompt}
+              onMiddlePromptChange={setMiddlePrompt}
             />
           </div>
-          <div className="flex-none">
-            <button
-              className={`round-button back-sky`}
-              onClick={() => setPromptOpen(true)}
-            >
-              상세설정
-            </button>
+          <div className="h-full flex flex-col p-2 overflow-hidden block md:hidden">
+            <div className="flex-none font-bold text-sub">
+              중위 프롬프트 (이 씬에만 적용됨):
+            </div>
+            <div className="flex-1 p-2 overflow-hidden">
+              <PromptEditTextArea
+                disabled={editDisabled}
+                onChange={setMiddlePrompt}
+                value={getMiddlePrompt()}
+              />
+            </div>
+            <div className="flex-none">
+              <button
+                className={`round-button back-sky`}
+                onClick={() => setPromptOpen(true)}
+              >
+                상세설정
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="flex-none h-2/3 md:h-auto md:w-2/3 overflow-hidden">
-        <div className="flex flex-col h-full">
-          <div className="flex-1 overflow-hidden">
-            {image && (
-              <img className="w-full h-full object-contain" src={image} />
-            )}
-          </div>
-          <div className="ml-auto flex-none flex gap-4 pt-2 mb-2 md:mb-0">
-            {path && (
-              <button
-                className={`round-button back-orange h-8 md:w-36 flex items-center justify-center`}
-                onClick={() => {
-                  setMainImage && setMainImage(path);
-                }}
-              >
-                {general? (
-                  !isMobile ? (
-                    '즐겨찾기 지정'
+        <div className="flex-none h-2/3 md:h-auto md:w-2/3 overflow-hidden">
+          <div className="flex flex-col h-full">
+            <div className="flex-1 overflow-hidden">
+              {image && (
+                <img className="w-full h-full object-contain" src={image} />
+              )}
+            </div>
+            <div className="ml-auto flex-none flex gap-4 pt-2 mb-2 md:mb-0">
+              {path && (
+                <button
+                  className={`round-button back-orange h-8 md:w-36 flex items-center justify-center`}
+                  onClick={() => {
+                    setMainImage && setMainImage(path);
+                  }}
+                >
+                  {general ? (
+                    !isMobile ? (
+                      '즐겨찾기 지정'
+                    ) : (
+                      <FaStar />
+                    )
                   ) : (
-                    <FaStar />
-                  )
-                ) : (
-                  '프로필 지정'
-                )}
-              </button>
-            )}
-            <TaskProgressBar fast />
-            {!taskQueueService.isRunning() ? (
-              <button
-                className={`round-button back-green h-8 w-16 md:w-36 flex items-center justify-center`}
-                onClick={() => {
-                  queuePrompt(getMiddlePrompt(), (path: string) => {
-                    setPath(path);
-                  });
-                }}
-              >
-                <FaPlay size={15} />
-              </button>
-            ) : (
-              <button
-                className={`round-button back-red h-8 w-16 md:w-36 flex items-center justify-center`}
-                onClick={() => {
-                  taskQueueService.removeAllTasks();
-                  taskQueueService.stop();
-                }}
-              >
-                <FaStop size={15} />
-              </button>
-            )}
+                    '프로필 지정'
+                  )}
+                </button>
+              )}
+              <TaskProgressBar fast />
+              {!taskQueueService.isRunning() ? (
+                <button
+                  className={`round-button back-green h-8 w-16 md:w-36 flex items-center justify-center`}
+                  onClick={() => {
+                    queuePrompt(getMiddlePrompt(), (path: string) => {
+                      setPath(path);
+                    });
+                  }}
+                >
+                  <FaPlay size={15} />
+                </button>
+              ) : (
+                <button
+                  className={`round-button back-red h-8 w-16 md:w-36 flex items-center justify-center`}
+                  onClick={() => {
+                    taskQueueService.removeAllTasks();
+                    taskQueueService.stop();
+                  }}
+                >
+                  <FaStop size={15} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 interface SlotPieceProps {
   scene: Scene;
@@ -271,97 +271,93 @@ interface SlotPieceProps {
   style?: React.CSSProperties;
 }
 
-export const SlotPiece = observer(({
-  scene,
-  piece,
-  removePiece,
-  moveSlotPiece,
-  style,
-}: SlotPieceProps) => {
-  const [{ isDragging }, drag, preview] = useDrag(
-    () => ({
-      type: 'slot',
-      item: { scene, piece },
-      collect: (monitor) => {
-        return {
-          isDragging: monitor.isDragging(),
-        };
-      },
-    }),
-    [scene, piece],
-  );
-
-  const [{ isOver }, drop] = useDrop(
-    () => ({
-      accept: 'slot',
-      canDrop: () => true,
-      collect: (monitor) => {
-        if (monitor.isOver()) {
+export const SlotPiece = observer(
+  ({ scene, piece, removePiece, moveSlotPiece, style }: SlotPieceProps) => {
+    const [{ isDragging }, drag, preview] = useDrag(
+      () => ({
+        type: 'slot',
+        item: { scene, piece },
+        collect: (monitor) => {
           return {
-            isOver: true,
+            isDragging: monitor.isDragging(),
           };
+        },
+      }),
+      [scene, piece],
+    );
+
+    const [{ isOver }, drop] = useDrop(
+      () => ({
+        accept: 'slot',
+        canDrop: () => true,
+        collect: (monitor) => {
+          if (monitor.isOver()) {
+            return {
+              isOver: true,
+            };
+          }
+          return { isOver: false };
+        },
+        drop: async (item: any, monitor) => {
+          if (!moveSlotPiece) return;
+          moveSlotPiece(item.piece.id, piece.id!);
+        },
+      }),
+      [scene, piece],
+    );
+
+    useEffect(() => {
+      preview(getEmptyImage(), { captureDraggingState: true });
+    }, [preview]);
+
+    return (
+      <div
+        key={piece.id!}
+        ref={(node) => drag(drop(node))}
+        style={style}
+        className={
+          'p-3 m-2 bg-gray-200 dark:bg-slate-600 rounded-xl ' +
+          (isDragging ? 'opacity-0' : '') +
+          (isOver ? ' outline outline-sky-500' : '')
         }
-        return { isOver: false };
-      },
-      drop: async (item: any, monitor) => {
-        if (!moveSlotPiece) return;
-        moveSlotPiece(item.piece.id, piece.id!);
-      },
-    }),
-    [scene, piece],
-  );
-
-  useEffect(() => {
-    preview(getEmptyImage(), { captureDraggingState: true });
-  }, [preview]);
-
-  return (
-    <div
-      key={piece.id!}
-      ref={(node) => drag(drop(node))}
-      style={style}
-      className={
-        'p-3 m-2 bg-gray-200 dark:bg-slate-600 rounded-xl ' +
-        (isDragging ? 'opacity-0' : '') +
-        (isOver ? ' outline outline-sky-500' : '')
-      }
-    >
-      <div className={'mb-3 h-12 w-28 md:h-24 md:w-48'}>
-        <PromptEditTextArea
-          whiteBg
-          disabled={!moveSlotPiece}
-          value={piece.prompt}
-          onChange={(s) => {
-            if (!moveSlotPiece) return;
-            piece.prompt = s;
-          }}
-        />
+      >
+        <div className={'mb-3 h-12 w-28 md:h-24 md:w-48'}>
+          <PromptEditTextArea
+            whiteBg
+            disabled={!moveSlotPiece}
+            value={piece.prompt}
+            onChange={(s) => {
+              if (!moveSlotPiece) return;
+              piece.prompt = s;
+            }}
+          />
+        </div>
+        <div className="flex gap-2 select-none">
+          <label className="gray-label">활성화</label>
+          <input
+            type="checkbox"
+            checked={piece.enabled == undefined || piece.enabled}
+            onChange={(e) => {
+              if (!moveSlotPiece) return;
+              piece.enabled = e.currentTarget.checked;
+            }}
+          />
+          <button
+            className="active:brightness-90 hover:brightness-95 ml-auto text-red-500 dark:text-red-400"
+            onClick={() => {
+              if (!moveSlotPiece) return;
+              removePiece && removePiece(piece);
+            }}
+          >
+            <FaTrash size={20} />
+          </button>
+        </div>
       </div>
-      <div className="flex gap-2 select-none">
-        <label className="gray-label">활성화</label>
-        <input
-          type="checkbox"
-          checked={piece.enabled == undefined || piece.enabled}
-          onChange={(e) => {
-            if (!moveSlotPiece) return;
-            piece.enabled = e.currentTarget.checked;
-          }}
-        />
-        <button
-          className="active:brightness-90 hover:brightness-95 ml-auto text-red-500 dark:text-red-400"
-          onClick={() => {
-            if (!moveSlotPiece) return;
-            removePiece && removePiece(piece);
-          }}
-        >
-          <FaTrash size={20} />
-        </button>
-      </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
-const SlotEditor = observer(({ scene, big, }: SlotEditorProps) => {
+const SlotEditor = observer(({ scene, big }: SlotEditorProps) => {
   useEffect(() => {
     for (const slot of scene.slots) {
       for (const piece of slot) {
@@ -420,7 +416,13 @@ const SlotEditor = observer(({ scene, big, }: SlotEditorProps) => {
           <button
             className="p-2 m-2 w-14 back-lllgray clickable rounded-xl flex justify-center"
             onClick={() => {
-              slot.push(PromptPiece.fromJSON({ prompt: '', enabled: true, id: uuidv4() }));
+              slot.push(
+                PromptPiece.fromJSON({
+                  prompt: '',
+                  enabled: true,
+                  id: uuidv4(),
+                }),
+              );
             }}
           >
             <FaPlus />
@@ -430,7 +432,9 @@ const SlotEditor = observer(({ scene, big, }: SlotEditorProps) => {
       <button
         className="p-2 m-2 h-14 flex items-center back-lllgray clickable rounded-xl"
         onClick={() => {
-          scene.slots.push([PromptPiece.fromJSON({ prompt: '', enabled: true, id: uuidv4() })]);
+          scene.slots.push([
+            PromptPiece.fromJSON({ prompt: '', enabled: true, id: uuidv4() }),
+          ]);
         }}
       >
         <FaPlus />
@@ -440,9 +444,11 @@ const SlotEditor = observer(({ scene, big, }: SlotEditorProps) => {
 });
 
 const SceneEditor = observer(({ scene, onClosed, onDeleted }: Props) => {
-  const { curSession, } = appState;
+  const { curSession } = appState;
   const [curName, setCurName] = useState('');
-  const [type,preset,shared,def] = curSession!.getCommonSetup(curSession!.selectedWorkflow!);
+  const [type, preset, shared, def] = curSession!.getCommonSetup(
+    curSession!.selectedWorkflow!,
+  );
 
   useEffect(() => {
     setCurName(scene.name);
@@ -467,8 +473,24 @@ const SceneEditor = observer(({ scene, onClosed, onDeleted }: Props) => {
     callback: (path: string) => void,
   ) => {
     try {
-      const prompts = await workFlowService.createPrompts(type, curSession!, scene, preset, shared);
-      await workFlowService.pushJob(type, curSession!, scene, prompts[0], preset, shared, 1, callback, true);
+      const prompts = await workFlowService.createPrompts(
+        type,
+        curSession!,
+        scene,
+        preset,
+        shared,
+      );
+      await workFlowService.pushJob(
+        type,
+        curSession!,
+        scene,
+        prompts[0],
+        preset,
+        shared,
+        1,
+        callback,
+        true,
+      );
       taskQueueService.run();
     } catch (e: any) {
       appState.pushMessage(e.message);
@@ -499,9 +521,7 @@ const SceneEditor = observer(({ scene, onClosed, onDeleted }: Props) => {
     </div>
   );
 
-  const SmallSlotEditor = (
-    <SlotEditor scene={scene} big={false}/>
-  );
+  const SmallSlotEditor = <SlotEditor scene={scene} big={false} />;
 
   const BigEditor = (
     <BigPromptEditor
@@ -617,7 +637,13 @@ const SceneEditor = observer(({ scene, onClosed, onDeleted }: Props) => {
                 onClick: () => {
                   (async () => {
                     try {
-                      const prompts = await workFlowService.createPrompts(type, curSession!, scene, preset, shared);
+                      const prompts = await workFlowService.createPrompts(
+                        type,
+                        curSession!,
+                        scene,
+                        preset,
+                        shared,
+                      );
                       setPreviews(prompts);
                     } catch (e: any) {
                       setPreviewError(e.message);

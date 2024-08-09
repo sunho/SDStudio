@@ -1,5 +1,11 @@
 import { action, observable, makeAutoObservable } from 'mobx';
-import { GenericScene, ModelBackend, PromptNode, Session, VibeItem } from '../types';
+import {
+  GenericScene,
+  ModelBackend,
+  PromptNode,
+  Session,
+  VibeItem,
+} from '../types';
 
 export type WFBackendType = 'image' | 'none';
 
@@ -17,8 +23,22 @@ export interface WorkFlowDef {
   createPrompt?: WFCreatePrompt;
 }
 
-export type WFHandler = (session: Session, scene: GenericScene, prompt: PromptNode, preset: any, shared: any, samples: number, onComplete?: (img: string) => void, nodelay?: boolean) => void | Promise<void>;
-export type WFCreatePrompt = (session: Session, scene: GenericScene, preset: any, shared: any) => PromptNode[] | Promise<PromptNode[]>;
+export type WFHandler = (
+  session: Session,
+  scene: GenericScene,
+  prompt: PromptNode,
+  preset: any,
+  shared: any,
+  samples: number,
+  onComplete?: (img: string) => void,
+  nodelay?: boolean,
+) => void | Promise<void>;
+export type WFCreatePrompt = (
+  session: Session,
+  scene: GenericScene,
+  preset: any,
+  shared: any,
+) => PromptNode[] | Promise<PromptNode[]>;
 
 export interface WFAbstractVar {
   name: string;
@@ -79,12 +99,22 @@ export interface WFMaskVar extends WFAbstractVar {
   imageRef: string;
 }
 
-export type WFVar = WFIntVar | WFVibeSetVar | WFSamplingVar | WFNoiseScheduleVar | WFBoolVar | WFPromptVar | WFImageVar | WFMaskVar | WFBackendVar | WFNullIntVar | WFStringVar;
+export type WFVar =
+  | WFIntVar
+  | WFVibeSetVar
+  | WFSamplingVar
+  | WFNoiseScheduleVar
+  | WFBoolVar
+  | WFPromptVar
+  | WFImageVar
+  | WFMaskVar
+  | WFBackendVar
+  | WFNullIntVar
+  | WFStringVar;
 
 export type WFIFlex = 'flex-1' | 'flex-2' | 'flex-none';
 
-export interface WFIAbstract {
-}
+export interface WFIAbstract {}
 
 export interface WFIPresetSelect extends WFIAbstract {
   type: 'presetSelect';
@@ -123,7 +153,14 @@ export interface WFIPush extends WFIAbstract {
   direction: 'top' | 'bottom' | 'left' | 'right';
 }
 
-export type WFIElement = WFIProfilePresetSelect | WFIPresetSelect | WFIStack | WFIInlineInput | WFIGroup | WFIMiddlePlaceholderInput | WFIPush;
+export type WFIElement =
+  | WFIProfilePresetSelect
+  | WFIPresetSelect
+  | WFIStack
+  | WFIInlineInput
+  | WFIGroup
+  | WFIMiddlePlaceholderInput
+  | WFIPush;
 
 function createDefaultValue(varObj: WFVar) {
   switch (varObj.type) {
@@ -156,7 +193,7 @@ function createDefaultValue(varObj: WFVar) {
 
 function createMobxObject(vars: WFVar[]) {
   const obj: any = {};
-  vars.forEach(varObj => {
+  vars.forEach((varObj) => {
     obj[varObj.name] = createDefaultValue(varObj);
   });
   return makeAutoObservable(obj);
@@ -171,9 +208,9 @@ function materializeWFObj(type: string, vars: WFVar[]) {
   }
 
   obj.fromJSON = (json: any) => {
-    Object.keys(params).forEach(key => {
+    Object.keys(params).forEach((key) => {
       if (params[key].type === 'vibeSet') {
-        obj[key] = json[key].map((x:any)=>VibeItem.fromJSON(x));
+        obj[key] = json[key].map((x: any) => VibeItem.fromJSON(x));
       } else {
         obj[key] = json[key];
       }
@@ -183,9 +220,9 @@ function materializeWFObj(type: string, vars: WFVar[]) {
   obj.toJSON = () => {
     const json: any = {};
     json['type'] = type;
-    Object.keys(params).forEach(key => {
+    Object.keys(params).forEach((key) => {
       if (params[key].type === 'vibeSet') {
-        json[key] = obj[key].map((x:VibeItem)=>x.toJSON());
+        json[key] = obj[key].map((x: VibeItem) => x.toJSON());
       } else {
         json[key] = obj[key];
       }
@@ -205,14 +242,20 @@ export class WFVarBuilder {
     return newBuilder;
   }
 
-  addIntVar(name: string, min: number, max: number, step: number, defaultValue: number): this {
+  addIntVar(
+    name: string,
+    min: number,
+    max: number,
+    step: number,
+    defaultValue: number,
+  ): this {
     this.vars.push({
       type: 'int',
       name,
       min,
       max,
       step,
-      default: defaultValue
+      default: defaultValue,
     });
     return this;
   }
@@ -228,7 +271,7 @@ export class WFVarBuilder {
   addVibeSetVar(name: string): this {
     this.vars.push({
       type: 'vibeSet',
-      name
+      name,
     });
     return this;
   }
@@ -237,7 +280,7 @@ export class WFVarBuilder {
     this.vars.push({
       type: 'sampling',
       name,
-      default: defaultValue
+      default: defaultValue,
     });
     return this;
   }
@@ -246,7 +289,7 @@ export class WFVarBuilder {
     this.vars.push({
       type: 'noiseSchedule',
       name,
-      default: defaultValue
+      default: defaultValue,
     });
     return this;
   }
@@ -255,7 +298,7 @@ export class WFVarBuilder {
     this.vars.push({
       type: 'bool',
       name,
-      default: defaultValue
+      default: defaultValue,
     });
     return this;
   }
@@ -264,7 +307,7 @@ export class WFVarBuilder {
     this.vars.push({
       type: 'prompt',
       name,
-      default: defaultValue
+      default: defaultValue,
     });
     return this;
   }
@@ -272,7 +315,7 @@ export class WFVarBuilder {
   addImageVar(name: string): this {
     this.vars.push({
       type: 'image',
-      name
+      name,
     });
     return this;
   }
@@ -281,7 +324,7 @@ export class WFVarBuilder {
     this.vars.push({
       type: 'mask',
       name,
-      imageRef
+      imageRef,
     });
     return this;
   }
@@ -290,7 +333,7 @@ export class WFVarBuilder {
     this.vars.push({
       type: 'backend',
       name,
-      default: defaultValue
+      default: defaultValue,
     });
     return this;
   }
@@ -299,7 +342,7 @@ export class WFVarBuilder {
     this.vars.push({
       type: 'string',
       name,
-      default: defaultValue
+      default: defaultValue,
     });
     return this;
   }
@@ -328,11 +371,15 @@ export class WFWorkFlow {
   }
 
   buildPreset() {
-    let newVars = this.def.presetVars.concat([{ type: 'string', name: 'name', default: '' }])
+    let newVars = this.def.presetVars.concat([
+      { type: 'string', name: 'name', default: '' },
+    ]);
     if (this.def.backendType === 'none') {
       return materializeWFObj(this.def.type, newVars);
     } else {
-      newVars = newVars.concat([{ type: 'backend', name: 'backend', default: { type: 'NAI' } }])
+      newVars = newVars.concat([
+        { type: 'backend', name: 'backend', default: { type: 'NAI' } },
+      ]);
       return materializeWFObj(this.def.type, newVars);
     }
   }
@@ -362,7 +409,12 @@ export function wfiStack(inputs: WFIElement[]): WFIStack {
   return { type: 'stack', inputs };
 }
 
-export function wfiInlineInput(label: string, field: string, preset: boolean, flex: WFIFlex): WFIInlineInput {
+export function wfiInlineInput(
+  label: string,
+  field: string,
+  preset: boolean,
+  flex: WFIFlex,
+): WFIInlineInput {
   return { type: 'inline', label, field, preset, flex };
 }
 
@@ -370,11 +422,15 @@ export function wfiGroup(label: string, inputs: WFIElement[]): WFIGroup {
   return { type: 'group', label, inputs };
 }
 
-export function wfiMiddlePlaceholderInput(label: string): WFIMiddlePlaceholderInput {
+export function wfiMiddlePlaceholderInput(
+  label: string,
+): WFIMiddlePlaceholderInput {
   return { type: 'middlePlaceholder', label };
 }
 
-export function wfiPush(direction: 'top' | 'bottom' | 'left' | 'right'): WFIPush {
+export function wfiPush(
+  direction: 'top' | 'bottom' | 'left' | 'right',
+): WFIPush {
   return { type: 'push', direction };
 }
 
@@ -391,7 +447,7 @@ export class WFDefBuilder {
       innerEditor: null as any,
       i2i: false,
       title: '',
-      handler: () => {}
+      handler: () => {},
     };
   }
 

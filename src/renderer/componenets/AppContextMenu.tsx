@@ -1,11 +1,18 @@
-import { observer } from "mobx-react-lite";
-import { getSnapshot } from "mobx-state-tree";
-import { Item, Menu } from "react-contexify";
-import { sessionService, backend, imageService, isMobile } from "../models";
-import { appState } from "../models/AppService";
-import { dataUriToBase64 } from "../models/ImageService";
-import { embedJSONInPNG } from "../models/SessionService";
-import { SceneContextAlt, ImageContextAlt, StyleContextAlt, ContextMenuType, Scene, genericSceneFromJSON } from "../models/types";
+import { observer } from 'mobx-react-lite';
+import { getSnapshot } from 'mobx-state-tree';
+import { Item, Menu } from 'react-contexify';
+import { sessionService, backend, imageService, isMobile } from '../models';
+import { appState } from '../models/AppService';
+import { dataUriToBase64 } from '../models/ImageService';
+import { embedJSONInPNG } from '../models/SessionService';
+import {
+  SceneContextAlt,
+  ImageContextAlt,
+  StyleContextAlt,
+  ContextMenuType,
+  Scene,
+  genericSceneFromJSON,
+} from '../models/types';
 
 export const AppContextMenu = observer(() => {
   const duplicateScene = async (ctx: SceneContextAlt) => {
@@ -102,7 +109,9 @@ export const AppContextMenu = observer(() => {
   const exportStyle = async (ctx: StyleContextAlt) => {
     const pngData = dataUriToBase64(
       await backend.readDataFile(
-        imageService.getVibesDir(appState.curSession!) + '/' + ctx.preset.profile,
+        imageService.getVibesDir(appState.curSession!) +
+          '/' +
+          ctx.preset.profile,
       ),
     );
     const newPngData = embedJSONInPNG(pngData, ctx.preset);

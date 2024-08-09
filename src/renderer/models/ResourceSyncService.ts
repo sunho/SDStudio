@@ -7,7 +7,9 @@ export interface Serealizable {
   toJSON(): any;
 }
 
-export abstract class ResourceSyncService<T extends Serealizable> extends EventTarget {
+export abstract class ResourceSyncService<
+  T extends Serealizable,
+> extends EventTarget {
   resources: { [name: string]: T };
   dirty: { [name: string]: boolean };
   resourceList: string[];
@@ -25,7 +27,7 @@ export abstract class ResourceSyncService<T extends Serealizable> extends EventT
     this.resourceList = [];
     this.updateInterval = interval;
     this.running = true;
-    (async ()=> {
+    (async () => {
       this.dummy = await this.createDefault('dummy');
     })();
   }
@@ -80,11 +82,15 @@ export abstract class ResourceSyncService<T extends Serealizable> extends EventT
         this.resources[name] = this.dummy!.fromJSON(JSON.parse(str));
         const resource = this.resources[name];
         await this.getHook(this.resources[name], name);
-        const dispose = reaction(() => resource.toJSON(), _ => {
-          this.#markUpdated(name);
-        }, {
-          delay: this.updateInterval,
-        });
+        const dispose = reaction(
+          () => resource.toJSON(),
+          (_) => {
+            this.#markUpdated(name);
+          },
+          {
+            delay: this.updateInterval,
+          },
+        );
         this.disposes[name] = dispose;
         this.dispatchEvent(
           new CustomEvent<{ name: string }>('fetched', { detail: { name } }),
@@ -99,8 +105,7 @@ export abstract class ResourceSyncService<T extends Serealizable> extends EventT
 
   async update() {
     for (const name of Object.keys(this.dirty)) {
-      if (!(name in this.resources))
-        continue;
+      if (!(name in this.resources)) continue;
       const l = this.getFast(name);
       if (l) {
         await backend.writeFile(

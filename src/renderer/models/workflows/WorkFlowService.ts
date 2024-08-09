@@ -1,6 +1,5 @@
-import { WFWorkFlow, WorkFlowDef } from "./WorkFlow";
-import { Session, GenericScene, PromptNode } from "../types";
-
+import { WFWorkFlow, WorkFlowDef } from './WorkFlow';
+import { Session, GenericScene, PromptNode } from '../types';
 
 export enum WorkFlowCategoryFlag {
   General = 1 << 0,
@@ -66,15 +65,16 @@ export class WorkFlowService {
   }
 
   getGeneralEditor(type: string) {
-    return this.generalFlows.find(wf => wf.getType() === type)!.def.editor;
+    return this.generalFlows.find((wf) => wf.getType() === type)!.def.editor;
   }
 
   getInnerEditor(type: string) {
-    return this.generalFlows.find(wf => wf.getType() === type)!.def.innerEditor!;
+    return this.generalFlows.find((wf) => wf.getType() === type)!.def
+      .innerEditor!;
   }
 
   getI2IEditor(type: string) {
-    return this.i2iFlows.find(wf => wf.getType() === type)!.def.editor;
+    return this.i2iFlows.find((wf) => wf.getType() === type)!.def.editor;
   }
 
   getDef(type: string) {
@@ -84,13 +84,19 @@ export class WorkFlowService {
   getVarDef(type: string, preset: boolean, field: string) {
     const def = this.getDef(type);
     if (preset) {
-      return def.presetVars.find(v => v.name === field);
+      return def.presetVars.find((v) => v.name === field);
     } else {
-      return def.sharedVars.find(v => v.name === field);
+      return def.sharedVars.find((v) => v.name === field);
     }
   }
 
-  async createPrompts(type: string, session: Session, scene: GenericScene, preset: any, shared: any) {
+  async createPrompts(
+    type: string,
+    session: Session,
+    scene: GenericScene,
+    preset: any,
+    shared: any,
+  ) {
     const wf = this.workflows.get(type);
     if (!wf) {
       throw new Error(`Unknown workflow type: ${type}`);
@@ -98,11 +104,30 @@ export class WorkFlowService {
     return await wf.def.createPrompt!(session, scene, preset, shared);
   }
 
-  async pushJob(type: string, session: Session, scene: GenericScene, prompt: PromptNode, preset: any, shared: any, samples: number, onComplete?: (img: string) => void, nodelay?: boolean) {
+  async pushJob(
+    type: string,
+    session: Session,
+    scene: GenericScene,
+    prompt: PromptNode,
+    preset: any,
+    shared: any,
+    samples: number,
+    onComplete?: (img: string) => void,
+    nodelay?: boolean,
+  ) {
     const wf = this.workflows.get(type);
     if (!wf) {
       throw new Error(`Unknown workflow type: ${type}`);
     }
-    return await wf.def.handler!(session, scene, prompt, preset, shared, samples, onComplete, nodelay);
+    return await wf.def.handler!(
+      session,
+      scene,
+      prompt,
+      preset,
+      shared,
+      samples,
+      onComplete,
+      nodelay,
+    );
   }
 }
