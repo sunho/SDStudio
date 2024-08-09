@@ -468,7 +468,7 @@ const SceneEditor = observer(({ scene, onClosed, onDeleted }: Props) => {
   ) => {
     try {
       const prompts = await workFlowService.createPrompts(type, curSession!, scene, preset, shared);
-      await workFlowService.pushJob(type, curSession!, scene, prompts[0], preset, shared, 1, callback);
+      await workFlowService.pushJob(type, curSession!, scene, prompts[0], preset, shared, 1, callback, true);
       taskQueueService.run();
     } catch (e: any) {
       appState.pushMessage(e.message);

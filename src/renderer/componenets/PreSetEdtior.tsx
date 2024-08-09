@@ -13,11 +13,13 @@ import PromptEditTextArea from './PromptEditTextArea';
 import { FaCopy, FaFont, FaImage, FaPlus, FaTrash, FaTrashAlt } from 'react-icons/fa';
 import { FloatView } from './FloatView';
 import { v4 } from 'uuid';
-import { BigPromptEditor } from './SceneEditor';
+import { BigPromptEditor, SlotPiece } from './SceneEditor';
 import { useContextMenu } from 'react-contexify';
 import {
   ContextMenuType,
   PromptNode,
+  PromptPiece,
+  Scene,
   VibeItem,
 } from '../models/types';
 import {
@@ -328,8 +330,19 @@ const InnerEditor: React.FC<InnerEditorProps> = ({
     prompt.current = txt;
   };
   const [name, setName] = useState(preset.name);
-  const queueprompt = (middle: string, callback: (path: string) => void) => {
-
+  const queueprompt = async (middle: string, callback: (path: string) => void) => {
+    let scene = curSession!.getScene('scene', 'style_test') as Scene | undefined;
+    if (!scene) {
+      scene = new Scene();
+      scene.name = 'style_test';
+      curSession!.addScene(scene);
+    }
+    scene.resolution = 'portrait';
+    scene.slots = [[PromptPiece.fromJSON({ enabled: true, prompt: middle, id: v4() })]];
+    const dummyShared = workFlowService.buildShared(type);
+    const prompts = await workFlowService.createPrompts(type, curSession!, scene, preset, dummyShared);
+    await workFlowService.pushJob(type, curSession!, scene, prompts[0], preset, dummyShared, 1, callback, true);
+    taskQueueService.run();
   };
   const setMainImage = async (path: string) => {
     const newPath = imageService.getVibesDir(curSession!) + '/' + v4() + '.png';
@@ -458,11 +471,11 @@ const ProfilePreSetSelect = observer(({}) => {
               };
             }}
           >
-            {preset.profile && <VibeImage
+            {x.profile && <VibeImage
               path={
                 imageService.getVibesDir(curSession!) +
                 '/' +
-                preset.profile.split('/').pop()!
+                x.profile.split('/').pop()!
               }
               className="w-auto h-full"
             />}
@@ -1043,7 +1056,7 @@ const PreSetEditor = observer(({
     } else if (!shared) {
       curSession.presetShareds.set(workflowType, workFlowService.buildShared(workflowType));
       rerender({});
-    } else if (!curSession.selectedWorkflow!.presetName) {
+    } else if (!curSession.selectedWorkflow!.presetName || !presets.find(x=>x.name === curSession.selectedWorkflow!.presetName)) {
       curSession.selectedWorkflow!.presetName = presets[0].name;
       rerender({});
     }

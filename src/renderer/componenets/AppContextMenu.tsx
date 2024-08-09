@@ -117,7 +117,12 @@ export const AppContextMenu = observer(() => {
       text: '정말로 삭제하시겠습니까?',
       callback: async () => {
         const curSession = appState.curSession;
-        curSession!.removePreset(ctx.type, ctx.preset.name);
+        const presets = appState.curSession!.presets.get(ctx.preset.type)!;
+        if (presets.length === 1) {
+          appState.pushMessage('그림체는 최소 한 개 이상이어야 합니다');
+          return;
+        }
+        curSession!.removePreset(ctx.preset.type, ctx.preset.name);
       },
     });
   };

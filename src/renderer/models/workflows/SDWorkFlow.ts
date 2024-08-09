@@ -72,7 +72,7 @@ const SDImageGenEasyInnerUI = wfiStack([
   ]),
 ]);
 
-const SDImageGenHandler = async (session: Session, scene: GenericScene, prompt: PromptNode, preset: any, shared: any, samples: number, onComplete?: (img: string) => void) => {
+const SDImageGenHandler = async (session: Session, scene: GenericScene, prompt: PromptNode, preset: any, shared: any, samples: number, onComplete?: (img: string) => void, nodelay?: boolean) => {
   const job: SDJob = {
     type: 'sd',
     cfgRescale: preset.cfgRescale,
@@ -92,6 +92,7 @@ const SDImageGenHandler = async (session: Session, scene: GenericScene, prompt: 
     session: session,
     job: job,
     scene: scene,
+    nodelay: nodelay,
     outputPath: imageService.getOutputDir(session, scene),
     onComplete: onComplete,
   };
