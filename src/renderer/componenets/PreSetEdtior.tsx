@@ -10,7 +10,7 @@ import {
 } from './UtilComponents';
 import { NoiseSchedule, Resolution, Sampling } from '../backends/imageGen';
 import PromptEditTextArea from './PromptEditTextArea';
-import { FaImage, FaPlus, FaTrash, FaTrashAlt } from 'react-icons/fa';
+import { FaCopy, FaFont, FaImage, FaPlus, FaTrash, FaTrashAlt } from 'react-icons/fa';
 import { FloatView } from './FloatView';
 import { v4 } from 'uuid';
 import { BigPromptEditor } from './SceneEditor';
@@ -320,12 +320,14 @@ const InnerEditor: React.FC<InnerEditorProps> = ({
   shared,
   preset,
 }) => {
-  const { curSession, pushMessage } = appState;
+  const { curSession } = appState;
   const prompt = React.useRef<string>('');
+  const presets = curSession!.presets.get(type)!;
   const getPrompt = () => prompt.current;
   const setPrompt = (txt: string) => {
     prompt.current = txt;
   };
+  const [name, setName] = useState(preset.name);
   const queueprompt = (middle: string, callback: (path: string) => void) => {
 
   };
@@ -342,15 +344,28 @@ const InnerEditor: React.FC<InnerEditorProps> = ({
           <input
             className="gray-input"
             type="text"
-            value={preset.name}
+            value={name}
             onChange={(e) => {
-              preset.name = e.currentTarget.value;
+              setName(e.target.value);
             }}
           />
         </div>
           <button
             className={`round-button back-sky`}
             onClick={async () => {
+              if (presets.find((x) => x.name === name)) {
+                appState.pushMessage('이미 존재하는 그림체 이름입니다');
+                return;
+              }
+              if (curSession!.selectedWorkflow?.presetName === preset.name) {
+                preset.name = name;
+                curSession!.selectedWorkflow = {
+                  workflowType: type,
+                  presetName: name
+                };
+              } else {
+                preset.name = name;
+              }
             }}
           >
             이름변경
@@ -538,15 +553,140 @@ const PreSetSelect = observer(({
   workflowType: string;
 }) => {
   const curSession = appState.curSession!;
+  const [isOpen, setIsOpen] = useState(false);
+  const clicked = React.useRef(false);
+  const presets = curSession.presets.get(workflowType)!;
+  const { preset } = useContext(WFElementContext)!;
+  useEffect(()=>{
+    const close = () => {
+      if (!clicked.current)
+        setIsOpen(false);
+      else
+        clicked.current = false;
+    }
+    window.addEventListener('click', close);
+    return ()=>{
+      window.removeEventListener('click', close);
+    }
+  })
   return (
-    <div className="flex gap-2 mt-2 items-center">
+    <div className="flex gap-2 mt-2 items-center relative">
       <div className="flex-none gray-label">사전세팅선택:</div>
-      <div className="round-button back-gray h-9 w-full"></div>
+      <div className="round-button back-gray h-9 w-full" onClick={
+        ()=>{
+          setIsOpen(!isOpen);
+          clicked.current = true;
+        }
+      }>
+        {curSession.selectedWorkflow?.presetName}
+      </div>
       <button
         className={`icon-button`}
+        onClick={async () => {
+          const name = await appState.pushDialogAsync({
+            type: 'input-confirm',
+            text: '사전 세팅 이름을 입력하세요',
+          });
+          if (!name) return;
+          if (presets.find((x) => x.name === name)) {
+            appState.pushMessage('이미 존재하는 사전 세팅 이름입니다');
+            return;
+          }
+          const newPreset = workFlowService.buildPreset(workflowType);
+          newPreset.name = name;
+          curSession.addPreset(newPreset);
+          curSession.selectedWorkflow = {
+            workflowType: workflowType,
+            presetName: name
+          };
+        }}
       >
         <FaPlus />
       </button>
+      {isOpen && (
+        <ul className="left-0 top-10 absolute max-h-60 z-20 w-full mt-1 bg-white border-2 border-gray-300 dark:border-slate-600 rounded-md shadow-lg overflow-auto dark:bg-slate-700">
+          {presets.map((option) => (
+            <li key={option.name} className="text-default flex items-center justify-between p-2 clickable bg-white dark:bg-slate-700">
+              <button
+                onClick={() => {
+                  curSession.selectedWorkflow = {
+                    workflowType: workflowType,
+                    presetName: option.name
+                  };
+                }}
+                className="w-full text-left"
+              >
+                {option.name}
+              </button>
+              <div className="flex">
+                <button
+                  onClick={async ()=>{
+                    const newName = await appState.pushDialogAsync({
+                      type: 'input-confirm',
+                      text: '새 사전 세팅 이름을 입력하세요',
+                    });
+                    if (!newName) return;
+                    if (presets.find((x) => x.name === newName)) {
+                      appState.pushMessage('이미 존재하는 사전 세팅 이름입니다');
+                      return;
+                    }
+                    if (curSession.selectedWorkflow?.presetName === option.name) {
+                      option.name = newName;
+                      curSession.selectedWorkflow = {
+                        workflowType: workflowType,
+                        presetName: newName
+                      };
+                    } else {
+                      option.name = newName;
+                    }
+                  }}
+                  className="p-2 mx-1 icon-button bg-green-500"
+                >
+                  <FaFont/>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newPreset = workFlowService.presetFromJSON(preset.toJSON());
+                    let num = 1;
+                    while (presets.find((x) => x.name === preset.name + ' copy ' + num.toString())) {
+                      num++;
+                    }
+                    const newName = preset.name + ' copy ' + num.toString();
+                    newPreset.name = newName;
+                    curSession!.addPreset(newPreset);
+                  }}
+                  className="p-2 mx-1 icon-button bg-sky-500"
+                >
+                  <FaCopy/>
+                </button>
+                <button
+                  onClick={() => {
+                    if (presets.length === 1) {
+                      appState.pushMessage('마지막 사전 세팅은 삭제할 수 없습니다');
+                      return;
+                    }
+                    appState.pushDialog({
+                      type: 'confirm',
+                      text: '정말로 사전 세팅을 삭제하시겠습니까?',
+                      callback: () => {
+                        curSession!.removePreset(workflowType, option.name);
+                        curSession!.selectedWorkflow = {
+                          workflowType: workflowType,
+                          presetName: undefined
+                        };
+                      },
+                    });
+                  }}
+                  className="p-2 mx-1 icon-button bg-red-500"
+                >
+                  <FaTrash/>
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 });

@@ -47,6 +47,7 @@ import { extractPromptDataFromBase64 } from '../models/util';
 import { appState, SceneSelectorItem } from '../models/AppService';
 import { observer } from 'mobx-react-lite';
 import { createInpaintPreset } from '../models/workflows/SDWorkFlow';
+import { reaction } from 'mobx';
 
 interface SceneCellProps {
   scene: GenericScene;
@@ -56,13 +57,11 @@ interface SceneCellProps {
   setDisplayScene?: (scene: GenericScene) => void;
   setEditingScene?: (scene: GenericScene) => void;
   moveScene?: (scene: GenericScene, index: number) => void;
-  refreshSceneImageFuncs?: { [key: string]: () => void };
   style?: React.CSSProperties;
 }
 
 export const SceneCell = observer(({
   scene,
-  refreshSceneImageFuncs,
   getImage,
   setDisplayScene,
   moveScene,
@@ -187,16 +186,19 @@ export const SceneCell = observer(({
       }
     };
     refreshImage();
-    if (refreshSceneImageFuncs) {
-      gameService.addEventListener('updated', refreshImage);
-      taskQueueService.addEventListener('progress', onUpdate);
-      refreshSceneImageFuncs![scene.name] = refreshImage;
-      return () => {
-        gameService.removeEventListener('updated', refreshImage);
-        taskQueueService.removeEventListener('progress', onUpdate);
-        delete refreshSceneImageFuncs![scene.name];
-      };
-    }
+    gameService.addEventListener('updated', refreshImage);
+    taskQueueService.addEventListener('progress', onUpdate);
+    const dispose = reaction(
+      () => scene.mains.join(''),
+      () => {
+        refreshImage();
+      },
+    );
+    return () => {
+      gameService.removeEventListener('updated', refreshImage);
+      taskQueueService.removeEventListener('progress', onUpdate);
+      dispose();
+    };
   }, [scene]);
 
   return (
@@ -312,7 +314,6 @@ const QueueControl = observer(
     const [displayScene, setDisplayScene] = useState<GenericScene | undefined>(
       undefined,
     );
-    const refreshSceneImageFuncs = useRef<{ [key: string]: () => void }>({});
     const [cellSize, setCellSize] = useState(1);
     useEffect(() => {
       const onProgressUpdated = () => {
@@ -379,37 +380,35 @@ const QueueControl = observer(
         if (!image) throw new Error('No image available');
         return image;
       } else {
-        return await imageService.fetchImageSmall(
-          sessionService.getInpaintOrgPath(curSession!, scene as InpaintScene),
-          500,
-        );
+        return await imageService.fetchVibeImage(curSession!, scene.preset.image);
       }
     };
 
     const cellSizes = ['스몰뷰', '미디엄뷰', '라지뷰'];
 
-    const buttons =
+    const favButton =  {
+      text: (path: string) => {
+        return isMainImage(path) ? '즐겨찾기 해제' : '즐겨찾기 지정';
+      },
+      className: 'back-orange',
+      onClick: async (
+        scene: Scene,
+        path: string,
+        close: () => void,
+      ) => {
+        const filename = path.split('/').pop()!;
+        if (isMainImage(path)) {
+          scene.mains = scene.mains.filter((x) => x !== filename);
+        } else {
+          scene.mains.push(filename);
+        }
+      },
+    };
+
+    const buttons: any =
       type === 'scene'
         ? [
-            {
-              text: (path: string) => {
-                return isMainImage(path) ? '즐겨찾기 해제' : '즐겨찾기 지정';
-              },
-              className: 'back-orange',
-              onClick: async (
-                scene: Scene,
-                path: string,
-                close: () => void,
-              ) => {
-                const filename = path.split('/').pop()!;
-                if (isMainImage(path)) {
-                  scene.mains = scene.mains.filter((x) => x !== filename);
-                } else {
-                  scene.mains.push(filename);
-                }
-                refreshSceneImageFuncs.current[scene.name]();
-              },
-            },
+            favButton,
             {
               text: '인페인팅 씬 생성',
               className: 'back-green',
@@ -448,6 +447,7 @@ const QueueControl = observer(
             },
           ]
         : [
+            favButton,
             {
               text: '해당 이미지로 인페인트',
               className: 'back-orange',
@@ -458,19 +458,7 @@ const QueueControl = observer(
               ) => {
                 let image = await imageService.fetchImage(path);
                 image = dataUriToBase64(image!);
-                let mask = await imageService.fetchImage(
-                  sessionService.getInpaintMaskPath(
-                    curSession!,
-                    scene as InpaintScene,
-                  ),
-                );
-                mask = dataUriToBase64(mask!);
-                await sessionService.saveInpaintImages(
-                  curSession!,
-                  scene,
-                  image,
-                  mask,
-                );
+                await imageService.writeVibeImage(curSession!, scene.preset.image, image);
                 close();
                 setInpaintEditScene(scene as InpaintScene);
               },
@@ -611,10 +599,9 @@ const QueueControl = observer(
     };
 
     const isMainImage = (path: string) => {
-      if (type === 'inpaint') return false;
       const filename = path.split('/').pop()!;
       return !!(
-        displayScene && (displayScene as Scene).mains.includes(filename)
+        displayScene && displayScene.mains.includes(filename)
       );
     };
 
@@ -670,7 +657,7 @@ const QueueControl = observer(
           <FloatView priority={0} onEscape={() => setSceneSelector(undefined)}>
             <SceneSelector
               text={sceneSelector.text}
-              scenes={curSession!.getScenes('scene') as Scene[]}
+              scenes={curSession!.getScenes(type)}
               onConfirm={sceneSelector.callback}
               getImage={getImage}
             />
@@ -690,19 +677,15 @@ const QueueControl = observer(
               >
                 모두 예약추가
               </button>
-              {type === 'scene' && (
-                <button
-                  className={`round-button back-gray`}
-                  onClick={() => appState.exportPackage()}
-                >
-                  {isMobile ? '' : '이미지 '}내보내기
-                </button>
-              )}
-              {type === 'scene' && (
-                <button className={`round-button back-gray`} onClick={()=>{appState.openBatchProcessMenu(setSceneSelector)}}>
-                  대량 작업
-                </button>
-              )}
+              <button
+                className={`round-button back-gray`}
+                onClick={() => appState.exportPackage(type)}
+              >
+                {isMobile ? '' : '이미지 '}내보내기
+              </button>
+              <button className={`round-button back-gray`} onClick={()=>{appState.openBatchProcessMenu(type, setSceneSelector)}}>
+                대량 작업
+              </button>
             </div>
             <div className="ml-auto mr-2 hidden md:block">
               <button
@@ -731,7 +714,6 @@ const QueueControl = observer(
                   setEditingScene={setEditingScene}
                   moveScene={moveScene}
                   curSession={curSession}
-                  refreshSceneImageFuncs={refreshSceneImageFuncs.current}
                 />
               ))}
           </div>

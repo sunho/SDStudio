@@ -31,7 +31,7 @@ import {
   Session,
 } from './types';
 import { sleep } from './util';
-import { createPrompts, lowerPromptNode, toPARR } from './PromptService';
+import { lowerPromptNode, toPARR } from './PromptService';
 import { dataUriToBase64 } from './ImageService';
 
 const FAST_TASK_TIME_ESTIMATOR_SAMPLE_COUNT = 16;
@@ -634,7 +634,7 @@ export const taskHandlers = [
   new RemoveBgTaskHandler()
 ];
 
-export const queueRemoveBg = (session: Session, scene: Scene, image: string, onComplete?: (path: string) => void) => {
+export const queueRemoveBg = (session: Session, scene: GenericScene, image: string, onComplete?: (path: string) => void) => {
   const job: AugmentJob = {
     type: 'augment',
     image: image,
@@ -653,52 +653,15 @@ export const queueRemoveBg = (session: Session, scene: Scene, image: string, onC
   taskQueueService.addTask(params, 1);
 };
 
-export const queueInPaint = async (
-  session: Session,
-  preset: Preset,
-  scene: InpaintScene,
-  samples: number,
-) => {
-  const prompt = await createInPaintPrompt(session, preset, scene);
-  let image = await imageService.fetchImage(
-    sessionService.getInpaintOrgPath(session, scene),
-  );
-  image = dataUriToBase64(image!);
-  let mask = await imageService.fetchImage(
-    sessionService.getInpaintMaskPath(session, scene),
-  );
-  mask = dataUriToBase64(mask!);
-  let sampling = preset.sampling ?? Sampling.KEulerAncestral;
-  if (sampling === Sampling.DDIM) sampling = Sampling.KEulerAncestral;
-  const params: GenerateImageTaskParams = {
-    preset: {
-      prompt,
-      uc: scene.uc,
-      vibes: session.presetShareds[session.presetMode].vibes,
-      resolution: scene.resolution as Resolution,
-      smea: false,
-      dyn: false,
-      steps: preset.steps ?? 28,
-      promptGuidance: preset.promptGuidance ?? 5,
-      sampling: sampling,
-      cfgRescale: preset.cfgRescale ?? 0,
-      noiseSchedule: preset.noiseSchedule ?? NoiseSchedule.Native,
-    },
-    outPath: imageService.getInPaintDir(session, scene),
-    session,
-    scene: scene.name,
-    image: image,
-    mask: mask,
-    originalImage: scene.originalImage ?? false,
-  };
-  console.log(params);
-  taskQueueService.addTask('inpaint', samples, params);
-};
-
 export const queueWorkflow = async (session: Session, workflow: SelectedWorkflow, scene: GenericScene, samples: number) => {
   const [type, preset, shared, def] = session.getCommonSetup(workflow);
   const prompts = await def.createPrompt!(session, scene, preset, shared);
   for (const prompt of prompts) {
     await def.handler(session, scene, prompt, preset, shared, samples);
   }
+}
+
+export const queueI2IWorkflow = async (session: Session, type: string, preset: any, scene: GenericScene, samples: number) => {
+  const def = workFlowService.getDef(type);
+  await def.handler(session, scene, {type:'text',text:''}, preset, undefined, samples);
 }

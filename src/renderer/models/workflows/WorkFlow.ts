@@ -11,6 +11,7 @@ export interface WorkFlowDef {
   backendType: WFBackendType;
   editor: WFIElement;
   innerEditor?: WFIElement;
+  hasMask?: boolean;
   i2i: boolean;
   handler: WFHandler;
   createPrompt?: WFCreatePrompt;
@@ -436,6 +437,11 @@ export class WFDefBuilder {
 
   setCreatePrompt(createPrompt: WFCreatePrompt): this {
     this.workflowDef.createPrompt = createPrompt;
+    return this;
+  }
+
+  setHasMask(hasMask: boolean): this {
+    this.workflowDef.hasMask = hasMask;
     return this;
   }
 

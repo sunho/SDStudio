@@ -37,13 +37,14 @@ import { FaPlus } from 'react-icons/fa6';
 import { useContextMenu } from 'react-contexify';
 import { useDrag, useDrop } from 'react-dnd';
 import { getEmptyImage } from 'react-dnd-html5-backend';
-import { ContextMenuType, GenericScene, Scene } from '../models/types';
+import { ContextMenuType, GenericScene, Scene, SelectedWorkflow } from '../models/types';
 import { imageService, sessionService, isMobile, gameService, backend, taskQueueService } from '../models';
 import { dataUriToBase64, deleteImageFiles } from '../models/ImageService';
 import { getResultDirectory } from '../models/SessionService';
-import { queueWorkflow } from '../models/TaskQueueService';
+import { queueI2IWorkflow, queueWorkflow } from '../models/TaskQueueService';
 import { extractPromptDataFromBase64 } from '../models/util';
 import { appState } from '../models/AppService';
+import { observer } from 'mobx-react-lite';
 
 interface ImageGalleryProps {
   scene: GenericScene;
@@ -447,7 +448,7 @@ interface ResultDetailViewProps {
   buttons: ResultDetailViewButton[];
   onClose: () => void;
 }
-const ResultDetailView = ({
+const ResultDetailView = observer(({
   scene,
   buttons,
   getPaths,
@@ -713,7 +714,7 @@ const ResultDetailView = ({
       </div>
     </div>
   );
-};
+});
 
 interface ResultVieweRef {
   setImageTab: () => void;
@@ -741,7 +742,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
     }: ResultViewerProps,
     ref,
   ) => {
-    const { curSession, samples, pushDialog } = appState;
+    const { curSession, samples } = appState;
     const [_, forceUpdate] = useState<{}>({});
     const [tournament, setTournament] = useState<boolean>(false);
     const [selectedImageIndex, setSelectedImageIndex] = useState<
@@ -754,7 +755,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
     ];
     const [imageSize, setImageSize] = useState<number>(1);
     const [selectedTab, setSelectedTab] = useState<number>(0);
-    const tabNames = ['이미지', '인페인트 씬', '즐겨찾기'];
+    const tabNames = scene.type === 'scene' ? ['이미지', '즐겨찾기', '인페인트 씬'] : ['이미지', '즐겨찾기'];
     useEffect(() => {
       imageService.refresh(curSession!, scene);
     }, []);
@@ -787,7 +788,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
       setSelectedImageIndex(index);
     }, []);
     const onDeleteImages = async (scene: GenericScene) => {
-      pushDialog({
+      appState.pushDialog({
         type: 'select',
         text: '이미지를 삭제합니다. 원하시는 작업을 선택해주세요.',
         items: [
@@ -806,7 +807,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
         ],
         callback: (value) => {
           if (value === 'all') {
-            pushDialog({
+            appState.pushDialog({
               type: 'confirm',
               text: '정말로 모든 이미지를 삭제하시겠습니까?',
               callback: async () => {
@@ -814,7 +815,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
               },
             });
           } else if (value === 'n') {
-            pushDialog({
+            appState.pushDialog({
               type: 'input-confirm',
               text: '몇등 이하 이미지를 삭제할지 입력해주세요.',
               callback: async (value) => {
@@ -830,7 +831,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
               },
             });
           } else {
-            pushDialog({
+            appState.pushDialog({
               type: 'confirm',
               text: '정말로 즐겨찾기 외 모든 이미지를 삭제하시겠습니까?',
               callback: async () => {
@@ -851,9 +852,8 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
         .map(
           (path) => imageService.getOutputDir(curSession!, scene) + '/' + path,
         );
-      return selectedTab === 2
-        ? paths.filter((path) => isMainImage && isMainImage(path))
-        : paths;
+      return selectedTab === 0
+        ? paths : paths.filter((path) => isMainImage && isMainImage(path));
     };
 
     return (
@@ -906,7 +906,11 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
               <button
                 className={`round-button back-green`}
                 onClick={async () => {
-                  await queueWorkflow(curSession!, curSession!.selectedWorkflow!, scene, appState.samples);
+                  if (scene.type === 'scene') {
+                    await queueWorkflow(curSession!, curSession!.selectedWorkflow!, scene, appState.samples);
+                  } else {
+                    await queueI2IWorkflow(curSession!, scene.workflowType, scene.preset, scene, appState.samples);
+                  }
                 }}
               >
                 {!isMobile ? '예약 추가' : <FaPlus />}
@@ -948,21 +952,19 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
                 <FaTrash />
               </button>
             </div>
-            {scene.type === 'scene' && (
-              <span className="flex ml-auto gap-1 md:gap-2 mt-2 md:mt-0">
-                {tabNames.map((tabName, index) => (
-                  <button
-                    className={
-                      `round-button ` +
-                      (selectedTab === index ? 'back-sky' : 'back-llgray')
-                    }
-                    onClick={() => setSelectedTab(index)}
-                  >
-                    {tabName}
-                  </button>
-                ))}
-              </span>
-            )}
+            <span className="flex ml-auto gap-1 md:gap-2 mt-2 md:mt-0">
+              {tabNames.map((tabName, index) => (
+                <button
+                  className={
+                    `round-button ` +
+                    (selectedTab === index ? 'back-sky' : 'back-llgray')
+                  }
+                  onClick={() => setSelectedTab(index)}
+                >
+                  {tabName}
+                </button>
+              ))}
+            </span>
           </div>
         </div>
         <div className="flex-1 pt-2 relative h-full overflow-hidden">
@@ -977,7 +979,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
           />
           <QueueControl
             type="inpaint"
-            className={selectedTab === 1 ? 'px-1 md:px-4 ' : 'hidden'}
+            className={selectedTab === 2 ? 'px-1 md:px-4 ' : 'hidden'}
             onClose={(x) => {
               setSelectedTab(x);
             }}
@@ -1007,12 +1009,12 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
             isMainImage={isMainImage}
             filePaths={paths.filter((path) => isMainImage && isMainImage(path))}
             imageSize={imagesSizes[imageSize].size}
-            isHidden={selectedTab !== 2}
+            isHidden={selectedTab !== 1}
             onSelected={onSelected}
           />
         </div>
         <div className="absolute gap-1 m-2 bottom-0 bg-white dark:bg-slate-800 p-1 right-0 opacity-30 hover:opacity-100 transition-all flex">
-          {selectedTab !== 1 &&
+          {selectedTab !== 2 &&
             imagesSizes.map((size, index) => (
               <button
                 key={index}

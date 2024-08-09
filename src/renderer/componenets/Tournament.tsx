@@ -12,7 +12,7 @@ interface TournamentProps {
 }
 
 const Tournament = observer(({ scene, path }: TournamentProps) => {
-  const { curSession, pushMessage, pushDialog } = appState;
+  const { curSession, } = appState;
   const [images, setImages] = useState<string[]>([]);
   const [players, setPlayers] = useState<string[]>([]);
   const lock = useRef(false);
@@ -61,7 +61,7 @@ const Tournament = observer(({ scene, path }: TournamentProps) => {
       }
     }
     if (winRank === 0) {
-      pushDialog({
+      appState.pushDialog({
         type: 'yes-only',
         text: '1위가 결정되었습니다. 여기서 멈춰도 됩니다.',
       });
@@ -111,14 +111,14 @@ const Tournament = observer(({ scene, path }: TournamentProps) => {
         let files = await backend.listFiles(path);
         files = files.filter((f: string) => f.endsWith('.png'));
         if (scene.game!.length !== files.length) {
-          pushDialog({
+          appState.pushDialog({
             type: 'yes-only',
             text: '새로운 이미지가 추가되었습니다. 순위를 초기화 해주세요.',
           });
         }
         loadRoundInitial();
       } catch (e: any) {
-        pushMessage('Error: ' + e.message);
+        appState.pushMessage('Error: ' + e.message);
       }
     })();
   }, [scene]);
@@ -135,7 +135,7 @@ const Tournament = observer(({ scene, path }: TournamentProps) => {
           ))!;
           setImages([p0, p1]);
         } catch (e: any) {
-          pushMessage('Image load error: ' + e.message);
+          appState.pushMessage('Image load error: ' + e.message);
           setImages([]);
         }
       })();
@@ -149,7 +149,7 @@ const Tournament = observer(({ scene, path }: TournamentProps) => {
             ))!;
             setImages([p0]);
           } catch (e: any) {
-            pushMessage('Image load error: ' + e.message);
+            appState.pushMessage('Image load error: ' + e.message);
             setImages([]);
           }
         })();
@@ -161,7 +161,7 @@ const Tournament = observer(({ scene, path }: TournamentProps) => {
     }
   }, [players]);
   const resetRanks = () => {
-    pushDialog({
+    appState.pushDialog({
       type: 'confirm',
       text: '정말로 순위를 초기화하시겠습니까?',
       callback: async () => {
@@ -172,7 +172,7 @@ const Tournament = observer(({ scene, path }: TournamentProps) => {
           scene.round = undefined;
           loadRoundInitial();
         } catch (e: any) {
-          pushMessage('Error: ' + e.message);
+          appState.pushMessage('Error: ' + e.message);
         }
       },
     });
