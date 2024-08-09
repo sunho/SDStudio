@@ -5,12 +5,11 @@ import { convertDenDenData, isValidDenDenDataFormat } from './compat';
 import { dataUriToBase64, deleteImageFiles } from './ImageService';
 import { importStyle } from './SessionService';
 import { action, observable } from 'mobx';
-import { types, Instance } from 'mobx-state-tree';
 import { isValidPieceLibrary, isValidSession, PieceLibrary, Scene, Session } from './types';
 import { getFirstFile } from './util';
 import { ImageOptimizeMethod } from '../backend';
 import { v4 } from 'uuid';
-import { RemoveBgTaskParams } from './TaskQueueService';
+import { queueRemoveBg } from './TaskQueueService';
 import { Resolution, resolutionMap } from '../backends/imageGen';
 
 export interface SceneSelectorItem {
@@ -87,7 +86,6 @@ export class AppState {
               const preset = await importStyle(this.curSession!, base64);
               if (preset) {
               // setSelectedPreset(preset);
-              sessionService.markUpdated(this.curSession!.name);
               this.pushDialog({
                   type: 'yes-only',
                   text: '그림체를 임포트 했습니다',
@@ -186,8 +184,6 @@ export class AppState {
           }
           if (!(json.name in this.curSession.library)) {
           this.curSession.library.set(json.name, PieceLibrary.fromJSON(json));
-          sessionService.markUpdated(this.curSession.name);
-          sessionService.pieceLibraryImported();
           sessionService.reloadPieceLibraryDB(this.curSession);
           this.pushDialog({
               type: 'yes-only',
@@ -199,22 +195,20 @@ export class AppState {
           type: 'input-confirm',
           text: '조각그룹을 임포트 합니다. 새 조각그룹 이름을 입력하세요.',
           callback: (value) => {
-              if (!value || value === '') {
+            if (!value || value === '') {
               return;
-              }
-              if (this.curSession!.library.has(value)){
+            }
+            if (this.curSession!.library.has(value)){
               this.pushMessage('이미 존재하는 조각그룹 이름입니다.');
               return;
-              }
-              json.name = value;
-              this.curSession!.library.set(value, PieceLibrary.fromJSON(json));
-              sessionService.markUpdated(this.curSession!.name);
-              sessionService.pieceLibraryImported();
+            }
+            json.name = value;
+            this.curSession!.library.set(value, PieceLibrary.fromJSON(json));
           },
           });
       } else if (isValidDenDenDataFormat(json)) {
-          const converted = convertDenDenData(name, json);
-          handleAddSession(converted);
+        const converted = convertDenDenData(name, json);
+        handleAddSession(converted);
       }
       };
     }
@@ -327,195 +321,180 @@ export class AppState {
         },
       });
     }
-
-    @action
-    openBatchProcessMenu(setSceneSelector: (item: SceneSelectorItem | undefined) => void) {
-      const exportPackage = async (selected?: Scene[]) => {
-        const exportImpl = async (
-          prefix: string,
-          fav: boolean,
-          opt: string,
-          imageSize: number,
-        ) => {
-          const paths = [];
-          await imageService.refreshBatch(this.curSession!);
-          const scenes = selected ?? Object.values(this.curSession!.scenes);
-          for (const scene of scenes) {
-            await gameService.refreshList(this.curSession!, scene);
-            const cands = gameService.getOutputs(this.curSession!, scene);
-            const imageMap: any = {};
-            cands.forEach((x) => {
-              imageMap[x] = true;
-            });
-            const images = [];
-            if (fav) {
-              if (scene.mains.length) {
-                for (const main of scene.mains) {
-                  if (imageMap[main]) images.push(main);
-                }
-              } else {
-                if (cands.length) {
-                  images.push(cands[0]);
-                }
+    async exportPackage(selected?: Scene[])  {
+      const exportImpl = async (
+        prefix: string,
+        fav: boolean,
+        opt: string,
+        imageSize: number,
+      ) => {
+        const paths = [];
+        await imageService.refreshBatch(this.curSession!);
+        const scenes = selected ?? Object.values(this.curSession!.scenes);
+        for (const scene of scenes) {
+          await gameService.refreshList(this.curSession!, scene);
+          const cands = gameService.getOutputs(this.curSession!, scene);
+          const imageMap: any = {};
+          cands.forEach((x) => {
+            imageMap[x] = true;
+          });
+          const images = [];
+          if (fav) {
+            if (scene.mains.length) {
+              for (const main of scene.mains) {
+                if (imageMap[main]) images.push(main);
               }
             } else {
-              for (const cand of cands) {
-                images.push(cand);
+              if (cands.length) {
+                images.push(cands[0]);
               }
             }
-            for (let i = 0; i < images.length; i++) {
-              const path = images[i];
-              if (images.length === 1) {
-                paths.push({
-                  path: imageService.getImageDir(this.curSession!, scene) + '/' + path,
-                  name: prefix + scene.name + '.png',
-                });
-              } else {
-                paths.push({
-                  path: imageService.getImageDir(this.curSession!, scene) + '/' + path,
-                  name: prefix + scene.name + '.' + (i + 1).toString() + '.png',
-                });
-              }
+          } else {
+            for (const cand of cands) {
+              images.push(cand);
             }
           }
-          if (opt !== 'original') {
-            try {
-              let done = 0;
-              for (const item of paths) {
-                const outputPath = 'tmp/' + v4() + '.webp';
-                appState.setProgressDialog({
-                  text: '이미지 크기 최적화 중..',
-                  done: done,
-                  total: paths.length,
-                });
-                await backend.resizeImage({
-                  inputPath: item.path,
-                  outputPath: outputPath,
-                  maxHeight: imageSize,
-                  maxWidth: imageSize,
-                  optimize:
-                    opt === 'lossy'
-                      ? ImageOptimizeMethod.LOSSY
-                      : ImageOptimizeMethod.LOSSLESS,
-                });
-                item.path = outputPath;
-                item.name =
-                  item.name.substring(0, item.name.length - 4) + '.webp';
-                done++;
-              }
-            } catch (e: any) {
-              appState.pushMessage(e.message);
-              appState.setProgressDialog(undefined);
-              return;
+          for (let i = 0; i < images.length; i++) {
+            const path = images[i];
+            if (images.length === 1) {
+              paths.push({
+                path: imageService.getImageDir(this.curSession!, scene) + '/' + path,
+                name: prefix + scene.name + '.png',
+              });
+            } else {
+              paths.push({
+                path: imageService.getImageDir(this.curSession!, scene) + '/' + path,
+                name: prefix + scene.name + '.' + (i + 1).toString() + '.png',
+              });
             }
           }
-          appState.setProgressDialog({
-            text: '이미지 압축파일 생성중..',
-            done: 0,
-            total: 1,
-          });
-          const outFilePath =
-            'exports/' +
-            this.curSession!.name +
-            '_main_images_' +
-            Date.now().toString() +
-            '.tar';
-          if (zipService.isZipping) {
-            appState.pushDialog({
-              type: 'yes-only',
-              text: '이미 다른 이미지 내보내기가 진행중입니다',
-            });
-            return;
-          }
+        }
+        if (opt !== 'original') {
           try {
-            await zipService.zipFiles(paths, outFilePath);
+            let done = 0;
+            for (const item of paths) {
+              const outputPath = 'tmp/' + v4() + '.webp';
+              appState.setProgressDialog({
+                text: '이미지 크기 최적화 중..',
+                done: done,
+                total: paths.length,
+              });
+              await backend.resizeImage({
+                inputPath: item.path,
+                outputPath: outputPath,
+                maxHeight: imageSize,
+                maxWidth: imageSize,
+                optimize:
+                  opt === 'lossy'
+                    ? ImageOptimizeMethod.LOSSY
+                    : ImageOptimizeMethod.LOSSLESS,
+              });
+              item.path = outputPath;
+              item.name =
+                item.name.substring(0, item.name.length - 4) + '.webp';
+              done++;
+            }
           } catch (e: any) {
             appState.pushMessage(e.message);
             appState.setProgressDialog(undefined);
             return;
           }
-          appState.setProgressDialog(undefined);
+        }
+        appState.setProgressDialog({
+          text: '이미지 압축파일 생성중..',
+          done: 0,
+          total: 1,
+        });
+        const outFilePath =
+          'exports/' +
+          this.curSession!.name +
+          '_main_images_' +
+          Date.now().toString() +
+          '.tar';
+        if (zipService.isZipping) {
           appState.pushDialog({
             type: 'yes-only',
-            text: '이미지 내보내기가 완료되었습니다',
+            text: '이미 다른 이미지 내보내기가 진행중입니다',
           });
-          await backend.showFile(outFilePath);
+          return;
+        }
+        try {
+          await zipService.zipFiles(paths, outFilePath);
+        } catch (e: any) {
+          appState.pushMessage(e.message);
           appState.setProgressDialog(undefined);
-        };
-        const menu = await appState.pushDialogAsync({
-          type: 'select',
-          text: '내보낼 이미지를 선택해주세요',
-          items: [
-            { text: '즐겨찾기 이미지만 내보내기', value: 'fav' },
-            { text: '모든 이미지 전부 내보내기', value: 'all' },
-          ],
-        });
-        if (!menu) return;
-        const format = await appState.pushDialogAsync({
-          type: 'select',
-          text: '파일 이름 형식을 선택해주세요',
-          items: [
-            { text: '(씬이름).(이미지 번호).png', value: 'normal' },
-            { text: '(캐릭터 이름).(씬이름).(이미지 번호)', value: 'prefix' },
-          ],
-        });
-        if (!format) return;
-
-        const optItems = [
-          { text: '원본', value: 'original' },
-          { text: '저손실 webp 최적화 (에셋용 권장)', value: 'lossy' },
-        ];
-        if (!isMobile) {
-          optItems.push({ text: '무손실 webp 최적화', value: 'lossless' });
+          return;
         }
-        const opt = await appState.pushDialogAsync({
-          type: 'select',
-          text: '이미지 크기 최적화 방법을 선택해주세요',
-          items: optItems,
+        appState.setProgressDialog(undefined);
+        appState.pushDialog({
+          type: 'yes-only',
+          text: '이미지 내보내기가 완료되었습니다',
         });
-        if (!opt) return;
-        let imageSize = 0;
-        if (opt !== 'original') {
-          const inputImageSize = await appState.pushDialogAsync({
-            type: 'input-confirm',
-            text: '이미지 픽셀 크기를 결정해주세요 (추천값 1024)',
-          });
-          if (!inputImageSize) return;
-          try {
-            imageSize = parseInt(inputImageSize);
-          } catch (error) {
-            return;
-          }
-        }
-        if (format === 'normal') {
-          await exportImpl('', menu === 'fav', opt, imageSize);
-        } else {
-          appState.pushDialog({
-            type: 'input-confirm',
-            text: '캐릭터 이름을 입력해주세요',
-            callback: async (prefix) => {
-              if (!prefix) return;
-              await exportImpl(prefix + '.', menu === 'fav', opt, imageSize);
-            },
-          });
-        }
+        await backend.showFile(outFilePath);
+        appState.setProgressDialog(undefined);
       };
+      const menu = await appState.pushDialogAsync({
+        type: 'select',
+        text: '내보낼 이미지를 선택해주세요',
+        items: [
+          { text: '즐겨찾기 이미지만 내보내기', value: 'fav' },
+          { text: '모든 이미지 전부 내보내기', value: 'all' },
+        ],
+      });
+      if (!menu) return;
+      const format = await appState.pushDialogAsync({
+        type: 'select',
+        text: '파일 이름 형식을 선택해주세요',
+        items: [
+          { text: '(씬이름).(이미지 번호).png', value: 'normal' },
+          { text: '(캐릭터 이름).(씬이름).(이미지 번호)', value: 'prefix' },
+        ],
+      });
+      if (!format) return;
 
-    const queueRemoveBg = async (
-      session: Session,
-      scene: Scene,
-      image: string,
-      onComplete?: (path: string) => void,
-    ) => {
-      const params: RemoveBgTaskParams = {
-        session,
-        scene: scene.name,
-        image,
-        ouputPath: imageService.getImageDir(session, scene),
-        onComplete,
-      };
-      taskQueueService.addTask('remove-bg', 1, params);
-    };
+      const optItems = [
+        { text: '원본', value: 'original' },
+        { text: '저손실 webp 최적화 (에셋용 권장)', value: 'lossy' },
+      ];
+      if (!isMobile) {
+        optItems.push({ text: '무손실 webp 최적화', value: 'lossless' });
+      }
+      const opt = await appState.pushDialogAsync({
+        type: 'select',
+        text: '이미지 크기 최적화 방법을 선택해주세요',
+        items: optItems,
+      });
+      if (!opt) return;
+      let imageSize = 0;
+      if (opt !== 'original') {
+        const inputImageSize = await appState.pushDialogAsync({
+          type: 'input-confirm',
+          text: '이미지 픽셀 크기를 결정해주세요 (추천값 1024)',
+        });
+        if (!inputImageSize) return;
+        try {
+          imageSize = parseInt(inputImageSize);
+        } catch (error) {
+          return;
+        }
+      }
+      if (format === 'normal') {
+        await exportImpl('', menu === 'fav', opt, imageSize);
+      } else {
+        appState.pushDialog({
+          type: 'input-confirm',
+          text: '캐릭터 이름을 입력해주세요',
+          callback: async (prefix) => {
+            if (!prefix) return;
+            await exportImpl(prefix + '.', menu === 'fav', opt, imageSize);
+          },
+        });
+      }
+    }
+
+    @action
+    openBatchProcessMenu(setSceneSelector: (item: SceneSelectorItem | undefined) => void) {
+
 
       const removeBg = async (selected: Scene[]) => {
         if (!localAIService.ready) {
@@ -704,7 +683,7 @@ export class AppState {
         } else if (value === 'removeBg') {
           removeBg(selected);
         } else if (value === 'export') {
-          exportPackage(selected);
+          this.exportPackage(selected);
         } else {
           console.log('Not implemented');
         }

@@ -254,7 +254,10 @@ export const App = observer(() => {
 
   useEffect(() => {
     window.curSession = appState.curSession;
-    if (appState.curSession) sessionService.reloadPieceLibraryDB(appState.curSession);
+    if (appState.curSession) {
+      sessionService.reloadPieceLibraryDB(appState.curSession);
+      imageService.refreshBatch(appState.curSession);
+    }
     return () => {
       window.curSession = undefined;
     };

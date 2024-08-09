@@ -5,7 +5,6 @@ import { FaTimes } from 'react-icons/fa';
 import { FaRegClock } from 'react-icons/fa';
 import { taskQueueService } from '../models';
 import {
-  RemoveBgTaskParams,
   Task,
 } from '../models/TaskQueueService';
 import { appState } from '../models/AppService';

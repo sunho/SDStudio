@@ -1,10 +1,8 @@
 import { backend, isMobile, promptService } from '.';
 import { NoiseSchedule, Sampling } from '../backends/imageGen';
-import { ResourceSyncService } from './ResourceSyncService';
 import {
   InpaintScene,
   PARR,
-  PieceLibrary,
   PromptGroupNode,
   PromptNode,
   PromptRandomNode,
@@ -166,7 +164,7 @@ export class PromptService extends EventTarget {
   }
 }
 
-export const createPrompts = async (
+export const createSDPrompts = async (
   session: Session,
   preset: any,
   shared: any,

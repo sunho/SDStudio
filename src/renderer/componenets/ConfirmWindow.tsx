@@ -17,12 +17,14 @@ export interface Dialog {
 }
 
 const ConfirmWindow = observer(() => {
-  const dialogs = appState.dialogs;
   const [inputValue, setInputValue] = useState<string>('');
+  console.log("DIAG", appState.dialogs)
 
   const handleConfirm = () => {
-    const currentDialog = dialogs[dialogs.length - 1];
-    appState.dialogs = dialogs.slice(0, dialogs.length - 1);
+    console.log("confirm")
+    const currentDialog = appState.dialogs[appState.dialogs.length - 1];
+    if (appState.dialogs.length > 0)
+      appState.dialogs.pop();
     if (currentDialog && currentDialog.callback) {
       currentDialog.callback(
         currentDialog.type === 'input-confirm' ||
@@ -35,7 +37,7 @@ const ConfirmWindow = observer(() => {
     setInputValue('');
   };
 
-  const curDialog = dialogs[dialogs.length - 1];
+  const curDialog = appState.dialogs[appState.dialogs.length - 1];
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Enter') {
@@ -51,7 +53,7 @@ const ConfirmWindow = observer(() => {
 
   return (
     <>
-      {dialogs.length > 0 && (
+      {appState.dialogs.length > 0 && (
         <div className="fixed flex justify-center w-full confirm-window">
           <div className="flex flex-col justify-between m-4 p-4 rounded-md shadow-xl bg-white dark:bg-slate-800 text-black w-96">
             <div className="break-keep text-center text-default">
@@ -88,7 +90,7 @@ const ConfirmWindow = observer(() => {
                     className="px-4 py-2 rounded back-gray clickable "
                     onClick={() => {
                       if (curDialog.onCancel) curDialog.onCancel();
-                      appState.dialogs = dialogs.slice(0, dialogs.length - 1);
+                      appState.dialogs.pop();
                       setInputValue('');
                     }}
                   >
@@ -116,7 +118,7 @@ const ConfirmWindow = observer(() => {
                     className="px-4 py-2 rounded back-gray clickable"
                     onClick={() => {
                       if (curDialog.onCancel) curDialog.onCancel();
-                      appState.dialogs = dialogs.slice(0, dialogs.length - 1);
+                      appState.dialogs.pop();
                       setInputValue('');
                     }}
                   >
@@ -134,7 +136,7 @@ const ConfirmWindow = observer(() => {
                         (curDialog.graySelect ? 'back-lgray' : 'back-sky')
                       }
                       onClick={() => {
-                        appState.dialogs = dialogs.slice(0, dialogs.length - 1);
+                        appState.dialogs.pop();
                         if (curDialog.callback) {
                           curDialog.callback!(item.value, item.text);
                         }
@@ -147,7 +149,7 @@ const ConfirmWindow = observer(() => {
                     className="w-full px-4 py-2 clickable rounded back-gray"
                     onClick={() => {
                       if (curDialog.onCancel) curDialog.onCancel();
-                      appState.dialogs = dialogs.slice(0, dialogs.length - 1);
+                      appState.dialogs.pop();
                     }}
                   >
                     취소
@@ -183,7 +185,7 @@ const ConfirmWindow = observer(() => {
                       className="flex-1 px-4 py-2 block rounded back-gray clickable"
                       onClick={() => {
                         if (curDialog.onCancel) curDialog.onCancel();
-                        appState.dialogs = dialogs.slice(0, dialogs.length - 1);
+                        appState.dialogs.pop();
                         setInputValue('');
                       }}
                     >

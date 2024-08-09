@@ -41,11 +41,11 @@ import {
   isMobile,
   sessionService,
   backend,
+  workFlowService,
 } from '../models';
 import { getMainImagePath } from '../models/ImageService';
 import {
   highlightPrompt,
-  createPrompts,
   lowerPromptNode,
 } from '../models/PromptService';
 import { renameScene } from '../models/SessionService';
@@ -87,7 +87,6 @@ export const PromptHighlighter = observer(({
 interface SlotEditorProps {
   scene: Scene;
   big?: boolean;
-  onChanged?: () => void;
 }
 
 interface BigPromptEditorProps {
@@ -102,7 +101,7 @@ interface BigPromptEditorProps {
   initialImagePath?: string;
 }
 
-export const BigPromptEditor = ({
+export const BigPromptEditor = observer(({
   general,
   type,
   shared,
@@ -262,21 +261,19 @@ export const BigPromptEditor = ({
       </div>
     </div>
   );
-};
+});
 
 interface SlotPieceProps {
   scene: Scene;
   piece: PromptPiece;
-  onChanged?: () => void;
   removePiece?: (piece: PromptPiece) => void;
   moveSlotPiece?: (from: string, to: string) => void;
   style?: React.CSSProperties;
 }
 
-export const SlotPiece = ({
+export const SlotPiece = observer(({
   scene,
   piece,
-  onChanged,
   removePiece,
   moveSlotPiece,
   style,
@@ -337,7 +334,6 @@ export const SlotPiece = ({
           onChange={(s) => {
             if (!moveSlotPiece) return;
             piece.prompt = s;
-            onChanged && onChanged();
           }}
         />
       </div>
@@ -349,7 +345,6 @@ export const SlotPiece = ({
           onChange={(e) => {
             if (!moveSlotPiece) return;
             piece.enabled = e.currentTarget.checked;
-            onChanged && onChanged();
           }}
         />
         <button
@@ -364,12 +359,9 @@ export const SlotPiece = ({
       </div>
     </div>
   );
-};
+});
 
-const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
-  const textAreaRef = useRef<any>([]);
-  const [_, rerender] = useState<{}>({});
-  const { curSession, pushMessage } = appState;
+const SlotEditor = observer(({ scene, big, }: SlotEditorProps) => {
   useEffect(() => {
     for (const slot of scene.slots) {
       for (const piece of slot) {
@@ -380,32 +372,11 @@ const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
     }
   }, [scene]);
 
-  useEffect(() => {
-    let dirty = false;
-    for (let i = 0; i < scene.slots.length; i++) {
-      if (i >= textAreaRef.current.length) {
-        textAreaRef.current.push([]);
-        dirty = true;
-      }
-      if (textAreaRef.current[i].length !== scene.slots[i].length) {
-        textAreaRef.current[i] = Array(scene.slots[i].length)
-          .fill(0)
-          .map((x) => createRef());
-        dirty = true;
-      }
-    }
-    if (dirty) {
-      rerender({});
-    }
-  });
-
   const removePiece = (slot: PromptPieceSlot, pieceIndex: number) => {
     slot.splice(pieceIndex, 1);
     if (slot.length === 0) {
       scene.slots.splice(scene.slots.indexOf(slot), 1);
     }
-    onChanged && onChanged();
-    rerender({});
   };
 
   const moveSlotPiece = (from: string, to: string) => {
@@ -429,8 +400,6 @@ const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
     if (scene.slots[fromSlotIndex].length === 0) {
       scene.slots.splice(fromSlotIndex, 1);
     }
-
-    onChanged && onChanged();
   };
 
   return (
@@ -442,7 +411,6 @@ const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
               key={piece.id!}
               scene={scene}
               piece={piece}
-              onChanged={onChanged}
               removePiece={(piece: PromptPiece) =>
                 removePiece(slot, slot.indexOf(piece)!)
               }
@@ -452,8 +420,7 @@ const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
           <button
             className="p-2 m-2 w-14 back-lllgray clickable rounded-xl flex justify-center"
             onClick={() => {
-              slot.push({ prompt: '', enabled: true, id: uuidv4() });
-              onChanged && onChanged();
+              slot.push(PromptPiece.fromJSON({ prompt: '', enabled: true, id: uuidv4() }));
             }}
           >
             <FaPlus />
@@ -463,29 +430,23 @@ const SlotEditor = ({ scene, big, onChanged }: SlotEditorProps) => {
       <button
         className="p-2 m-2 h-14 flex items-center back-lllgray clickable rounded-xl"
         onClick={() => {
-          scene.slots.push([{ prompt: '', enabled: true, id: uuidv4() }]);
-          onChanged && onChanged();
+          scene.slots.push([PromptPiece.fromJSON({ prompt: '', enabled: true, id: uuidv4() })]);
         }}
       >
         <FaPlus />
       </button>
     </div>
   );
-};
+});
 
-const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
-  const [_, rerender] = useState<{}>({});
-  const { curSession, pushMessage, pushDialog } = appState;
+const SceneEditor = observer(({ scene, onClosed, onDeleted }: Props) => {
+  const { curSession, } = appState;
   const [curName, setCurName] = useState('');
+  const [type,preset,shared,def] = curSession!.getCommonSetup(curSession!.selectedWorkflow!);
 
   useEffect(() => {
     setCurName(scene.name);
   }, [scene]);
-
-  const updateScene = () => {
-    sessionService.markUpdated(curSession!.name);
-    rerender({});
-  };
 
   const getMiddlePrompt = () => {
     if (scene.slots.length === 0 || scene.slots[0].length === 0) {
@@ -506,21 +467,11 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
     callback: (path: string) => void,
   ) => {
     try {
-      const prompts = await createPrompts(curSession!, selectedPreset!, scene);
-      queueScenePrompt(
-        curSession!,
-        selectedPreset!,
-        scene,
-        prompts[0],
-        1,
-        true,
-        async (path: string) => {
-          callback(path);
-        },
-      );
+      const prompts = await workFlowService.createPrompts(type, curSession!, scene, preset, shared);
+      await workFlowService.pushJob(type, curSession!, scene, prompts[0], preset, shared, 1, callback);
       taskQueueService.run();
     } catch (e: any) {
-      pushMessage(e.message);
+      appState.pushMessage(e.message);
       return;
     }
   };
@@ -530,7 +481,6 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
     if (!(filename in scene.mains)) {
       scene.mains.push(filename);
     }
-    sessionService.mainImageUpdated();
   };
 
   const [previews, setPreviews] = useState<PromptNode[]>([]);
@@ -550,7 +500,7 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
   );
 
   const SmallSlotEditor = (
-    <SlotEditor scene={scene} big={false} onChanged={updateScene} />
+    <SlotEditor scene={scene} big={false}/>
   );
 
   const BigEditor = (
@@ -597,17 +547,15 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
                     opt.value.startsWith('large') ||
                     opt.value.startsWith('wallpaper')
                   ) {
-                    pushDialog({
+                    appState.pushDialog({
                       type: 'confirm',
                       text: '해당 해상도는 Anlas를 소모합니다 (유로임) 계속하시겠습니까?',
                       callback: () => {
                         scene.resolution = opt.value as Resolution;
-                        updateScene();
                       },
                     });
                   } else {
                     scene.resolution = opt.value as Resolution;
-                    updateScene();
                   }
                 }}
               />
@@ -618,12 +566,11 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
             className={`round-button back-sky`}
             onClick={async () => {
               if (curName in curSession!.scenes) {
-                pushMessage('해당 이름의 씬이 이미 존재합니다');
+                appState.pushMessage('해당 이름의 씬이 이미 존재합니다');
                 return;
               }
               const oldName = scene.name;
               await renameScene(curSession!, scene.name, curName);
-              updateScene();
             }}
           >
             이름 변경
@@ -631,12 +578,11 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
           <button
             className={`round-button back-red`}
             onClick={() => {
-              pushDialog({
+              appState.pushDialog({
                 type: 'confirm',
                 text: '정말로 해당 씬을 삭제하시겠습니까?',
                 callback: async () => {
                   curSession!.removeScene(scene.type, scene.name);
-                  updateScene();
                   onClosed();
                   if (onDeleted) {
                     onDeleted();
@@ -671,11 +617,7 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
                 onClick: () => {
                   (async () => {
                     try {
-                      const prompts = await createPrompts(
-                        curSession!,
-                        selectedPreset!,
-                        scene,
-                      );
+                      const prompts = await workFlowService.createPrompts(type, curSession!, preset, shared, scene)
                       setPreviews(prompts);
                     } catch (e: any) {
                       setPreviewError(e.message);
@@ -689,6 +631,6 @@ const SceneEditor = ({ scene, onClosed, onDeleted }: Props) => {
       </div>
     </div>
   );
-};
+});
 
 export default SceneEditor;

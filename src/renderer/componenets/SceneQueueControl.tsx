@@ -2,11 +2,8 @@ import { memo, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { FloatView } from './FloatView';
 import SceneEditor from './SceneEditor';
 import {
-  FaCalendarPlus,
   FaEdit,
-  FaImages,
   FaPlus,
-  FaRegCalendarPlus,
   FaRegCalendarTimes,
 } from 'react-icons/fa';
 import Tournament from './Tournament';
@@ -16,7 +13,6 @@ import { base64ToDataUri } from './BrushTool';
 import { useDrag, useDrop } from 'react-dnd';
 import { getEmptyImage } from 'react-dnd-html5-backend';
 import { useContextMenu } from 'react-contexify';
-import { Resolution, resolutionMap } from '../backends/imageGen';
 import SceneSelector from './SceneSelector';
 import { v4 } from 'uuid';
 import { ImageOptimizeMethod } from '../backend';
@@ -37,9 +33,7 @@ import {
   deleteImageFiles,
 } from '../models/ImageService';
 import {
-  queueGenericScene,
-  removeTaskFromGenericScene,
-  statsGenericSceneTasks,
+  queueRemoveBg,
   queueWorkflow,
 } from '../models/TaskQueueService';
 import {
@@ -169,16 +163,21 @@ export const SceneCell = observer(({
     }
   };
 
+  const [_, rerender] = useState<{}>({});
+
   const removeFromQueue = (scene: GenericScene) => {
-    removeTaskFromGenericScene(curSession!, scene);
+    taskQueueService.removeTasksFromScene(scene);
   };
 
   const getSceneQueueCount = (scene: GenericScene) => {
-    const stats = statsGenericSceneTasks(curSession!, scene);
+    const stats = taskQueueService.statsTasksFromScene(curSession!, scene);
     return stats.total - stats.done;
   };
 
   useEffect(() => {
+    const onUpdate = () => {
+      rerender({});
+    }
     const refreshImage = async () => {
       try {
         const base64 = await getImage(scene);
@@ -190,11 +189,11 @@ export const SceneCell = observer(({
     refreshImage();
     if (refreshSceneImageFuncs) {
       gameService.addEventListener('updated', refreshImage);
-      sessionService.addEventListener('main-image-updated', refreshImage);
+      taskQueueService.addEventListener('progress', onUpdate);
       refreshSceneImageFuncs![scene.name] = refreshImage;
       return () => {
         gameService.removeEventListener('updated', refreshImage);
-        sessionService.removeEventListener('main-image-updated', refreshImage);
+        taskQueueService.removeEventListener('progress', onUpdate);
         delete refreshSceneImageFuncs![scene.name];
       };
     }
@@ -238,7 +237,7 @@ export const SceneCell = observer(({
         >
           <div className="truncate flex-1">{scene.name}</div>
           <div className="flex-none text-gray-400">
-            {imageService.getOutputs(curSession!, scene).length}{' '}
+            {gameService.getOutputs(curSession!, scene).length}{' '}
           </div>
         </div>
         <div
@@ -319,23 +318,9 @@ const QueueControl = observer(
       const onProgressUpdated = () => {
         rerender({});
       };
-      if (type === 'inpaint') {
-        sessionService.addEventListener('inpaint-updated', onProgressUpdated);
-      }
       taskQueueService.addEventListener('progress', onProgressUpdated);
-      sessionService.addEventListener('scene-order-changed', onProgressUpdated);
       return () => {
-        if (type === 'inpaint') {
-          sessionService.removeEventListener(
-            'inpaint-updated',
-            onProgressUpdated,
-          );
-        }
         taskQueueService.removeEventListener('progress', onProgressUpdated);
-        sessionService.removeEventListener(
-          'scene-order-changed',
-          onProgressUpdated,
-        );
       };
     }, []);
     useEffect(() => {
@@ -423,7 +408,6 @@ const QueueControl = observer(
                   scene.mains.push(filename);
                 }
                 refreshSceneImageFuncs.current[scene.name]();
-                sessionService.mainImageUpdated();
               },
             },
             {
@@ -460,7 +444,6 @@ const QueueControl = observer(
                 curSession!.addScene(newScene);
                 close();
                 setInpaintEditScene(newScene);
-                sessionService.inPaintHook();
               },
             },
           ]
@@ -490,7 +473,6 @@ const QueueControl = observer(
                 );
                 close();
                 setInpaintEditScene(scene as InpaintScene);
-                sessionService.inPaintHook();
               },
             },
             {
@@ -647,7 +629,6 @@ const QueueControl = observer(
           scene.mains = scene.mains.map((x) => (x === dst ? src : x));
         }
       }
-      sessionService.mainImageUpdated();
     };
 
     const resultViewerRef = useRef<any>(null);
@@ -659,7 +640,6 @@ const QueueControl = observer(
             showToolbar
             onEscape={() => {
               gameService.refreshList(curSession!, displayScene);
-              sessionService.mainImageUpdated();
               setDisplayScene(undefined);
             }}
           >
@@ -713,7 +693,7 @@ const QueueControl = observer(
               {type === 'scene' && (
                 <button
                   className={`round-button back-gray`}
-                  onClick={() => exportPackage()}
+                  onClick={() => appState.exportPackage()}
                 >
                   {isMobile ? '' : '이미지 '}내보내기
                 </button>

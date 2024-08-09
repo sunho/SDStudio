@@ -38,10 +38,10 @@ import { useContextMenu } from 'react-contexify';
 import { useDrag, useDrop } from 'react-dnd';
 import { getEmptyImage } from 'react-dnd-html5-backend';
 import { ContextMenuType, GenericScene, Scene } from '../models/types';
-import { imageService, sessionService, isMobile, gameService, backend } from '../models';
+import { imageService, sessionService, isMobile, gameService, backend, taskQueueService } from '../models';
 import { dataUriToBase64, deleteImageFiles } from '../models/ImageService';
 import { getResultDirectory } from '../models/SessionService';
-import { queueGenericScene, queueWorkflow, removeTaskFromGenericScene } from '../models/TaskQueueService';
+import { queueWorkflow } from '../models/TaskQueueService';
 import { extractPromptDataFromBase64 } from '../models/util';
 import { appState } from '../models/AppService';
 
@@ -454,7 +454,7 @@ const ResultDetailView = ({
   initialSelectedIndex,
   onClose,
 }: ResultDetailViewProps) => {
-  const { curSession, pushDialog } = appState;
+  const { curSession } = appState;
   const [selectedIndex, setSelectedIndex] =
     useState<number>(initialSelectedIndex);
   const [paths, setPaths] = useState<string[]>(getPaths());
@@ -518,7 +518,7 @@ const ResultDetailView = ({
       } else if (e.key === 'ArrowRight') {
         setSelectedIndex((selectedIndex + 1) % paths.length);
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        pushDialog({
+        appState.pushDialog({
           type: 'confirm',
           text: '정말로 파일을 삭제하시겠습니까?',
           callback: async () => {
@@ -598,7 +598,7 @@ const ResultDetailView = ({
           <button
             className={`round-button back-red`}
             onClick={() => {
-              pushDialog({
+              appState.pushDialog({
                 type: 'confirm',
                 text: '정말로 파일을 삭제하시겠습니까?',
                 callback: async () => {
@@ -914,7 +914,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
               <button
                 className={`round-button back-gray`}
                 onClick={() => {
-                  removeTaskFromGenericScene(curSession!, scene);
+                  taskQueueService.removeTasksFromScene(scene);
                 }}
               >
                 {!isMobile ? '예약 제거' : <FaCalendarTimes />}

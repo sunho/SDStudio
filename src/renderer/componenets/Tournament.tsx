@@ -98,7 +98,6 @@ const Tournament = observer(({ scene, path }: TournamentProps) => {
     sessionUpdated();
   };
   const sessionUpdated = () => {
-    sessionService.markUpdated(curSession!.name);
   };
   useEffect(() => {
     setPlayers([]);

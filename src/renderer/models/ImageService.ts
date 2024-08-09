@@ -402,12 +402,12 @@ export class ImageService extends EventTarget {
   }
 
   async refreshBatch(session: Session) {
-    for (const scene of Object.values(session.scenes)) {
+    for (const scene of session.scenes.values()) {
       try {
         await this.refresh(session, scene, false);
       } catch (e) {}
     }
-    for (const scene of Object.values(session.inpaints)) {
+    for (const scene of session.inpaints.values()) {
       try {
         await this.refresh(session, scene, false);
       } catch (e) {}

@@ -1,7 +1,7 @@
 import { NoiseSchedule, Sampling } from "../../backends/imageGen";
-import { WFDefBuilder, wfiGroup, wfiInlineInput, wfiPresetSelect, wfiProfilePresetSelect, wfiPush, wfiStack, WFVarBuilder } from "./WorkFlow";
-import { Session, GenericScene, SDJob, Scene, SDAbstractJob } from "../types";
-import { createPrompts } from "../PromptService";
+import { WFDefBuilder, wfiGroup, wfiInlineInput, wfiMiddlePlaceholderInput, wfiPresetSelect, wfiProfilePresetSelect, wfiPush, wfiStack, WFVarBuilder } from "./WorkFlow";
+import { Session, GenericScene, SDJob, Scene, SDAbstractJob, PromptNode } from "../types";
+import { createSDPrompts } from "../PromptService";
 import { imageService, taskQueueService, workFlowService } from "..";
 import { TaskParam } from "../TaskQueueService";
 
@@ -24,6 +24,7 @@ const SDImageGenShared = new WFVarBuilder()
 const SDImageGenUI = wfiStack([
   wfiPresetSelect(),
   wfiInlineInput('상위 프롬프트', 'frontPrompt', true, 'flex-1'),
+  wfiMiddlePlaceholderInput('중간 프롬프트 (이 씬에만 적용됨)'),
   wfiInlineInput('하위 프롬프트', 'backPrompt', true, 'flex-1'),
   wfiInlineInput('네거티브 프롬프트', 'uc', true, 'flex-1'),
   wfiInlineInput('시드', 'seed', false, 'flex-none'),
@@ -47,6 +48,7 @@ const SDImageGenEasyShared = SDImageGenShared.clone()
 const SDImageGenEasyUI = wfiStack([
   wfiProfilePresetSelect(),
   wfiInlineInput('캐릭터 관련 태그', 'characterPrompt', false, 'flex-1'),
+  wfiMiddlePlaceholderInput('중간 프롬프트 (이 씬에만 적용됨)'),
   wfiInlineInput('배경 관련 태그', 'backgroundPrompt', false, 'flex-1'),
   wfiInlineInput('태그 밴 리스트', 'uc', false, 'flex-1'),
   wfiInlineInput('시드', 'seed', false, 'flex-none'),
@@ -68,35 +70,35 @@ const SDImageGenEasyInnerUI = wfiStack([
   ]),
 ]);
 
-const SDImageGenHandler = async (session: Session, scene: GenericScene, preset: any, shared: any, samples: number, onComplete?: (img: string) => void) => {
-  const prompts = await createPrompts(session, preset, shared, scene as Scene);
-  for (const prompt of prompts) {
-    console.log("pp", prompt);
-    const job: SDJob = {
-      type: 'sd',
-      cfgRescale: preset.cfgRescale,
-      steps: preset.steps,
-      promptGuidance: preset.promptGuidance,
-      smea: preset.smea,
-      dyn: preset.dyn,
-      prompt: prompt,
-      sampling: preset.sampling,
-      uc: preset.uc,
-      noiseSchedule: preset.noiseSchedule,
-      backend: preset.backend,
-      vibes: shared.vibes,
-      seed: shared.seed,
-    };
-    const param: TaskParam = {
-      session: session,
-      job: job,
-      scene: scene,
-      outputPath: imageService.getOutputDir(session, scene),
-      onComplete: onComplete,
-    };
-    taskQueueService.addTask(param, samples);
-  }
+const SDImageGenHandler = async (session: Session, scene: GenericScene, prompt: PromptNode, preset: any, shared: any, samples: number, onComplete?: (img: string) => void) => {
+  const job: SDJob = {
+    type: 'sd',
+    cfgRescale: preset.cfgRescale,
+    steps: preset.steps,
+    promptGuidance: preset.promptGuidance,
+    smea: preset.smea,
+    dyn: preset.dyn,
+    prompt: prompt,
+    sampling: preset.sampling,
+    uc: preset.uc,
+    noiseSchedule: preset.noiseSchedule,
+    backend: preset.backend,
+    vibes: shared.vibes,
+    seed: shared.seed,
+  };
+  const param: TaskParam = {
+    session: session,
+    job: job,
+    scene: scene,
+    outputPath: imageService.getOutputDir(session, scene),
+    onComplete: onComplete,
+  };
+  taskQueueService.addTask(param, samples);
 };
+
+const SDCreatePrompt = async (session: Session, scene: GenericScene, preset: any, shared: any) => {
+  return await createSDPrompts(session, preset, shared, scene as Scene);
+}
 
 export const SDImageGenDef = new WFDefBuilder('SDImageGen')
   .setTitle('이미지 생성')
@@ -106,6 +108,7 @@ export const SDImageGenDef = new WFDefBuilder('SDImageGen')
   .setSharedVars(SDImageGenShared.build())
   .setEditor(SDImageGenUI)
   .setHandler(SDImageGenHandler)
+  .setCreatePrompt(SDCreatePrompt)
   .build();
 
 export const SDImageGenEasyDef = new WFDefBuilder('SDImageGenEasy')
@@ -117,6 +120,7 @@ export const SDImageGenEasyDef = new WFDefBuilder('SDImageGenEasy')
   .setEditor(SDImageGenEasyUI)
   .setInnerEditor(SDImageGenEasyInnerUI)
   .setHandler(SDImageGenHandler)
+  .setCreatePrompt(SDCreatePrompt)
   .build();
 
 const SDInpaintPreset = new WFVarBuilder()

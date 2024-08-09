@@ -1,5 +1,5 @@
 import { action, observable, makeAutoObservable } from 'mobx';
-import { GenericScene, ModelBackend, Session, VibeItem } from '../types';
+import { GenericScene, ModelBackend, PromptNode, Session, VibeItem } from '../types';
 
 export type WFBackendType = 'image' | 'none';
 
@@ -13,9 +13,11 @@ export interface WorkFlowDef {
   innerEditor?: WFIElement;
   i2i: boolean;
   handler: WFHandler;
+  createPrompt?: WFCreatePrompt;
 }
 
-export type WFHandler = (session: Session, scene: GenericScene, preset: any, shared: any, samples: number, onComplete?: (img: string) => void) => void | Promise<void>;
+export type WFHandler = (session: Session, scene: GenericScene, prompt: PromptNode, preset: any, shared: any, samples: number, onComplete?: (img: string) => void) => void | Promise<void>;
+export type WFCreatePrompt = (session: Session, scene: GenericScene, preset: any, shared: any) => PromptNode[] | Promise<PromptNode[]>;
 
 export interface WFAbstractVar {
   name: string;
@@ -429,6 +431,11 @@ export class WFDefBuilder {
 
   setHandler(handler: WFHandler): this {
     this.workflowDef.handler = handler;
+    return this;
+  }
+
+  setCreatePrompt(createPrompt: WFCreatePrompt): this {
+    this.workflowDef.createPrompt = createPrompt;
     return this;
   }
 
