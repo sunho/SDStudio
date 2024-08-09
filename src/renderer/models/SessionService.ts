@@ -434,22 +434,6 @@ export class SessionService extends ResourceSyncService<Session> {
     this.dispatchEvent(new CustomEvent('style-edit', { detail: { preset, container } }));
   }
 
-  inPaintHook(): void {
-    this.dispatchEvent(new CustomEvent('inpaint-updated', {}));
-  }
-
-  mainImageUpdated(): void {
-    this.dispatchEvent(new CustomEvent('main-image-updated', {}));
-  }
-
-  pieceLibraryImported(): void {
-    this.dispatchEvent(new CustomEvent('piece-library-imported', {}));
-  }
-
-  sceneOrderChanged(): void {
-    this.dispatchEvent(new CustomEvent('scene-order-changed', {}));
-  }
-
   configChanged(): void {
     this.dispatchEvent(new CustomEvent('config-changed', {}));
   }
@@ -547,8 +531,8 @@ export const renameScene = async (
   newName: string,
 ) => {
   await imageService.onRenameScene(session, oldName, newName);
-  const scene = session.scenes[oldName];
+  const scene = session.scenes.get(oldName)!;
   scene.name = newName;
-  delete session.scenes[oldName];
-  session.scenes[newName] = scene;
+  session.scenes.delete(oldName);
+  session.scenes.set(newName, scene);
 };

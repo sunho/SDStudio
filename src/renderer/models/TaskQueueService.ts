@@ -232,7 +232,7 @@ class GenerateImageTaskHandler implements TaskHandler {
   }
 
   async handleTask(task: Task, run: TaskQueueRun) {
-    const job: SDAbstractJob = task.params.job as SDAbstractJob;
+    const job: SDAbstractJob<PromptNode> = task.params.job as SDAbstractJob<PromptNode>;
     let prompt = lowerPromptNode(job.prompt!);
     console.log('lowered prompt: ' + prompt);
     const outputFilePath =
@@ -329,14 +329,6 @@ class GenerateImageTaskHandler implements TaskHandler {
   getNumTries(task: Task) {
     return 40;
   }
-}
-
-export interface RemoveBgTaskParams {
-  session: Session;
-  scene: string;
-  image: string;
-  ouputPath: string;
-  onComplete?: (path: string) => void;
 }
 
 class RemoveBgTaskHandler implements TaskHandler {
@@ -642,6 +634,24 @@ export const taskHandlers = [
   new RemoveBgTaskHandler()
 ];
 
+export const queueRemoveBg = (session: Session, scene: Scene, image: string, onComplete?: (path: string) => void) => {
+  const job: AugmentJob = {
+    type: 'augment',
+    image: image,
+    method: 'bg-removal',
+    backend: {
+      type: 'SD',
+    },
+  };
+  const params: TaskParam = {
+    session,
+    job,
+    outputPath: imageService.getOutputDir(session, scene),
+    scene,
+    onComplete
+  };
+  taskQueueService.addTask(params, 1);
+};
 
 export const queueInPaint = async (
   session: Session,
@@ -685,59 +695,10 @@ export const queueInPaint = async (
   taskQueueService.addTask('inpaint', samples, params);
 };
 
-export const queueWorkflow = (session: Session, workflow: SelectedWorkflow, scene: GenericScene, samples: number) => {
+export const queueWorkflow = async (session: Session, workflow: SelectedWorkflow, scene: GenericScene, samples: number) => {
   const [type, preset, shared, def] = session.getCommonSetup(workflow);
-  def.handler(session, scene, preset, shared, samples);
+  const prompts = await def.createPrompt!(session, scene, preset, shared);
+  for (const prompt of prompts) {
+    await def.handler(session, scene, prompt, preset, shared, samples);
+  }
 }
-
-export const queueGenericScene = async (
-  session: Session,
-  preset: Preset,
-  scene: GenericScene,
-  samples: number,
-) => {
-  if (scene.type === 'scene') {
-    return queueScene(session, preset, scene as Scene, samples);
-  }
-  return queueInPaint(session, preset, scene as InpaintScene, samples);
-};
-
-export const removeTaskFromGenericScene = (
-  session: Session,
-  scene: GenericScene,
-) => {
-  if (scene.type === 'scene') {
-    return taskQueueService.removeTasksFromScene(
-      'generate',
-      getSceneKey(session, scene.name),
-    );
-  }
-  return taskQueueService.removeTasksFromScene(
-    'inpaint',
-    getSceneKey(session, scene.name),
-  );
-};
-
-export const statsGenericSceneTasks = (
-  session: Session,
-  scene: GenericScene,
-) => {
-  if (scene.type === 'scene') {
-    const stats = taskQueueService.statsTasksFromScene(
-      'generate',
-      getSceneKey(session, scene.name),
-    );
-    const stats2 = taskQueueService.statsTasksFromScene(
-      'remove-bg',
-      getSceneKey(session, scene.name),
-    );
-    return {
-      done: stats.done + stats2.done,
-      total: stats.total + stats2.total,
-    };
-  }
-  return taskQueueService.statsTasksFromScene(
-    'inpaint',
-    getSceneKey(session, scene.name),
-  );
-};

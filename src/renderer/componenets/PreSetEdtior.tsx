@@ -34,7 +34,7 @@ import {
 } from '../models/PromptService';
 import { appState } from '../models/AppService';
 import { observer } from 'mobx-react-lite';
-import { WFAbstractVar, WFIElement, WFIGroup, WFIInlineInput, WFIPush, WFIStack, WFVar, WorkFlowDef } from '../models/workflows/WorkFlow';
+import { WFAbstractVar, WFIElement, WFIGroup, WFIInlineInput, WFIMiddlePlaceholderInput, WFIPush, WFIStack, WFVar, WorkFlowDef } from '../models/workflows/WorkFlow';
 import { StackFixed, StackGrow, VerticalStack } from './LayoutComponents';
 
 const ImageSelect = observer(({
@@ -620,7 +620,23 @@ const WFRenderElement = observer(({
     return <WFRProfilePresetSelect element={element} />;
   case 'push':
     return <WFRPush element={element} />;
+  case 'middlePlaceholder':
+    return <WFRMiddlePlaceholder element={element} />;
   }
+});
+
+const WFRMiddlePlaceholder = observer(({element}:WFElementProps) => {
+  const { editVibe, showGroup, getMiddlePrompt, onMiddlePromptChange } = useContext(WFElementContext)!;
+  const input = element as WFIMiddlePlaceholderInput;
+  if (!getMiddlePrompt || !onMiddlePromptChange) { return <></> }
+  if (showGroup || editVibe) { return <></>}
+  return <EditorField label={input.label} full={true} bold>
+    <PromptEditTextArea
+      value={getMiddlePrompt!()}
+      disabled={false}
+      onChange={onMiddlePromptChange!}
+    ></PromptEditTextArea>
+  </EditorField>
 });
 
 const WFRProfilePresetSelect = observer(({element}:WFElementProps) => {

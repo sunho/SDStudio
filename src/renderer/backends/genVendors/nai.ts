@@ -210,7 +210,7 @@ export class NovelAiImageGenService implements ImageGenService {
       image: params.image,
       prompt: params.prompt,
       defry: params.weaken,
-      req_type: 'emotion',
+      req_type: params.method,
       width: resolutionValue.width,
       height: resolutionValue.height,
     };

@@ -74,10 +74,13 @@ export interface ImageGenInput {
   originalImage?: boolean;
 }
 
+export type AugmentMethod = 'lineart' | 'colorize' | 'bg-removal' | 'declutter' | 'emotion' | 'sketch';
+
 export interface ImageAugmentInput {
-  prompt: string;
+  method: AugmentMethod;
+  prompt?: string;
+  weaken?: number;
   image: string;
-  weaken: number;
   resolution: Resolution;
 }
 
