@@ -26,6 +26,7 @@ import {
   PromptNode,
   Scene,
   SDAbstractJob,
+  SDI2IJob,
   SDInpaintJob,
   SelectedWorkflow,
   Session,
@@ -197,12 +198,14 @@ async function handleNAIDelay(numTry: number, fast: boolean) {
   }
 }
 
+type ImageTaskType = 'gen' | 'inpaint' | 'i2i';
+
 class GenerateImageTaskHandler implements TaskHandler {
-  inpaint: boolean;
+  type: ImageTaskType;
   fast: boolean;
-  constructor(fast: boolean, inpaint: boolean) {
+  constructor(fast: boolean, type: ImageTaskType) {
     this.fast = fast;
-    this.inpaint = inpaint;
+    this.type = type;
   }
 
   createTimeEstimator() {
@@ -223,16 +226,14 @@ class GenerateImageTaskHandler implements TaskHandler {
   }
 
   checkTask(task: Task): boolean {
-    if (task.params.job.type === 'sd' && !this.inpaint) {
-      if (task.params.nodelay && this.fast) {
-        return true;
-      }
-      if (!task.params.nodelay && !this.fast) {
-        return true;
-      }
+    if (task.params.job.type === 'sd' && this.type === 'gen') {
+      return !!task.params.nodelay == !!this.fast;
     }
-    if (task.params.job.type === 'sd_inpaint' && this.inpaint) {
-      return true;
+    if (task.params.job.type === 'sd_inpaint' && this.type === 'inpaint') {
+      return !!task.params.nodelay == !!this.fast;
+    }
+    if (task.params.job.type === 'sd_i2i' && this.type === 'i2i') {
+      return !!task.params.nodelay == !!this.fast;
     }
     return false;
   }
@@ -276,14 +277,21 @@ class GenerateImageTaskHandler implements TaskHandler {
       outputFilePath: outputFilePath,
       seed: job.seed,
     };
-    if (this.inpaint) {
+    if (this.type === 'inpaint') {
       const inpaintJob = job as SDInpaintJob;
       arg.model = Model.Inpaint;
       arg.image = inpaintJob.image;
       arg.mask = inpaintJob.mask;
       arg.originalImage = inpaintJob.originalImage;
       arg.imageStrength = inpaintJob.strength;
-      arg.vibes = [];
+    }
+    if (this.type === 'i2i') {
+      const i2iJob = job as SDI2IJob;
+      arg.model = Model.I2I;
+      arg.image = i2iJob.image;
+      arg.noise = i2iJob.noise;
+      arg.originalImage = true;
+      arg.imageStrength = i2iJob.strength;
     }
     console.log(arg);
     const config = await backend.getConfig();
@@ -315,7 +323,7 @@ class GenerateImageTaskHandler implements TaskHandler {
     }
 
     if (task.params.scene != null) {
-      if (this.inpaint) {
+      if (task.params.scene.type === 'inpaint') {
         imageService.onAddInPaint(
           task.params.session,
           task.params.scene.name,
@@ -335,9 +343,14 @@ class GenerateImageTaskHandler implements TaskHandler {
 
   getInfo(task: Task) {
     const title = task.params.scene ? task.params.scene.name : '(none)';
+    const emojis = {
+      gen: '🎨',
+      inpaint: '🖌️',
+      i2i: '🔄',
+    };
     return {
       name: title,
-      emoji: this.inpaint ? '🖌️' : '🖼️',
+      emoji: emojis[this.type],
     };
   }
 
@@ -496,7 +509,7 @@ export class TaskQueueService extends EventTarget {
         return i;
       }
     }
-    return -1;
+    throw new Error('No task handler found');
   }
 
   isEmpty() {
@@ -691,9 +704,12 @@ export class TaskQueueService extends EventTarget {
 }
 
 export const taskHandlers = [
-  new GenerateImageTaskHandler(false, false),
-  new GenerateImageTaskHandler(true, false),
-  new GenerateImageTaskHandler(false, true),
+  new GenerateImageTaskHandler(false, 'gen'),
+  new GenerateImageTaskHandler(true, 'gen'),
+  new GenerateImageTaskHandler(false, 'i2i'),
+  new GenerateImageTaskHandler(true, 'i2i'),
+  new GenerateImageTaskHandler(false, 'inpaint'),
+  new GenerateImageTaskHandler(true, 'inpaint'),
   new RemoveBgTaskHandler(),
 ];
 

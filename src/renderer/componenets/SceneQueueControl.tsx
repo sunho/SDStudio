@@ -438,6 +438,41 @@ const QueueControl = observer(
       },
     };
 
+    const createInpaintScene = async (scene: GenericScene, workflowType: string, path: string, close: () => void) => {
+      console.log("Create inpaint scene", scene, workflowType, path);
+      let image = await imageService.fetchImage(path);
+      image = dataUriToBase64(image!);
+      let cnt = 0;
+      const newName = () => scene.name + cnt.toString();
+      while (curSession!.inpaints.has(newName())) {
+        cnt++;
+      }
+      const name = newName();
+      const job = await extractPromptDataFromBase64(image);
+      const preset = job
+        ? workFlowService.createPreset(workflowType, job)
+        : workFlowService.buildPreset(workflowType);
+      preset.image = await imageService.storeVibeImage(
+        curSession!,
+        image,
+      );
+      const newScene = InpaintScene.fromJSON({
+        type: 'inpaint',
+        name: name,
+        workflowType: workflowType,
+        preset,
+        resolution: scene.resolution,
+        sceneRef: scene.type === 'scene' ? scene.name : undefined,
+        imageMap: [],
+        mains: [],
+        round: undefined,
+        game: undefined,
+      });
+      curSession!.addScene(newScene);
+      close();
+      setInpaintEditScene(newScene);
+    };
+
     const buttons: any =
       type === 'scene'
         ? [
@@ -450,37 +485,7 @@ const QueueControl = observer(
                 path: string,
                 close: () => void,
               ) => {
-                let image = await imageService.fetchImage(path);
-                image = dataUriToBase64(image!);
-                let cnt = 0;
-                const newName = () => scene.name + '_inpaint_' + cnt.toString();
-                while (curSession!.inpaints.has(newName())) {
-                  cnt++;
-                }
-                const name = newName();
-                const job = await extractPromptDataFromBase64(image);
-                const preset = job
-                  ? createInpaintPreset('', '', job)
-                  : workFlowService.buildPreset('SDInpaint');
-                preset.image = await imageService.storeVibeImage(
-                  curSession!,
-                  image,
-                );
-                const newScene = InpaintScene.fromJSON({
-                  type: 'inpaint',
-                  name: name,
-                  workflowType: 'SDInpaint',
-                  preset,
-                  resolution: scene.resolution,
-                  sceneRef: scene.name,
-                  imageMap: [],
-                  mains: [],
-                  round: undefined,
-                  game: undefined,
-                });
-                curSession!.addScene(newScene);
-                close();
-                setInpaintEditScene(newScene);
+                await createInpaintScene(scene, 'SDInpaint', path, close);
               },
             },
           ]
@@ -538,12 +543,39 @@ const QueueControl = observer(
           ];
     if (type === 'scene' && !isMobile) {
       buttons.push({
-        text: '배경 제거 예약',
+        text: '이미지 변형',
         className: 'back-gray',
         // @ts-ignore
         onClick: async (scene: Scene, path: string, close: () => void) => {
-          if (!localAIService.ready) {
-            appState.pushMessage(
+          const menu = await appState.pushDialogAsync({
+            type: 'select',
+            text: '이미지 변형 방법을 선택해주세요',
+            items: [{
+              text: '이미지 변형 씬 생성',
+              value: 'create'
+            },
+            {
+              text: '배경 제거',
+              value: 'removebg'
+            }
+          ]});
+          if (!menu) return;
+          if (menu === 'create') {
+            const flows = workFlowService.i2iFlows;
+            const items = flows.map((x) => ({
+              text: x.def.title,
+              value: x.getType()
+            }));
+            const method = await appState.pushDialogAsync({
+              type: 'select',
+              text: '변형 씬에서 사용할 방법을 선택해주세요',
+              items: items
+            });
+            if (!method) return;
+            await createInpaintScene(scene, method, path, close);
+          } else if (menu === 'removebg') {
+            if (!localAIService.ready) {
+              appState.pushMessage(
               '환경설정에서 배경 제거 기능을 활성화해주세요',
             );
             return;
@@ -551,6 +583,7 @@ const QueueControl = observer(
           let image = await imageService.fetchImage(path);
           image = dataUriToBase64(image!);
           queueRemoveBg(curSession!, scene, image);
+        }
         },
       });
     }

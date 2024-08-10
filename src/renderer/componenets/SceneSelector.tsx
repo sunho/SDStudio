@@ -29,6 +29,7 @@ const SceneImage: React.FC<{
       {image && (
         <img
           className="bg-checkboard w-auto h-auto max-w-20 max-h-20"
+          draggable={false}
           src={image}
           alt={scene.name}
         />

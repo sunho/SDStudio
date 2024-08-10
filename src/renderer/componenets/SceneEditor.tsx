@@ -210,7 +210,7 @@ export const BigPromptEditor = observer(
           <div className="flex flex-col h-full">
             <div className="flex-1 overflow-hidden">
               {image && (
-                <img className="w-full h-full object-contain" src={image} />
+                <img className="w-full h-full object-contain" src={image} draggable={false} />
               )}
             </div>
             <div className="ml-auto flex-none flex gap-4 pt-2 mb-2 md:mb-0">

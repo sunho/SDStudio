@@ -273,6 +273,7 @@ const Tournament = observer(({ scene, path }: TournamentProps) => {
           <div className="flex h-full w-full overflow-hidden flex-col md:flex-row">
             <div className="flex-1 justify-center items-center flex overflow-hidden">
               <img
+                draggable={false}
                 onClick={() => {
                   if (!lock.current) {
                     round.winMask[round.curPlayer] = true;
@@ -300,6 +301,7 @@ const Tournament = observer(({ scene, path }: TournamentProps) => {
             <div className="bg-gray-300 dark:bg-slate-700 h-px w-full md:w-px md:h-full flex-none"></div>
             <div className="flex-1 justify-center items-center flex overflow-hidden">
               <img
+                draggable={false}
                 onClick={() => {
                   if (!lock.current) {
                     round.winMask[round.curPlayer] = false;
@@ -333,7 +335,7 @@ const Tournament = observer(({ scene, path }: TournamentProps) => {
           images.length
         ) && (
           <div className="h-full w-full">
-            <img className="imageSmall" src={images[0]} />
+            <img className="imageSmall" src={images[0]} draggable={false} />
           </div>
         )}
       </div>

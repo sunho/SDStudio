@@ -116,7 +116,7 @@ const VibeImage = ({
   }, [path]);
   return (
     <>
-      {image && <img className={className} src={image} onClick={onClick} />}
+      {image && <img className={className} src={image} onClick={onClick} draggable={false} />}
       {!image && <div className={className} onClick={onClick}></div>}
     </>
   );
