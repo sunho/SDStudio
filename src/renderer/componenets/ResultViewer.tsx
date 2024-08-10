@@ -788,7 +788,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
         setSelectedTab(0);
       },
       setInpaintTab: () => {
-        setSelectedTab(1);
+        setSelectedTab(2);
       },
     }));
 

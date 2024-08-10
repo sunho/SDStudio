@@ -4,16 +4,13 @@ import BrushTool, {
   base64ToDataUri,
   getImageDimensions,
 } from './BrushTool';
-import { DropdownSelect, FileUploadBase64 } from './UtilComponents';
-import PromptEditTextArea from './PromptEditTextArea';
+import { DropdownSelect, } from './UtilComponents';
 import { Resolution, resolutionMap } from '../backends/imageGen';
-import { FaArrowsAlt, FaBrush, FaPaintBrush, FaUndo } from 'react-icons/fa';
+import { FaArrowsAlt, FaPaintBrush, FaUndo } from 'react-icons/fa';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import {
   isMobile,
   imageService,
-  sessionService,
-  backend,
   workFlowService,
 } from '../models';
 import { dataUriToBase64 } from '../models/ImageService';
@@ -33,7 +30,7 @@ let brushSizeSaved = 10;
 
 const InPaintEditor = observer(
   ({ editingScene, onConfirm, onDelete }: Props) => {
-    const { curSession, pushDialog } = appState;
+    const { curSession } = appState;
     const resolutionOptions = Object.entries(resolutionMap)
       .map(([key, value]) => {
         return { label: `${value.width}x${value.height}`, value: key };
@@ -102,7 +99,7 @@ const InPaintEditor = observer(
     }, [image]);
 
     const deleteScene = () => {
-      pushDialog({
+      appState.pushDialog({
         type: 'confirm',
         text: '정말로 해당 씬을 삭제하시겠습니까?',
         callback: () => {
@@ -171,7 +168,7 @@ const InPaintEditor = observer(
                       opt.value.startsWith('large') ||
                       opt.value.startsWith('wallpaper')
                     ) {
-                      pushDialog({
+                      appState.pushDialog({
                         type: 'confirm',
                         text: '해당 해상도는 Anlas를 소모합니다 (유로임) 계속하시겠습니까?',
                         callback: () => {
