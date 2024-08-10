@@ -477,7 +477,7 @@ class AugmentTaskHandler implements TaskHandler {
   }
 
   checkTask(task: Task): boolean {
-    return task.params.job.type === 'augment';
+    return task.params.job.type === 'augment' && task.params.job.backend.type === 'NAI';
   }
 
   getNumTries(task: Task) {

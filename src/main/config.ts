@@ -13,6 +13,7 @@ export interface Config {
   imageEditor?: ImageEditor;
   modelType?: ModelType;
   removeBgQuality?: RemoveBgQuality;
+  useLocalBgRemoval?: boolean;
   useCUDA?: boolean;
   saveLocation?: string;
   noIpCheck?: boolean;

@@ -1,18 +1,19 @@
-import { imageService, localAIService, taskQueueService, workFlowService } from "..";
+import { backend, imageService, localAIService, taskQueueService, workFlowService } from "..";
 import { AugmentMethod, Resolution, upscaleReoslution } from "../../backends/imageGen";
 import { appState } from "../AppService";
 import { queueI2IWorkflow, TaskParam } from "../TaskQueueService";
 import { AugmentJob, GenericScene, SDAbstractJob, Session } from "../types";
 import { createI2IPreset } from "./SDWorkFlow";
 
-export const queueRemoveBg = (
+export const queueRemoveBg = async (
   session: Session,
   scene: GenericScene,
   image: string,
   onComplete?: (path: string) => void,
   imgJob?: SDAbstractJob<string>,
 ) => {
-  if (!localAIService.ready) {
+  const config = await backend.getConfig();
+  if (config.useLocalBgRemoval && !localAIService.ready) {
       appState.pushMessage(
       '환경설정에서 배경 제거 기능을 활성화해주세요',
     );
@@ -24,7 +25,7 @@ export const queueRemoveBg = (
     prompt: { type: 'text', text: '' },
     method: 'bg-removal',
     backend: {
-      type: 'NAI',
+      type: config.useLocalBgRemoval ? 'SD' : 'NAI'
     },
   };
   const params: TaskParam = {
