@@ -520,15 +520,16 @@ export interface PromptRandomNode {
 export type PromptNode = PromptGroupNode | PromptTextNode | PromptRandomNode;
 
 export enum ContextMenuType {
+  GallaryImage = 'gallary_image',
   Image = 'image',
   Scene = 'scene',
   Style = 'style',
 }
 
 export interface ImageContextAlt {
-  type: 'image';
+  type: 'image' | 'gallary_image';
   path: string;
-  scene?: string;
+  scene?: GenericScene;
   starable?: boolean;
 }
 
