@@ -278,7 +278,20 @@ const TaskQueueControl = observer(({}) => {
           className={`round-button back-green px-2 h-8 md:px-6`}
           onClick={() => {
             (async () => {
-              taskQueueService.run();
+              const costs = taskQueueService.calculateCost();
+              console.log("costs", costs);
+              const message = costs.map(x=>(`${x.text} (씬: ${x.scene})`)).slice(0,10).join('\n');
+              if (costs.length > 0) {
+                appState.pushDialog({
+                  type: 'confirm',
+                  text: 'Anals를 소모하는 유료 세팅입니다. 계속합니까?' + '\n' + message,
+                  callback: () => {
+                    taskQueueService.run();
+                  }
+                })
+              } else {
+                taskQueueService.run();
+              }
             })();
           }}
         >

@@ -54,12 +54,13 @@ const SDImageGenUI = wfiStack([
   wfiInlineInput('시드', 'seed', false, 'flex-none'),
   wfiGroup('샘플링 설정', [
     wfiPush('top'),
-    wfiInlineInput('CFG 리스케일', 'cfgRescale', true, 'flex-none'),
+    wfiInlineInput('스탭 수', 'steps', true, 'flex-none'),
     wfiInlineInput('프롬프트 가이던스', 'promptGuidance', true, 'flex-none'),
     wfiInlineInput('SMEA', 'smea', true, 'flex-none'),
     wfiInlineInput('DYN', 'dyn', true, 'flex-none'),
     wfiInlineInput('샘플링', 'sampling', true, 'flex-none'),
     wfiInlineInput('노이즈 스케줄', 'noiseSchedule', true, 'flex-none'),
+    wfiInlineInput('CFG 리스케일', 'cfgRescale', true, 'flex-none'),
   ]),
   wfiInlineInput('바이브 설정', 'vibes', false, 'flex-none'),
 ]);
@@ -86,12 +87,13 @@ const SDImageGenEasyInnerUI = wfiStack([
   wfiInlineInput('네거티브 프롬프트', 'uc', true, 'flex-1'),
   wfiGroup('샘플링 설정', [
     wfiPush('top'),
-    wfiInlineInput('CFG 리스케일', 'cfgRescale', true, 'flex-none'),
+    wfiInlineInput('스탭 수', 'steps', true, 'flex-none'),
     wfiInlineInput('프롬프트 가이던스', 'promptGuidance', true, 'flex-none'),
     wfiInlineInput('SMEA', 'smea', true, 'flex-none'),
     wfiInlineInput('DYN', 'dyn', true, 'flex-none'),
     wfiInlineInput('샘플링', 'sampling', true, 'flex-none'),
     wfiInlineInput('노이즈 스케줄', 'noiseSchedule', true, 'flex-none'),
+    wfiInlineInput('CFG 리스케일', 'cfgRescale', true, 'flex-none'),
   ]),
 ]);
 
@@ -188,12 +190,13 @@ const SDInpaintUI = wfiStack([
   wfiInlineInput('네거티브 프롬프트', 'uc', true, 'flex-1'),
   wfiGroup('샘플링 설정', [
     wfiPush('top'),
-    wfiInlineInput('CFG 리스케일', 'cfgRescale', true, 'flex-none'),
+    wfiInlineInput('스탭 수', 'steps', true, 'flex-none'),
     wfiInlineInput('프롬프트 가이던스', 'promptGuidance', true, 'flex-none'),
     wfiInlineInput('SMEA', 'smea', true, 'flex-none'),
     wfiInlineInput('DYN', 'dyn', true, 'flex-none'),
     wfiInlineInput('샘플링', 'sampling', true, 'flex-none'),
     wfiInlineInput('노이즈 스케줄', 'noiseSchedule', true, 'flex-none'),
+    wfiInlineInput('CFG 리스케일', 'cfgRescale', true, 'flex-none'),
   ]),
   wfiInlineInput('바이브 설정', 'vibes', true, 'flex-none'),
   // wfiInlineInput('시드', 'seed', true, 'flex-none'),
