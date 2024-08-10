@@ -164,6 +164,13 @@ export class NovelAiImageGenService implements ImageGenService {
       body.parameters.image = params.image;
       body.parameters.mask = params.mask;
     }
+    if (params.model === Model.Inpaint) {
+      body.parameters.sm = false;
+      body.parameters.sm_dyn = false;
+      if (params.sampling === Sampling.DDIM) {
+        body.parameters.sampler = this.translateSampling(Sampling.KEulerAncestral);
+      }
+    }
 
     const headers = {
       Authorization: `Bearer ${authorization}`,

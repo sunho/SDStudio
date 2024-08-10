@@ -10,10 +10,8 @@ import {
   ImageContextAlt,
   StyleContextAlt,
   ContextMenuType,
-  Scene,
   genericSceneFromJSON,
 } from '../models/types';
-import { Resolution } from '../backends/imageGen';
 
 export const AppContextMenu = observer(() => {
   const duplicateScene = async (ctx: SceneContextAlt) => {
@@ -108,17 +106,7 @@ export const AppContextMenu = observer(() => {
     }
   };
   const exportStyle = async (ctx: StyleContextAlt) => {
-    let pngData;
-    if (ctx.preset.profile) {
-      pngData = dataUriToBase64((await imageService.fetchVibeImage(appState.curSession!, ctx.preset.profile))!);
-    } else {
-      pngData = await createImageWithText(832, 1216, ctx.preset.name);
-    }
-    const newPngData = embedJSONInPNG(pngData, ctx.preset);
-    const path =
-      'exports/' + ctx.preset.name + '_' + Date.now().toString() + '.png';
-    await backend.writeDataFile(path, newPngData);
-    await backend.showFile(path);
+    await appState.exportPreset(appState.curSession!, ctx.preset);
   };
   const deleteStyle = async (ctx: StyleContextAlt) => {
     appState.pushDialog({

@@ -37,6 +37,7 @@ export class SessionService extends ResourceSyncService<Session> {
       rc = await legacy.migrateSession(rc);
     }
     await this.migrateSession(rc);
+    console.log("migrated", rc);
     return rc;
   }
 

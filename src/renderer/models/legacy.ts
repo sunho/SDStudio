@@ -468,7 +468,7 @@ export function migratePieceLibrary(library: any): IPieceLibrary {
   const multi = library.multi ?? {};
   return {
     version: 1,
-    name: library.description,
+    name: library.description ?? library.name,
     pieces: Object.entries(library.pieces).map(([k, x]) => ({
       name: k,
       prompt: x as string,

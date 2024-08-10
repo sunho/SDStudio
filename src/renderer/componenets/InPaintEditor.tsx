@@ -19,6 +19,7 @@ import { extractPromptDataFromBase64 } from '../models/util';
 import { appState } from '../models/AppService';
 import { observer } from 'mobx-react-lite';
 import { InnerPreSetEditor } from './PreSetEdtior';
+import { reaction } from 'mobx';
 
 interface Props {
   editingScene: InpaintScene;
@@ -75,11 +76,18 @@ const InPaintEditor = observer(
           setMask(dataUriToBase64(data!));
         } catch (e) {}
       }
+      const dispose = reaction(
+        () => editingScene.preset.image,
+        () => {
+          loadImage();
+        }
+      );
       loadImage();
       if (def.hasMask) loadMask();
       imageService.addEventListener('image-cache-invalidated', loadImage);
       return () => {
         imageService.removeEventListener('image-cache-invalidated', loadImage);
+        dispose();
       };
     }, [editingScene]);
     useEffect(() => {
