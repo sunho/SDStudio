@@ -42,6 +42,7 @@ export class AppState {
   @observable accessor dialogs: Dialog[] = [];
   @observable accessor samples: number = 10;
   @observable accessor progressDialog: ProgressDialog | undefined = undefined;
+  @observable accessor externalImage: string | undefined = undefined;
 
   @action
   addMessage(message: string): void {
@@ -113,6 +114,9 @@ export class AppState {
                 type: 'yes-only',
                 text: '그림체를 임포트 했습니다',
               });
+            } else {
+              console.log("external");
+              this.externalImage = base64;
             }
           } catch (e) {}
         };
@@ -762,6 +766,10 @@ export class AppState {
       });
     };
     openMenu();
+  }
+
+  closeExternalImage() {
+    this.externalImage = undefined;
   }
 }
 

@@ -19,22 +19,13 @@ import PieceEditor, { PieceCell } from './PieceEditor';
 import PromptTooltip from './PromptTooltip';
 import ConfirmWindow, { Dialog } from './ConfirmWindow';
 import QueueControl from './SceneQueueControl';
-import { FloatViewProvider } from './FloatView';
+import { FloatView, FloatViewProvider } from './FloatView';
 import { observer, useObserver } from 'mobx-react-lite';
 import {
-  FaImage,
   FaImages,
   FaPenFancy,
-  FaPenNib,
   FaPuzzlePiece,
 } from 'react-icons/fa';
-import {
-  Menu,
-  Item,
-  Separator,
-  Submenu,
-  useContextMenu,
-} from 'react-contexify';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { TouchBackend } from 'react-dnd-touch-backend';
@@ -43,9 +34,6 @@ import { usePreview } from 'react-dnd-preview';
 import React from 'react';
 import { CellPreview } from './ResultViewer';
 import { SlotPiece } from './SceneEditor';
-import { v4 } from 'uuid';
-
-import styles from './App.module.scss';
 import { StackFixed, StackGrow, VerticalStack } from './LayoutComponents';
 import ProgressWindow, { ProgressDialog } from './ProgressWindow';
 import {
@@ -61,6 +49,7 @@ import { appState } from '../models/AppService';
 import { AppContextMenu } from './AppContextMenu';
 
 import { configure } from 'mobx';
+import { ExternalImageView } from './ExternalImageView';
 configure({
   enforceActions: 'never',
 });
@@ -294,6 +283,10 @@ export const App = observer(() => {
         >
           <FloatViewProvider>
             <AppContextMenu />
+            {appState.externalImage && <FloatView onEscape={()=>{appState.closeExternalImage()}} priority={1}>
+              <ExternalImageView image={appState.externalImage} onClose={()=>{appState.closeExternalImage()}}/>
+              </FloatView>
+            }
             <VerticalStack>
               <StackFixed>
                 <TobBar />
