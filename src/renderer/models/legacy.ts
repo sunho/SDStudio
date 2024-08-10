@@ -4,7 +4,7 @@ import { dataUriToBase64 } from "./ImageService";
 import ExifReader from "exifreader";
 import defaultassets from "../defaultassets";
 import extractChunks from "png-chunks-extract";
-import { IInpaintScene, IPieceLibrary, IPromptPiece, IScene, ISession, Round } from "./types";
+import { IInpaintScene, IPieceLibrary, IPromptPiece, IScene, ISession, IVibeItem, Round } from "./types";
 import { Buffer } from 'buffer';
 
 export const defaultUC = `worst quality, bad quality, displeasing, very displeasing, lowres, bad anatomy, bad perspective, bad proportions, bad aspect ratio, bad face, long face, bad teeth, bad neck, long neck, bad arm, bad hands, bad ass, bad leg, bad feet, bad reflection, bad shadow, bad link, bad source, wrong hand, wrong feet, missing limb, missing eye, missing tooth, missing ear, missing finger, extra faces, extra eyes, extra eyebrows, extra mouth, extra tongue, extra teeth, extra ears, extra breasts, extra arms, extra hands, extra legs, extra digits, fewer digits, cropped head, cropped torso, cropped shoulders, cropped arms, cropped legs, mutation, deformed, disfigured, unfinished, chromatic aberration, text, error, jpeg artifacts, watermark, scan, scan artifacts`;
@@ -137,10 +137,14 @@ async function migrateSessionLegacy(session: any) {
       },
     };
 
-    const newVibes = [];
+    const newVibes: IVibeItem[] = [];
     for (const preset of Object.values(session.presets)) {
       for (const vibe of (preset as any).vibes) {
-        newVibes.push(vibe);
+        newVibes.push({
+          path: vibe.path.split('/').pop()!,
+          info: vibe.info,
+          strength: vibe.strength,
+        });
       }
     }
     session.presetShareds['preset'].vibes = newVibes;
