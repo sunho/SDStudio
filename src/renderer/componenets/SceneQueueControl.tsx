@@ -179,8 +179,15 @@ export const SceneCell = observer(
       refreshImage();
       gameService.addEventListener('updated', refreshImage);
       taskQueueService.addEventListener('progress', onUpdate);
+      imageService.addEventListener('image-cache-invalidated', refreshImage);
       const dispose = reaction(
         () => scene.mains.join(''),
+        () => {
+          refreshImage();
+        },
+      );
+      const dispose2 = reaction(
+        () => scene.type === 'inpaint' && scene.preset.image,
         () => {
           refreshImage();
         },
@@ -188,7 +195,9 @@ export const SceneCell = observer(
       return () => {
         gameService.removeEventListener('updated', refreshImage);
         taskQueueService.removeEventListener('progress', onUpdate);
+        imageService.removeEventListener('image-cache-invalidated', refreshImage);
         dispose();
+        dispose2();
       };
     }, [scene]);
 
@@ -334,44 +343,48 @@ const QueueControl = observer(
       }
     };
     const addScene = () => {
-      if (type === 'scene') {
-        (async () => {
-          appState.pushDialog({
-            type: 'input-confirm',
-            text: '신규 씬 이름을 입력해주세요',
-            callback: async (inputValue) => {
-              if (inputValue) {
-                const scenes = curSession.getScenes(type);
-                if (inputValue in scenes) {
-                  appState.pushMessage('이미 존재하는 씬 이름입니다.');
-                  return;
-                }
+      appState.pushDialog({
+        type: 'input-confirm',
+        text: '신규 씬 이름을 입력해주세요',
+        callback: async (inputValue) => {
+          if (inputValue) {
+            const scenes = curSession.getScenes(type);
+            if (scenes.find((x) => x.name === inputValue)) {
+              appState.pushMessage('이미 존재하는 씬 이름입니다.');
+              return;
+            }
 
-                if (inputValue) {
-                  if (inputValue in curSession.scenes) {
-                    appState.pushMessage('이미 존재하는 씬 이름입니다.');
-                    return;
-                  }
-                  curSession.addScene(
-                    Scene.fromJSON({
-                      type: 'scene',
-                      name: inputValue,
-                      resolution: 'portrait',
-                      slots: [[{ id: v4(), prompt: '', enabled: true }]],
-                      mains: [],
-                      imageMap: [],
-                      round: undefined,
-                      game: undefined,
-                    }),
-                  );
-                }
-              }
-            },
-          });
-        })();
-      } else {
-        setAdding(true);
-      }
+            if (type === 'scene') {
+              curSession.addScene(
+                Scene.fromJSON({
+                  type: 'scene',
+                  name: inputValue,
+                  resolution: 'portrait',
+                  slots: [[{ id: v4(), prompt: '', enabled: true }]],
+                  mains: [],
+                  imageMap: [],
+                  round: undefined,
+                  game: undefined,
+                }),
+              );
+            } else {
+              curSession.addScene(
+                InpaintScene.fromJSON({
+                  type: 'inpaint',
+                  name: inputValue,
+                  resolution: 'portrait',
+                  workflowType: 'SDInpaint',
+                  preset: workFlowService.buildPreset('SDInpaint').toJSON(),
+                  mains: [],
+                  imageMap: [],
+                  round: undefined,
+                  game: undefined,
+                }),
+              );
+            }
+          }
+        },
+      });
     };
 
     const getImage = async (scene: GenericScene) => {

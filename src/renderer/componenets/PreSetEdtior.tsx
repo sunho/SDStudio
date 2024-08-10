@@ -15,6 +15,7 @@ import {
   FaFont,
   FaImage,
   FaPlus,
+  FaShare,
   FaTrash,
   FaTrashAlt,
 } from 'react-icons/fa';
@@ -136,12 +137,12 @@ export const VibeEditor = observer(({ disabled }: VibeEditorProps) => {
   };
   const setField = (val: any) => {
     if (editVibe!.preset) preset[editVibe!.field] = val;
-    shared[editVibe!.field] = val;
+    else shared[editVibe!.field] = val;
   };
   const vibeChange = async (vibe: string) => {
     if (!vibe) return;
-    const path = imageService.storeVibeImage(curSession!, vibe);
-    getField().push({ path: path, info: 1.0, strength: 0.6 });
+    const path = await imageService.storeVibeImage(curSession!, vibe);
+    getField().push(VibeItem.fromJSON({ path: path, info: 1.0, strength: 0.6 }));
   };
 
   return (
@@ -152,7 +153,7 @@ export const VibeEditor = observer(({ disabled }: VibeEditorProps) => {
             {getField().map((vibe: VibeItem) => (
               <div className="border border-gray-300 mt-2 p-2 flex gap-2 items-begin">
                 <VibeImage
-                  path={vibe.path}
+                  path={vibe.path && imageService.getVibeImagePath(curSession!, vibe.path)}
                   className="flex-none w-28 h-28 object-cover"
                 />
                 <div className="flex flex-col gap-2 w-full">
@@ -272,7 +273,7 @@ export const VibeButton = ({ input }: { input: WFIInlineInput }) => {
         <div className="w-full flex items-center mt-2">
           <div className={'flex-none mr-2 gray-label'}>바이브 설정:</div>
           <VibeImage
-            path={getField()[0].path}
+            path={imageService.getVibeImagePath(appState.curSession!, getField()[0].path)}
             className="flex-1 h-14 rounded-xl object-cover cursor-pointer hover:brightness-95 active:brightness-90"
             onClick={onClick}
           />
@@ -705,6 +706,15 @@ const PreSetSelect = observer(({ workflowType }: { workflowType: string }) => {
                   className="p-2 mx-1 icon-button bg-sky-500"
                 >
                   <FaCopy />
+                </button>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    await appState.exportPreset(curSession, option);
+                  }}
+                  className="p-2 mx-1 icon-button bg-orange-500"
+                >
+                  <FaShare/>
                 </button>
                 <button
                   onClick={() => {

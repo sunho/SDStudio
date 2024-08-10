@@ -10,7 +10,7 @@ import {
 } from '.';
 import { Dialog } from '../componenets/ConfirmWindow';
 import { dataUriToBase64, deleteImageFiles } from './ImageService';
-import { importPreset } from './SessionService';
+import { createImageWithText, embedJSONInPNG, importPreset } from './SessionService';
 import { action, observable } from 'mobx';
 import {
   GenericScene,
@@ -18,6 +18,7 @@ import {
   isValidPieceLibrary,
   isValidSession,
   PieceLibrary,
+  PromptPiece,
   Scene,
   Session,
 } from './types';
@@ -174,24 +175,26 @@ export class AppState {
               if (option === 'new-project') {
                 await importCool();
               } else if (option === 'cur-project') {
-                // const cur = this.curSession!;
-                // await sessionService.migrateSession(json);
-                // for (const key in json.scenes) {
-                // if (key in cur.scenes) {
-                //     cur.scenes[key].slots = json.scenes[key].slots;
-                //     cur.scenes[key].resolution = json.scenes[key].resolution;
-                // } else {
-                //     cur.scenes[key] = json.scenes[key];
-                //     cur.scenes[key].mains = [];
-                //     cur.scenes[key].game = undefined;
-                // }
-                // }
-                // sessionService.markUpdated(cur.name);
-                // sessionService.mainImageUpdated();
-                // pushDialog({
-                // type: 'yes-only',
-                // text: '씬을 임포트 했습니다',
-                //});
+                const cur = this.curSession!;
+                const newJson: ISession = await sessionService.migrate(json);
+                for (const key of Object.keys(newJson.scenes)) {
+                  if (cur.scenes.has(key)) {
+                    cur.scenes.get(key)!.slots = newJson.scenes[key].slots.map((slot:any) =>
+                      slot.map((piece:any) => PromptPiece.fromJSON(piece)),
+                    );
+                    cur.scenes.get(key)!.resolution = newJson.scenes[key].resolution;
+                  } else {
+                    const scene = newJson.scenes[key];
+                    console.log(key, scene);
+                    cur.scenes.set(key, Scene.fromJSON(scene));
+                    cur.scenes.get(key)!.mains = [];
+                    cur.scenes.get(key)!.game = undefined;
+                  }
+                }
+                appState.pushDialog({
+                  type: 'yes-only',
+                  text: '씬을 임포트 했습니다',
+                });
               }
             },
           });
@@ -507,6 +510,20 @@ export class AppState {
         },
       });
     }
+  }
+
+  async exportPreset(session: Session, preset: any){
+    let pngData;
+    if (preset.profile) {
+      pngData = dataUriToBase64((await imageService.fetchVibeImage(session, preset.profile))!);
+    } else {
+      pngData = await createImageWithText(832, 1216, preset.name);
+    }
+    const newPngData = embedJSONInPNG(pngData, preset);
+    const path =
+      'exports/' + preset.name + '_' + Date.now().toString() + '.png';
+    await backend.writeDataFile(path, newPngData);
+    await backend.showFile(path);
   }
 
   @action
