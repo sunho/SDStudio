@@ -37,6 +37,7 @@ import { FaPlus } from 'react-icons/fa6';
 import { useContextMenu } from 'react-contexify';
 import { useDrag, useDrop } from 'react-dnd';
 import { getEmptyImage } from 'react-dnd-html5-backend';
+import { reaction } from 'mobx';
 import {
   ContextMenuType,
   GenericScene,
@@ -151,6 +152,7 @@ const Cell = memo(
           setImage(undefined);
         }
       };
+      const dispose = reaction(()=>scene.mains.join(''), ()=>{forceUpdate({});});
       const refreshMainImage = () => {
         forceUpdate({});
       };
@@ -164,6 +166,7 @@ const Cell = memo(
           'main-image-updated',
           refreshMainImage,
         );
+        dispose();
       };
     }, [data, imageSize]);
 
@@ -174,7 +177,7 @@ const Cell = memo(
     }
 
     const { show, hideAll } = useContextMenu({
-      id: ContextMenuType.Image,
+      id: ContextMenuType.GallaryImage,
     });
 
     const [{ isDragging }, drag, preview] = useDrag(
@@ -302,9 +305,9 @@ const Cell = memo(
                     event: e,
                     props: {
                       ctx: {
-                        type: 'image',
+                        type: 'gallary_image',
                         path,
-                        scene: scene.name,
+                        scene: scene,
                         starable: true,
                       },
                     },
@@ -701,7 +704,7 @@ const ResultDetailView = observer(
                     ctx: {
                       type: 'image',
                       path: paths[selectedIndex],
-                      scene: scene.name,
+                      scene: scene,
                       starable: true,
                     },
                   },

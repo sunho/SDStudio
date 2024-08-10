@@ -3,7 +3,7 @@ import { getSnapshot } from 'mobx-state-tree';
 import { Item, Menu } from 'react-contexify';
 import { sessionService, backend, imageService, isMobile } from '../models';
 import { appState } from '../models/AppService';
-import { dataUriToBase64 } from '../models/ImageService';
+import { dataUriToBase64, deleteImageFiles } from '../models/ImageService';
 import { createImageWithText, embedJSONInPNG } from '../models/SessionService';
 import {
   SceneContextAlt,
@@ -44,19 +44,13 @@ export const AppContextMenu = observer(() => {
     }
   };
   const duplicateImage = async (ctx: ImageContextAlt) => {
+    if (!ctx.scene) return;
     const tmp = ctx.path.slice(0, ctx.path.lastIndexOf('/'));
-    const dir = tmp.split('/').pop()!;
-    const parDir = tmp.slice(0, tmp.lastIndexOf('/')) as any;
-    const field = parDir.startsWith('outs') ? 'scenes' : 'inpaints';
-    const scene = (appState.curSession! as any)[field].get(dir);
-    if (!scene) {
-      return;
-    }
     await backend.copyFile(
       ctx.path,
       tmp + '/' + Date.now().toString() + '.png',
     );
-    imageService.refresh(appState.curSession!, scene);
+    imageService.refresh(appState.curSession!, ctx.scene);
     appState.pushDialog({
       type: 'yes-only',
       text: '이미지를 복제했습니다',
@@ -96,6 +90,24 @@ export const AppContextMenu = observer(() => {
   const clipboardImage = async (ctx: ImageContextAlt) => {
     await backend.copyImageToClipboard(ctx.path);
   };
+  const favImage = (ctx: ImageContextAlt) => {
+    if (!ctx.scene) return;
+    const path = ctx.path.split('/').pop()!;
+    if (ctx.scene.mains.includes(path)) {
+      ctx.scene.mains.splice(ctx.scene.mains.indexOf(path), 1);
+    } else {
+      ctx.scene.mains.push(path);
+    }
+  };
+  const deleteImg = async (ctx: ImageContextAlt) => {
+    appState.pushDialog({
+      type: 'confirm',
+      text: '정말로 삭제하시겠습니까?',
+      callback: async () => {
+        await deleteImageFiles(appState.curSession!, [ctx.path], ctx.scene);
+      }
+    });
+  };
   const handleImageItemClick = ({ id, props }: any) => {
     if (id === 'duplicate') {
       duplicateImage(props.ctx as ImageContextAlt);
@@ -103,6 +115,10 @@ export const AppContextMenu = observer(() => {
       copyImage(props.ctx as ImageContextAlt);
     } else if (id === 'clipboard') {
       clipboardImage(props.ctx as ImageContextAlt);
+    } else if (id === 'fav') {
+      favImage(props.ctx as ImageContextAlt);
+    } else if (id === 'delete') {
+      deleteImg(props.ctx as ImageContextAlt);
     }
   };
   const exportStyle = async (ctx: StyleContextAlt) => {
@@ -147,8 +163,33 @@ export const AppContextMenu = observer(() => {
         <Item id="move-back" onClick={handleSceneItemClick}>
           해당 씬 맨 뒤로
         </Item>
+        <Item id="delete" onClick={handleSceneItemClick}>
+          해당 씬 삭제
+        </Item>
+      </Menu>
+      <Menu id={ContextMenuType.GallaryImage}>
+        <Item id="fav" onClick={handleImageItemClick}>
+          즐겨찾기 토글
+        </Item>
+        <Item id="delete" onClick={handleImageItemClick}>
+          해당 이미지 삭제
+        </Item>
+        <Item id="duplicate" onClick={handleImageItemClick}>
+          해당 이미지 복제
+        </Item>
+        <Item id="copy" onClick={handleImageItemClick}>
+          다른 씬으로 이미지 복사
+        </Item>
+        {!isMobile && (
+          <Item id="clipboard" onClick={handleImageItemClick}>
+            클립보드로 이미지 복사
+          </Item>
+        )}
       </Menu>
       <Menu id={ContextMenuType.Image}>
+        <Item id="fav" onClick={handleImageItemClick}>
+          즐겨찾기 토글
+        </Item>
         <Item id="duplicate" onClick={handleImageItemClick}>
           해당 이미지 복제
         </Item>
