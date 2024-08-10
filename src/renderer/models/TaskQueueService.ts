@@ -790,6 +790,7 @@ export const queueRemoveBg = (
   const job: AugmentJob = {
     type: 'augment',
     image: image,
+    prompt: { type: 'text', text: '' },
     method: 'bg-removal',
     backend: {
       type: 'SD',
