@@ -27,6 +27,7 @@ import { v4 } from 'uuid';
 import { queueRemoveBg } from './TaskQueueService';
 import { Resolution, resolutionMap } from '../backends/imageGen';
 import { ProgressDialog } from '../componenets/ProgressWindow';
+import { migratePieceLibrary } from './legacy';
 
 export interface SceneSelectorItem {
   type: 'scene' | 'inpaint';
@@ -224,6 +225,9 @@ export class AppState {
               return;
             }
             json.name = value;
+            if (!json.version) {
+              json = migratePieceLibrary(json);
+            }
             this.curSession!.library.set(value, PieceLibrary.fromJSON(json));
           },
         });
