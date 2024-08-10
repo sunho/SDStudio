@@ -22,13 +22,13 @@ import {
   Scene,
   Session,
 } from './types';
-import { getFirstFile } from './util';
+import { extractPromptDataFromBase64, getFirstFile } from './util';
 import { ImageOptimizeMethod } from '../backend';
 import { v4 } from 'uuid';
-import { queueRemoveBg } from './TaskQueueService';
 import { Resolution, resolutionMap } from '../backends/imageGen';
 import { ProgressDialog } from '../componenets/ProgressWindow';
 import { migratePieceLibrary } from './legacy';
+import { oneTimeFlowMap, oneTimeFlows, queueRemoveBg } from './workflows/OneTimeFlows';
 
 export interface SceneSelectorItem {
   type: 'scene' | 'inpaint';
@@ -731,6 +731,26 @@ export class AppState {
         removeBg(selected);
       } else if (value === 'export') {
         this.exportPackage(type, selected);
+      } else if (value === 'transform') {
+        const items = oneTimeFlows.map(x => ({
+          text: x.text,
+          value: x.text
+        }));
+        const menu = await appState.pushDialogAsync({
+          text: '이미지 변형 방법을 선택하세요',
+          type: 'select',
+          items: items,
+        });
+        if (!menu) return;
+        for (const scene of selected) {
+          for (let path of scene.mains) {
+            path = imageService.getOutputDir(this.curSession!, scene) + '/' + path;
+            let image = await imageService.fetchImage(path);
+            image = dataUriToBase64(image!);
+            const job = await extractPromptDataFromBase64(image);
+            oneTimeFlowMap.get(menu)!.handler(appState.curSession!, scene, image, undefined, job);
+          }
+        }
       } else {
         console.log('Not implemented');
       }
@@ -740,6 +760,7 @@ export class AppState {
       let items = [
         { text: '📁 이미지 내보내기', value: 'export' },
         { text: '🔪 즐겨찾기 이미지 배경 제거', value: 'removeBg' },
+        { text: '🔄 즐겨찾기 이미지 변형', value: 'transform' },
         { text: '🗑️ 이미지 삭제', value: 'removeImage' },
         { text: '🖥️ 해상도 변경 ', value: 'changeResolution' },
         { text: '❌ 즐겨찾기 전부 해제', value: 'removeAllFav' },

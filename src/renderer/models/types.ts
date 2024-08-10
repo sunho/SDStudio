@@ -63,6 +63,7 @@ export interface SDAbstractJob<T> extends AbstractJob {
   noiseSchedule: string;
   backend: ModelBackend;
   vibes: IVibeItem[];
+  overrideResolution?: Resolution;
   seed?: number;
 }
 

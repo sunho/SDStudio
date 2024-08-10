@@ -18,6 +18,7 @@ export interface WorkFlowDef {
   metaVars: WFVar[];
   backendType: WFBackendType;
   editor: WFIElement;
+  emoji?: string;
   innerEditor?: WFIElement;
   hasMask?: boolean;
   i2i: boolean;
@@ -601,6 +602,11 @@ export class WFDefBuilder {
 
   setHasMask(hasMask: boolean): this {
     this.workflowDef.hasMask = hasMask;
+    return this;
+  }
+
+  setEmoji(emoji: string): this {
+    this.workflowDef.emoji = emoji;
     return this;
   }
 

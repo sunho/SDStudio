@@ -266,7 +266,7 @@ class GenerateImageTaskHandler implements TaskHandler {
       prompt: prompt,
       uc: job.uc,
       model: Model.Anime,
-      resolution: task.params.scene!.resolution as Resolution,
+      resolution: job.overrideResolution ? job.overrideResolution : task.params.scene!.resolution as Resolution,
       sampling: job.sampling as Sampling,
       sm: job.smea,
       dyn: job.dyn,
@@ -370,7 +370,7 @@ class GenerateImageTaskHandler implements TaskHandler {
         text: '스탭 수 28개 초과',
       });
     }
-    const resolution = task.params.scene.resolution;
+    const resolution = job.overrideResolution ? job.overrideResolution : task.params.scene.resolution;
     if (resolution === Resolution.WallpaperLandscape || resolution === Resolution.LargeLandscape || resolution === Resolution.LargePortrait || resolution === Resolution.LargeSquare || resolution === Resolution.WallpaperPortrait) {
       res.push({
         scene: name,
@@ -488,12 +488,28 @@ class AugmentTaskHandler implements TaskHandler {
     const title = task.params.scene ? task.params.scene.name : '(none)';
     return {
       name: title,
-      emoji: '🎨',
+      emoji: '🪛',
     };
   }
 
   calculateCost(task: Task): CostItem[] {
-    return [];
+    const res: CostItem[] = [];
+    const resolution = task.params.scene.resolution;
+    const name = task.params.scene.name;
+    const job = task.params.job as AugmentJob;
+    if (resolution === Resolution.WallpaperLandscape || resolution === Resolution.LargeLandscape || resolution === Resolution.LargePortrait || resolution === Resolution.LargeSquare || resolution === Resolution.WallpaperPortrait) {
+      res.push({
+        scene: name,
+        text: '씬 해상도가 큼',
+      });
+    }
+    if (job.method === 'bg-removal') {
+      res.push({
+        scene: name,
+        text: 'NAI 배경 제거 기능 사용',
+      });
+    }
+    return res;
   }
 }
 
@@ -781,31 +797,6 @@ export const taskHandlers = [
   new RemoveBgTaskHandler(),
 ];
 
-export const queueRemoveBg = (
-  session: Session,
-  scene: GenericScene,
-  image: string,
-  onComplete?: (path: string) => void,
-) => {
-  const job: AugmentJob = {
-    type: 'augment',
-    image: image,
-    prompt: { type: 'text', text: '' },
-    method: 'bg-removal',
-    backend: {
-      type: 'SD',
-    },
-  };
-  const params: TaskParam = {
-    session,
-    job,
-    outputPath: imageService.getOutputDir(session, scene),
-    scene,
-    onComplete,
-  };
-  taskQueueService.addTask(params, 1);
-};
-
 export const queueWorkflow = async (
   session: Session,
   workflow: SelectedWorkflow,
@@ -826,6 +817,7 @@ export const queueI2IWorkflow = async (
   preset: any,
   scene: GenericScene,
   samples: number,
+  onComplete?: (path: string) => void,
 ) => {
   const def = workFlowService.getDef(type);
   await def.handler(
@@ -835,5 +827,7 @@ export const queueI2IWorkflow = async (
     preset,
     undefined,
     samples,
+    undefined,
+    onComplete,
   );
 };

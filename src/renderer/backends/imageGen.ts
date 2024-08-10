@@ -18,6 +18,29 @@ export enum Resolution {
   WallpaperLandscape = 'wallpaper_landscape',
 }
 
+export const upscaleReoslution = (resolution: Resolution) => {
+  switch (resolution) {
+    case Resolution.SmallLandscape:
+      return Resolution.Landscape;
+    case Resolution.SmallPortrait:
+      return Resolution.Portrait;
+    case Resolution.SmallSquare:
+      return Resolution.Square;
+    case Resolution.Landscape:
+      return Resolution.LargeLandscape;
+    case Resolution.Portrait:
+      return Resolution.LargePortrait;
+    case Resolution.Square:
+      return Resolution.LargeSquare;
+    case Resolution.WallpaperPortrait:
+      return Resolution.WallpaperPortrait;
+    case Resolution.WallpaperLandscape:
+      return Resolution.WallpaperLandscape;
+    default:
+      return resolution;
+  }
+}
+
 export const resolutionMap = {
   small_landscape: { height: 512, width: 768 },
   small_portrait: { height: 768, width: 512 },
