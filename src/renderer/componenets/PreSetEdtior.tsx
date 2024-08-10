@@ -1171,7 +1171,14 @@ const PreSetEditor = observer(
         !curSession.selectedWorkflow!.presetName ||
         !presets.find((x) => x.name === curSession.selectedWorkflow!.presetName)
       ) {
-        curSession.selectedWorkflow!.presetName = presets[0].name;
+        if (presets.length === 0) {
+          const preset = workFlowService.buildPreset(workflowType);
+          preset.name = 'default';
+          curSession.presets.set(workflowType, [preset]);
+          curSession.selectedWorkflow!.presetName = 'default';
+        } else {
+          curSession.selectedWorkflow!.presetName = presets[0].name;
+        }
         rerender({});
       }
     }

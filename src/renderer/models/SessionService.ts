@@ -19,6 +19,7 @@ import { extractPromptDataFromBase64 } from './util';
 import * as PngChunk from 'png-chunk-text';
 import { Sampling } from '../backends/imageGen';
 import encodeChunks from 'png-chunks-encode';
+import * as legacy from './legacy';
 
 const SESSION_SERVICE_INTERVAL = 5000;
 
@@ -32,6 +33,10 @@ export class SessionService extends ResourceSyncService<Session> {
   }
 
   async migrate(rc: any) {
+    if (!rc.version)  {
+      rc = await legacy.migrateSession(rc);
+    }
+    await this.migrateSession(rc);
     return rc;
   }
 

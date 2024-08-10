@@ -1,10 +1,10 @@
 import { v4 } from "uuid";
-import { backend, imageService } from ".";
+import { backend, imageService, sessionService } from ".";
 import { dataUriToBase64 } from "./ImageService";
 import ExifReader from "exifreader";
 import defaultassets from "../defaultassets";
 import extractChunks from "png-chunks-extract";
-import { IPieceLibrary, ISession } from "./types";
+import { IInpaintScene, IPieceLibrary, IPromptPiece, IScene, ISession, Round } from "./types";
 import { Buffer } from 'buffer';
 
 export const defaultUC = `worst quality, bad quality, displeasing, very displeasing, lowres, bad anatomy, bad perspective, bad proportions, bad aspect ratio, bad face, long face, bad teeth, bad neck, long neck, bad arm, bad hands, bad ass, bad leg, bad feet, bad reflection, bad shadow, bad link, bad source, wrong hand, wrong feet, missing limb, missing eye, missing tooth, missing ear, missing finger, extra faces, extra eyes, extra eyebrows, extra mouth, extra tongue, extra teeth, extra ears, extra breasts, extra arms, extra hands, extra legs, extra digits, fewer digits, cropped head, cropped torso, cropped shoulders, cropped arms, cropped legs, mutation, deformed, disfigured, unfinished, chromatic aberration, text, error, jpeg artifacts, watermark, scan, scan artifacts`;
@@ -97,7 +97,7 @@ async function extractPromptDataFromBase64(base64: string) {
   throw new Error("No prompt data found");
 }
 
-export async function migrateSessionLegacy(session: any) {
+async function migrateSessionLegacy(session: any) {
   if (!Array.isArray(session.presets)) {
     for (const preset of Object.values(session.presets)) {
       if ((preset as any).vibe) {
@@ -280,25 +280,195 @@ export async function migrateSessionLegacy(session: any) {
   }
 }
 
-export async function migrateFromLegacyLatest(session: any): Promise<ISession> {
-  const res: ISession = {
+export async function migrateSession(oldSession: any): Promise<ISession> {
+  console.log(oldSession);
+  await migrateSessionLegacy(oldSession);
+  console.log("b2");
+  const newSession: ISession = {
     version: 1,
-    name: session.name,
+    name: oldSession.name,
     presets: {},
-    presetShareds: {},
-    scenes: {},
     inpaints: {},
+    scenes: {},
     library: {},
+    presetShareds: {},
   };
 
-  return res;
+  // Migrate presets
+  for (const preset of oldSession.presets) {
+    const newPreset = migratePreset(preset);
+    if (newPreset.type === 'SDImageGen') {
+      if (!newSession.presets['SDImageGen']) {
+        newSession.presets['SDImageGen'] = [];
+      }
+      newSession.presets['SDImageGen'].push(newPreset);
+    } else {
+      if (!newSession.presets['SDImageGenEasy']) {
+        newSession.presets['SDImageGenEasy'] = [];
+      }
+      newSession.presets['SDImageGenEasy'].push(newPreset);
+    }
+  }
+
+  // Migrate scenes
+  for (const [key, scene] of Object.entries(oldSession.scenes)) {
+    newSession.scenes[key] = migrateScene(scene);
+  }
+
+  // Migrate inpaints
+  for (const [key, inpaint] of Object.entries(oldSession.inpaints)) {
+    newSession.inpaints[key] = await migrateInpaintScene(oldSession, inpaint);
+  }
+
+  // Migrate library
+  for (const [key, library] of Object.entries(oldSession.library)) {
+    newSession.library[key] = migratePieceLibrary(library);
+  }
+
+  // Migrate preset shareds
+  for (const [_, shared] of Object.entries(oldSession.presetShareds)) {
+    const newShared = migratePresetShared(shared);
+    newSession.presetShareds[newShared.type] = newShared;
+  }
+
+  console.log(newSession);
+  return newSession;
+}
+
+function migratePreset(preset: any): any {
+  const basePreset = {
+    name: preset.name,
+    cfgRescale: preset.cfgRescale ?? 0,
+    steps: preset.steps ?? 28,
+    promptGuidance: preset.promptGuidance ?? 5,
+    smea: !preset.smeaOff,
+    dyn: !!preset.dynOn,
+    sampling: preset.sampling ?? 'k_euler_ancestral',
+    frontPrompt: preset.frontPrompt,
+    backPrompt: preset.backPrompt,
+    uc: preset.uc,
+    noiseSchedule: preset.noiseSchedule ?? 'native',
+    profile: '',
+  };
+
+  if (preset.type === 'style') {
+    return {
+      ...basePreset,
+      type: 'SDImageGenEasy',
+      profile: preset.profile,
+    };
+  }
+
+  return {
+    ...basePreset,
+    type: 'SDImageGen',
+  };
+}
+
+
+function migrateRound(round: any): Round | undefined {
+  if (!round) {
+    return undefined;
+  }
+  return {
+    curPlayer: round.curPlayer,
+    players: round.players.map((player: any) => (player.path)),
+    winMask: round.winMask,
+  }
+}
+
+function migrateScene(scene: any): IScene {
+  return {
+    type: 'scene',
+    name: scene.name,
+    resolution: scene.resolution,
+    slots: scene.slots.map((slot:any) => slot.map(migratePromptPiece)),
+    game: scene.game,
+    round: migrateRound(scene.round),
+    imageMap: scene.imageMap,
+    mains: scene.mains,
+  };
+}
+
+async function migrateInpaintScene(session: any, inpaint: any): Promise<IInpaintScene> {
+  const imagePath = 'inpaint_orgs/' + session.name + '/' + inpaint.name + '.png';
+  const maskPath = 'inpaint_masks/' + session.name + '/' + inpaint.name + '.png';
+  let image = '';
+  let mask = '';
+  try {
+    image = dataUriToBase64((await imageService.fetchImage(imagePath))!);
+    image = await imageService.storeVibeImage(session, image);
+  } catch(e) {}
+  try {
+    mask = dataUriToBase64((await imageService.fetchImage(maskPath))!);
+    mask = await imageService.storeVibeImage(session, mask);
+  } catch(e) {}
+  return {
+    type: 'inpaint',
+    name: inpaint.name,
+    resolution: inpaint.resolution,
+    workflowType: 'SDInpaint',
+    preset: {
+      type: 'SDInpaint',
+      image: image,
+      mask: mask,
+      strength: 0.7,
+      cfgRescale: 0,
+      steps: 28,
+      promptGuidance: 5,
+      smea: false,
+      dyn: false,
+      originalImage: inpaint.originalImage ?? true,
+      sampling: 'k_euler_ancestral',
+      prompt: inpaint.prompt,
+      uc: inpaint.uc,
+      noiseSchedule: 'native',
+      vibes: [],
+      seed: undefined,
+    },
+    game: inpaint.game,
+    round: inpaint.round,
+    imageMap: inpaint.imageMap,
+    mains: [],
+    sceneRef: inpaint.sceneRef,
+  };
+}
+
+function migratePromptPiece(piece: any): IPromptPiece {
+  return {
+    prompt: piece.prompt,
+    id: piece.id ?? v4(),
+    enabled: piece.enabled,
+  };
+}
+
+function migratePresetShared(shared: any): any {
+  const baseShared = {
+    vibes: shared.vibes,
+    seed: shared.seed,
+  };
+
+  if (shared.type === 'style') {
+    return {
+      ...baseShared,
+      type: 'SDImageGenEasy',
+      characterPrompt: shared.characterPrompt,
+      backgroundPrompt: shared.backgroundPrompt,
+      uc: shared.uc,
+    };
+  }
+
+  return {
+    ...baseShared,
+    type: 'SDImageGen',
+  };
 }
 
 export function migratePieceLibrary(library: any): IPieceLibrary {
   const multi = library.multi ?? {};
   return {
     version: 1,
-    name: library.name,
+    name: library.description,
     pieces: Object.entries(library.pieces).map(([k, x]) => ({
       name: k,
       prompt: x as string,
