@@ -1,4 +1,4 @@
-import { WFWorkFlow, WorkFlowDef } from './WorkFlow';
+import { WFFieldType, WFWorkFlow, WorkFlowDef } from './WorkFlow';
 import { Session, GenericScene, PromptNode, SDAbstractJob } from '../types';
 
 export enum WorkFlowCategoryFlag {
@@ -48,6 +48,14 @@ export class WorkFlowService {
     return wf.sharedFromJSON(json);
   }
 
+  metaFromJSON(json: any) {
+    const wf = this.workflows.get(json.type);
+    if (!wf) {
+      throw new Error(`Unknown workflow type: ${json.type}`);
+    }
+    return wf.metaFromJSON(json);
+  }
+
   buildShared(type: string) {
     const wf = this.workflows.get(type);
     if (!wf) {
@@ -62,6 +70,14 @@ export class WorkFlowService {
       throw new Error(`Unknown workflow type: ${type}`);
     }
     return wf.buildPreset();
+  }
+
+  buildMeta(type: string) {
+    const wf = this.workflows.get(type);
+    if (!wf) {
+      throw new Error(`Unknown workflow type: ${type}`);
+    }
+    return wf.buildMeta();
   }
 
   getGeneralEditor(type: string) {
@@ -81,12 +97,14 @@ export class WorkFlowService {
     return this.workflows.get(type)!.def;
   }
 
-  getVarDef(type: string, preset: boolean, field: string) {
+  getVarDef(type: string, fieldType: WFFieldType, field: string) {
     const def = this.getDef(type);
-    if (preset) {
+    if (fieldType === 'preset') {
       return def.presetVars.find((v) => v.name === field);
-    } else {
+    } else if (fieldType === 'shared') {
       return def.sharedVars.find((v) => v.name === field);
+    } else {
+      return def.metaVars.find((v) => v.name === field);
     }
   }
 
@@ -125,6 +143,7 @@ export class WorkFlowService {
     preset: any,
     shared: any,
     samples: number,
+    meta?: any,
     onComplete?: (img: string) => void,
     nodelay?: boolean,
   ) {
@@ -139,6 +158,7 @@ export class WorkFlowService {
       preset,
       shared,
       samples,
+      meta,
       onComplete,
       nodelay,
     );

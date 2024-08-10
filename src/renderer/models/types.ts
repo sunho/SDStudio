@@ -89,8 +89,9 @@ export interface AugmentJob extends AbstractJob {
   type: 'augment';
   image: string;
   method: AugmentMethod;
-  prompt?: string;
+  prompt?: PromptNode;
   weaken?: number;
+  emotion?: string;
   backend: ModelBackend;
 }
 
@@ -241,11 +242,13 @@ export class AbstractScene implements IAbstractScene {
 export interface IScene extends IAbstractScene {
   type: 'scene';
   slots: IPromptPieceSlot[];
+  meta: Record<string, any>;
 }
 
 export class Scene extends AbstractScene implements IScene {
   @observable accessor type: 'scene' = 'scene';
   @observable accessor slots: PromptPieceSlot[] = [];
+  @observable accessor meta: Map<string, any> = new Map();
 
   static fromJSON(json: IScene): Scene {
     const scene = new Scene();
@@ -254,6 +257,7 @@ export class Scene extends AbstractScene implements IScene {
     scene.slots = json.slots.map((slot) =>
       slot.map((piece) => PromptPiece.fromJSON(piece)),
     );
+    scene.meta = new Map(Object.entries(json.meta??{}));
     return scene;
   }
 
@@ -262,6 +266,7 @@ export class Scene extends AbstractScene implements IScene {
       ...super.toJSON(),
       type: this.type,
       slots: this.slots.map((slot) => slot.map((piece) => piece.toJSON())),
+      meta: Object.fromEntries(this.meta.entries()),
     };
   }
 }

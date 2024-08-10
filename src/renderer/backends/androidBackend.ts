@@ -1,5 +1,5 @@
 import { Config } from '../../main/config';
-import { ImageGenInput, ImageGenService } from './imageGen';
+import { ImageAugmentInput, ImageGenInput, ImageGenService } from './imageGen';
 import {
   Backend,
   FileEntry,
@@ -166,6 +166,12 @@ export class AndroidBackend extends Backend {
   async generateImage(arg: ImageGenInput): Promise<void> {
     const token = await this.readFile('TOKEN.txt');
     const res = await this.imageGenService.generateImage(token, arg);
+    await this.writeDataFile(arg.outputFilePath, res);
+  }
+
+  async augmentImage(arg: ImageAugmentInput): Promise<void> {
+    const token = await this.readFile('TOKEN.txt');
+    const res = await this.imageGenService.augmentImage(token, arg);
     await this.writeDataFile(arg.outputFilePath, res);
   }
 

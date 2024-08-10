@@ -89,6 +89,7 @@ interface BigPromptEditorProps {
   type?: string;
   shared?: any;
   preset?: any;
+  meta?: any;
   general: boolean;
   getMiddlePrompt: () => string;
   setMiddlePrompt: (txt: string) => void;
@@ -103,6 +104,7 @@ export const BigPromptEditor = observer(
     type,
     shared,
     preset,
+    meta,
     getMiddlePrompt,
     setMiddlePrompt,
     initialImagePath,
@@ -162,6 +164,7 @@ export const BigPromptEditor = observer(
               general={general}
               type={type}
               preset={preset}
+              meta={meta}
               shared={shared}
               middlePromptMode={true}
               getMiddlePrompt={getMiddlePrompt}
@@ -179,6 +182,7 @@ export const BigPromptEditor = observer(
               general={general}
               type={type}
               preset={preset}
+              meta={meta}
               shared={shared}
               middlePromptMode={true}
               getMiddlePrompt={getMiddlePrompt}
@@ -445,10 +449,16 @@ const SlotEditor = observer(({ scene, big }: SlotEditorProps) => {
 
 const SceneEditor = observer(({ scene, onClosed, onDeleted }: Props) => {
   const { curSession } = appState;
+  const [_, rerender] = useState<{}>({});
   const [curName, setCurName] = useState('');
   const [type, preset, shared, def] = curSession!.getCommonSetup(
     curSession!.selectedWorkflow!,
   );
+
+  if (type && !scene.meta.has(type)) {
+    scene.meta.set(type, workFlowService.buildMeta(type));
+    rerender({});
+  }
 
   useEffect(() => {
     setCurName(scene.name);
@@ -488,6 +498,7 @@ const SceneEditor = observer(({ scene, onClosed, onDeleted }: Props) => {
         preset,
         shared,
         1,
+        scene.meta.get(type),
         callback,
         true,
       );
@@ -526,6 +537,7 @@ const SceneEditor = observer(({ scene, onClosed, onDeleted }: Props) => {
   const BigEditor = (
     <BigPromptEditor
       general={true}
+      meta={type && scene.meta.get(type)}
       getMiddlePrompt={getMiddlePrompt}
       setMiddlePrompt={onMiddlePromptChange}
       queuePrompt={queuePrompt}

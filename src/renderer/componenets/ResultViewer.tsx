@@ -498,16 +498,25 @@ const ResultDetailView = observer(
           )!;
           setImage(base64Image!);
           base64Image = dataUriToBase64(base64Image!);
-          const job = await extractPromptDataFromBase64(base64Image);
-          if (job) {
-            const { prompt, seed, promptGuidance, sampling, steps, uc } = job;
-            setMiddlePrompt(prompt);
-            setSeed(seed?.toString() ?? '');
-            setScale(promptGuidance.toString());
-            setSampler(sampling);
-            setSteps(steps.toString());
-            setUc(uc);
-          } else {
+          try {
+            const job = await extractPromptDataFromBase64(base64Image);
+            if (job) {
+              const { prompt, seed, promptGuidance, sampling, steps, uc } = job;
+              setMiddlePrompt(prompt);
+              setSeed(seed?.toString() ?? '');
+              setScale(promptGuidance.toString());
+              setSampler(sampling);
+              setSteps(steps.toString());
+              setUc(uc);
+            } else {
+              setMiddlePrompt('');
+              setSeed('');
+              setScale('');
+              setSampler('');
+              setSteps('');
+              setUc('');
+            }
+          } catch (e: any) {
             setMiddlePrompt('');
             setSeed('');
             setScale('');

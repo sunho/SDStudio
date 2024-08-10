@@ -46,9 +46,12 @@ import {
   WFAbstractVar,
   WFIElement,
   WFIGroup,
+  WFIIfIn,
   WFIInlineInput,
   WFIMiddlePlaceholderInput,
   WFIPush,
+  WFISceneOnly,
+  WFIShowImage,
   WFIStack,
   WFVar,
   WorkFlowDef,
@@ -57,17 +60,19 @@ import { StackFixed, StackGrow, VerticalStack } from './LayoutComponents';
 
 const ImageSelect = observer(({ input }: { input: WFIInlineInput }) => {
   const { curSession } = appState;
-  const { type, preset, shared, editVibe } = useContext(WFElementContext)!;
+  const { type, preset, shared, meta, editVibe } = useContext(WFElementContext)!;
   const getField = () => {
-    if (input.preset) return preset[input.field];
-    return shared[input.field];
+    if (input.fieldType === 'preset') return preset[input.field];
+    if (input.fieldType === 'shared') return shared[input.field];
+    return meta![input.field];
   };
   const setField = (val: any) => {
-    if (input.preset) preset[input.field] = val;
-    else shared[input.field] = val;
+    if (input.fieldType === 'preset') preset[input.field] = val;
+    else if (input.fieldType === 'shared') shared[input.field] = val;
+    else meta![input.field] = val;
   };
   return (
-    <div className="inline-flex md:flex gap-3 items-center flex-none text-eplsis overflow-hidden gap-3 mb-1">
+    <div className="inline-flex md:flex gap-3 items-center flex-none text-eplsis overflow-hidden gap-3 mb-1 mt-2">
       <span className="gray-label">{input.label}: </span>
       <div className="w-24 md:w-48">
         <FileUploadBase64
@@ -128,16 +133,18 @@ interface VibeEditorProps {
 
 export const VibeEditor = observer(({ disabled }: VibeEditorProps) => {
   const { curSession } = appState;
-  const { preset, shared, editVibe, setEditVibe } =
+  const { preset, shared, editVibe, setEditVibe, meta } =
     useContext(WFElementContext)!;
 
   const getField = () => {
-    if (editVibe!.preset) return preset[editVibe!.field];
-    return shared[editVibe!.field];
+    if (editVibe!.fieldType === 'preset') return preset[editVibe!.field];
+    if (editVibe!.fieldType === 'shared') return shared[editVibe!.field];
+    return meta![editVibe!.field];
   };
   const setField = (val: any) => {
-    if (editVibe!.preset) preset[editVibe!.field] = val;
-    else shared[editVibe!.field] = val;
+    if (editVibe!.fieldType === 'preset') preset[editVibe!.field] = val;
+    else if (editVibe!.fieldType === 'shared') shared[editVibe!.field] = val;
+    else meta![editVibe!.field] = val;
   };
   const vibeChange = async (vibe: string) => {
     if (!vibe) return;
@@ -249,12 +256,13 @@ export const VibeEditor = observer(({ disabled }: VibeEditorProps) => {
 });
 
 export const VibeButton = ({ input }: { input: WFIInlineInput }) => {
-  const { editVibe, setEditVibe, preset, shared } =
+  const { editVibe, setEditVibe, preset, shared, meta } =
     useContext(WFElementContext)!;
   const getField = () => {
     console.log(input.field);
-    if (input.preset) return preset[input.field];
-    return shared[input.field];
+    if (input.fieldType === 'preset') return preset[input.field];
+    if (input.fieldType === 'shared') return shared[input.field];
+    return meta![input.field];
   };
   const onClick = () => {
     setEditVibe(input);
@@ -368,6 +376,7 @@ const InnerEditor: React.FC<InnerEditorProps> = ({ type, shared, preset }) => {
       preset,
       dummyShared,
       1,
+      undefined,
       callback,
       true,
     );
@@ -787,6 +796,7 @@ const NullIntInput = ({
 interface IWFElementContext {
   preset: any;
   shared: any;
+  meta?: any;
   type: string;
   middlePromptMode: boolean;
   editVibe: WFIInlineInput | undefined;
@@ -825,7 +835,66 @@ const WFRenderElement = observer(({ element }: WFElementProps) => {
       return <WFRPush element={element} />;
     case 'middlePlaceholder':
       return <WFRMiddlePlaceholder element={element} />;
+    case 'showImage':
+      return <WFRShowImage element={element} />;
+    case 'ifIn':
+      return <WFRIfIn element={element} />;
+    case 'sceneOnly':
+      return <WFRSceneOnly element={element} />;
   }
+});
+
+const WFRSceneOnly = observer(({ element }: WFElementProps) => {
+  const { type, shared, preset, meta, editVibe, showGroup } =
+    useContext(WFElementContext)!;
+  const { curGroup } = useContext(WFGroupContext)!;
+  const input = element as WFISceneOnly;
+  if (editVibe != undefined || curGroup !== showGroup) {
+    return <></>;
+  }
+  if (!meta) {
+    return <></>;
+  }
+  return <WFRenderElement element={input.element}/>;
+});
+
+const WFRIfIn = observer(({ element }: WFElementProps) => {
+  const { type, shared, preset, meta, showGroup, editVibe } = useContext(WFElementContext)!;
+  const { curGroup } = useContext(WFGroupContext)!;
+  const input = element as WFIIfIn;
+  const getField = () => {
+    if (input.fieldType === 'preset') return preset[input.field];
+    if (input.fieldType === 'shared') return shared[input.field];
+    return meta![input.field];
+  };
+  if (editVibe != undefined || curGroup !== showGroup) {
+    return <></>;
+  }
+  if (!input.values.includes(getField())) {
+    return <></>
+  }
+  return <WFRenderElement element={input.element}/>;
+});
+
+const WFRShowImage = observer(({ element }: WFElementProps) => {
+  const curSession = appState.curSession;
+  const { type, meta, preset, shared, editVibe, showGroup } = useContext(WFElementContext)!;
+  const { curGroup } = useContext(WFGroupContext)!;
+  const input = element as WFIShowImage;
+  const getField = () => {
+    if (input.fieldType === 'preset') return preset[input.field];
+    if (input.fieldType === 'shared') return shared[input.field];
+    return meta![input.field];
+  };
+  if (editVibe != undefined || curGroup !== showGroup) {
+    return <></>;
+  }
+  return (
+    <div className="mt-2">
+      {getField() && <VibeImage path={imageService.getVibeImagePath(curSession!, getField())}
+          className="flex-none w-40 h-40 object-cover"/>}
+    </div>
+  );
 });
 
 const WFRMiddlePlaceholder = observer(({ element }: WFElementProps) => {
@@ -931,23 +1000,27 @@ const WFRPush = observer(({ element }: WFElementProps) => {
 });
 
 const WFRInline = observer(({ element }: WFElementProps) => {
-  const { editVibe, type, showGroup, preset, shared } =
+  const { editVibe, type, showGroup, preset, shared, meta } =
     useContext(WFElementContext)!;
   const { curGroup } = useContext(WFGroupContext)!;
   const input = element as WFIInlineInput;
-  const field = workFlowService.getVarDef(type, input.preset, input.field)!;
+  const field = workFlowService.getVarDef(type, input.fieldType, input.field)!;
   const getField = () => {
-    if (input.preset) {
+    if (input.fieldType === 'preset') {
       return preset[input.field];
-    } else {
+    } else if (input.fieldType === 'shared') {
       return shared[input.field];
+    } else {
+      return meta![input.field];
     }
   };
   const setField = (val: any) => {
-    if (input.preset) {
+    if (input.fieldType === 'preset') {
       preset[input.field] = val;
-    } else {
+    } else if (input.fieldType === 'shared') {
       shared[input.field] = val;
+    } else {
+      meta![input.field] = val;
     }
   };
   if (curGroup !== showGroup || editVibe != undefined) {
@@ -966,6 +1039,21 @@ const WFRInline = observer(({ element }: WFElementProps) => {
           ></PromptEditTextArea>
         </EditorField>
       );
+    case 'select':
+      return <InlineEditorField label={input.label}>
+        <DropdownSelect
+          key={key}
+          selectedOption={getField()}
+          disabled={false}
+          menuPlacement={input.menuPlacement}
+          options={field.options.map((x) => ({
+            label: x.label,
+            value: x.value,
+          }))}
+          onSelect={(opt) => {
+            setField(opt.value);
+          }}/>
+      </InlineEditorField>
     case 'nullInt':
       return (
         <InlineEditorField label={input.label}>
@@ -1050,6 +1138,7 @@ interface ImplProps {
   type: string;
   shared: any;
   preset: any;
+  meta?: any;
   middlePromptMode: boolean;
   element: WFIElement;
   getMiddlePrompt?: () => string;
@@ -1062,6 +1151,7 @@ export const PreSetEditorImpl = observer(
     shared,
     preset,
     element,
+    meta,
     middlePromptMode,
     getMiddlePrompt,
     onMiddlePromptChange,
@@ -1079,6 +1169,7 @@ export const PreSetEditorImpl = observer(
           value={{
             preset: preset,
             shared: shared,
+            meta: meta,
             showGroup: showGroup,
             editVibe: editVibe,
             setEditVibe: setEditVibe,
@@ -1103,6 +1194,7 @@ interface InnerProps {
   type: string;
   shared: any;
   preset: any;
+  meta?: any;
   element: WFIElement;
   middlePromptMode: boolean;
   nopad?: boolean;
@@ -1114,6 +1206,7 @@ interface UnionProps {
   general: boolean;
   type?: string;
   shared?: any;
+  meta?: any;
   preset?: any;
   middlePromptMode: boolean;
   getMiddlePrompt?: () => string;
@@ -1125,6 +1218,7 @@ export const InnerPreSetEditor = observer(
     type,
     shared,
     preset,
+    meta,
     element,
     middlePromptMode,
     getMiddlePrompt,
@@ -1137,6 +1231,7 @@ export const InnerPreSetEditor = observer(
           type={type}
           shared={shared}
           preset={preset}
+          meta={meta}
           element={element}
           middlePromptMode={middlePromptMode}
           getMiddlePrompt={getMiddlePrompt}
@@ -1148,13 +1243,14 @@ export const InnerPreSetEditor = observer(
 );
 
 interface Props {
+  meta?: any;
   middlePromptMode: boolean;
   getMiddlePrompt?: () => string;
   onMiddlePromptChange?: (txt: string) => void;
 }
 
 const PreSetEditor = observer(
-  ({ middlePromptMode, getMiddlePrompt, onMiddlePromptChange }: Props) => {
+  ({ middlePromptMode, getMiddlePrompt, onMiddlePromptChange, meta }: Props) => {
     const [_, rerender] = useState<{}>({});
     const curSession = appState.curSession!;
     const workflowType = curSession.selectedWorkflow?.workflowType;
@@ -1216,6 +1312,7 @@ const PreSetEditor = observer(
           <PreSetEditorImpl
             type={workflowType}
             shared={shared}
+            meta={meta}
             preset={
               presets!.find(
                 (x) => x.name === curSession.selectedWorkflow!.presetName,
@@ -1237,6 +1334,7 @@ export const UnionPreSetEditor = observer(
     general,
     type,
     shared,
+    meta,
     preset,
     middlePromptMode,
     getMiddlePrompt,
@@ -1244,12 +1342,14 @@ export const UnionPreSetEditor = observer(
   }: UnionProps) => {
     return general ? (
       <PreSetEditor
+        meta={meta}
         middlePromptMode={middlePromptMode}
         getMiddlePrompt={getMiddlePrompt}
         onMiddlePromptChange={onMiddlePromptChange}
       />
     ) : (
       <InnerPreSetEditor
+        meta={meta}
         type={type!}
         shared={shared!}
         preset={preset!}

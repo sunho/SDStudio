@@ -1,5 +1,5 @@
 import { Config } from '../main/config';
-import { ImageGenInput } from './backends/imageGen';
+import { ImageAugmentInput, ImageGenInput } from './backends/imageGen';
 
 export interface FileEntry {
   name: string;
@@ -25,6 +25,7 @@ export abstract class Backend {
   abstract getVersion(): Promise<string>;
   abstract openWebPage(url: string): Promise<void>;
   abstract generateImage(arg: ImageGenInput): Promise<void>;
+  abstract augmentImage(arg: ImageAugmentInput): Promise<void>;
   abstract login(email: string, password: string): Promise<void>;
   abstract showFile(arg: string): Promise<void>;
   abstract copyToDownloads(path: string): Promise<void>;

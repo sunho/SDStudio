@@ -1,5 +1,6 @@
 import { v4 } from 'uuid';
 import {
+  ImageAugmentInput,
   ImageGenInput,
   Model,
   NoiseSchedule,
@@ -409,7 +410,8 @@ class RemoveBgTaskHandler implements TaskHandler {
   checkTask(task: Task): boolean {
     return (
       task.params.job.type === 'augment' &&
-      task.params.job.backend.type === 'SD'
+      task.params.job.backend.type === 'SD' &&
+      task.params.job.method === 'bg-removal'
     );
   }
 
@@ -422,6 +424,71 @@ class RemoveBgTaskHandler implements TaskHandler {
     return {
       name: title,
       emoji: '🔪',
+    };
+  }
+
+  calculateCost(task: Task): CostItem[] {
+    return [];
+  }
+}
+
+class AugmentTaskHandler implements TaskHandler {
+  createTimeEstimator() {
+    return new TaskTimeEstimator(
+      TASK_TIME_ESTIMATOR_SAMPLE_COUNT,
+      TASK_DEFAULT_ESTIMATE,
+    );
+  }
+
+  async handleDelay(task: Task, numTry: number): Promise<void> {
+    await handleNAIDelay(numTry, false);
+  }
+
+  async handleTask(task: Task, run: TaskQueueRun) {
+    const outputFilePath =
+      task.params.outputPath + '/' + Date.now().toString() + '.png';
+    const job = task.params.job as AugmentJob;
+    let prompt = lowerPromptNode(job.prompt!);
+    const params: ImageAugmentInput = {
+      method: job.method,
+      outputFilePath: outputFilePath,
+      prompt: prompt,
+      emotion: job.emotion,
+      weaken: job.weaken,
+      image: job.image,
+      resolution: task.params.scene!.resolution as Resolution,
+    };
+    await backend.augmentImage(params);
+    if (task.params.onComplete) task.params.onComplete(outputFilePath);
+    if (task.params.scene.type === 'inpaint') {
+      imageService.onAddInPaint(
+        task.params.session,
+        task.params.scene.name,
+        outputFilePath,
+      );
+    } else {
+      imageService.onAddImage(
+        task.params.session,
+        task.params.scene.name,
+        outputFilePath,
+      );
+    }
+    return true;
+  }
+
+  checkTask(task: Task): boolean {
+    return task.params.job.type === 'augment';
+  }
+
+  getNumTries(task: Task) {
+    return 1;
+  }
+
+  getInfo(task: Task) {
+    const title = task.params.scene ? task.params.scene.name : '(none)';
+    return {
+      name: title,
+      emoji: '🎨',
     };
   }
 
@@ -710,6 +777,7 @@ export const taskHandlers = [
   new GenerateImageTaskHandler(true, 'i2i'),
   new GenerateImageTaskHandler(false, 'inpaint'),
   new GenerateImageTaskHandler(true, 'inpaint'),
+  new AugmentTaskHandler(),
   new RemoveBgTaskHandler(),
 ];
 
@@ -745,8 +813,9 @@ export const queueWorkflow = async (
 ) => {
   const [type, preset, shared, def] = session.getCommonSetup(workflow);
   const prompts = await def.createPrompt!(session, scene, preset, shared);
+  const scene_ = scene as Scene;
   for (const prompt of prompts) {
-    await def.handler(session, scene, prompt, preset, shared, samples);
+    await def.handler(session, scene, prompt, preset, shared, samples, scene_.meta.get(type));
   }
 };
 

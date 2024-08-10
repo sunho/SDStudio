@@ -48,22 +48,22 @@ const SDImageGenShared = new WFVarBuilder()
 
 const SDImageGenUI = wfiStack([
   wfiPresetSelect(),
-  wfiInlineInput('상위 프롬프트', 'frontPrompt', true, 'flex-1'),
+  wfiInlineInput('상위 프롬프트', 'frontPrompt', 'preset', 'flex-1'),
   wfiMiddlePlaceholderInput('중간 프롬프트 (이 씬에만 적용됨)'),
-  wfiInlineInput('하위 프롬프트', 'backPrompt', true, 'flex-1'),
-  wfiInlineInput('네거티브 프롬프트', 'uc', true, 'flex-1'),
-  wfiInlineInput('시드', 'seed', false, 'flex-none'),
+  wfiInlineInput('하위 프롬프트', 'backPrompt', 'preset', 'flex-1'),
+  wfiInlineInput('네거티브 프롬프트', 'uc', 'preset', 'flex-1'),
+  wfiInlineInput('시드', 'seed', 'shared', 'flex-none'),
   wfiGroup('샘플링 설정', [
     wfiPush('top'),
-    wfiInlineInput('스탭 수', 'steps', true, 'flex-none'),
-    wfiInlineInput('프롬프트 가이던스', 'promptGuidance', true, 'flex-none'),
-    wfiInlineInput('SMEA', 'smea', true, 'flex-none'),
-    wfiInlineInput('DYN', 'dyn', true, 'flex-none'),
-    wfiInlineInput('샘플링', 'sampling', true, 'flex-none'),
-    wfiInlineInput('노이즈 스케줄', 'noiseSchedule', true, 'flex-none'),
-    wfiInlineInput('CFG 리스케일', 'cfgRescale', true, 'flex-none'),
+    wfiInlineInput('스탭 수', 'steps', 'preset', 'flex-none'),
+    wfiInlineInput('프롬프트 가이던스', 'promptGuidance', 'preset', 'flex-none'),
+    wfiInlineInput('SMEA', 'smea', 'preset', 'flex-none'),
+    wfiInlineInput('DYN', 'dyn', 'preset', 'flex-none'),
+    wfiInlineInput('샘플링', 'sampling', 'preset', 'flex-none'),
+    wfiInlineInput('노이즈 스케줄', 'noiseSchedule', 'preset', 'flex-none'),
+    wfiInlineInput('CFG 리스케일', 'cfgRescale', 'preset', 'flex-none'),
   ]),
-  wfiInlineInput('바이브 설정', 'vibes', false, 'flex-none'),
+  wfiInlineInput('바이브 설정', 'vibes', 'shared', 'flex-none'),
 ]);
 
 const SDImageGenEasyShared = SDImageGenShared.clone()
@@ -73,28 +73,28 @@ const SDImageGenEasyShared = SDImageGenShared.clone()
 
 const SDImageGenEasyUI = wfiStack([
   wfiProfilePresetSelect(),
-  wfiInlineInput('캐릭터 관련 태그', 'characterPrompt', false, 'flex-1'),
+  wfiInlineInput('캐릭터 관련 태그', 'characterPrompt', 'shared', 'flex-1'),
   wfiMiddlePlaceholderInput('중간 프롬프트 (이 씬에만 적용됨)'),
-  wfiInlineInput('배경 관련 태그', 'backgroundPrompt', false, 'flex-1'),
-  wfiInlineInput('태그 밴 리스트', 'uc', false, 'flex-1'),
-  wfiInlineInput('시드', 'seed', false, 'flex-none'),
-  wfiInlineInput('바이브 설정', 'vibes', false, 'flex-none'),
+  wfiInlineInput('배경 관련 태그', 'backgroundPrompt', 'shared', 'flex-1'),
+  wfiInlineInput('태그 밴 리스트', 'uc', 'shared', 'flex-1'),
+  wfiInlineInput('시드', 'seed', 'shared', 'flex-none'),
+  wfiInlineInput('바이브 설정', 'vibes', 'shared', 'flex-none'),
 ]);
 
 const SDImageGenEasyInnerUI = wfiStack([
-  wfiInlineInput('상위 프롬프트', 'frontPrompt', true, 'flex-1'),
+  wfiInlineInput('상위 프롬프트', 'frontPrompt', 'preset', 'flex-1'),
   wfiMiddlePlaceholderInput('중간 프롬프트 (이 창에만 적용됨)'),
-  wfiInlineInput('하위 프롬프트', 'backPrompt', true, 'flex-1'),
-  wfiInlineInput('네거티브 프롬프트', 'uc', true, 'flex-1'),
+  wfiInlineInput('하위 프롬프트', 'backPrompt', 'preset', 'flex-1'),
+  wfiInlineInput('네거티브 프롬프트', 'uc', 'preset', 'flex-1'),
   wfiGroup('샘플링 설정', [
     wfiPush('top'),
-    wfiInlineInput('스탭 수', 'steps', true, 'flex-none'),
-    wfiInlineInput('프롬프트 가이던스', 'promptGuidance', true, 'flex-none'),
-    wfiInlineInput('SMEA', 'smea', true, 'flex-none'),
-    wfiInlineInput('DYN', 'dyn', true, 'flex-none'),
-    wfiInlineInput('샘플링', 'sampling', true, 'flex-none'),
-    wfiInlineInput('노이즈 스케줄', 'noiseSchedule', true, 'flex-none'),
-    wfiInlineInput('CFG 리스케일', 'cfgRescale', true, 'flex-none'),
+    wfiInlineInput('스탭 수', 'steps', 'preset', 'flex-none'),
+    wfiInlineInput('프롬프트 가이던스', 'promptGuidance', 'preset', 'flex-none'),
+    wfiInlineInput('SMEA', 'smea', 'preset', 'flex-none'),
+    wfiInlineInput('DYN', 'dyn', 'preset', 'flex-none'),
+    wfiInlineInput('샘플링', 'sampling', 'preset', 'flex-none'),
+    wfiInlineInput('노이즈 스케줄', 'noiseSchedule', 'preset', 'flex-none'),
+    wfiInlineInput('CFG 리스케일', 'cfgRescale', 'preset', 'flex-none'),
   ]),
 ]);
 
@@ -105,6 +105,7 @@ const SDImageGenHandler = async (
   preset: any,
   shared: any,
   samples: number,
+  meta?: any,
   onComplete?: (img: string) => void,
   nodelay?: boolean,
 ) => {
@@ -184,22 +185,22 @@ const SDInpaintPreset = new WFVarBuilder()
   .addNullIntVar('seed');
 
 const SDInpaintUI = wfiStack([
-  wfiInlineInput('이미지', 'image', true, 'flex-none'),
-  wfiInlineInput('인페인트 강도', 'strength', true, 'flex-none'),
-  wfiInlineInput('비마스크 영역 편집 방지', 'originalImage', true, 'flex-none'),
-  wfiInlineInput('프롬프트', 'prompt', true, 'flex-1'),
-  wfiInlineInput('네거티브 프롬프트', 'uc', true, 'flex-1'),
+  wfiInlineInput('이미지', 'image', 'preset', 'flex-none'),
+  wfiInlineInput('인페인트 강도', 'strength', 'preset', 'flex-none'),
+  wfiInlineInput('비마스크 영역 편집 방지', 'originalImage', 'preset', 'flex-none'),
+  wfiInlineInput('프롬프트', 'prompt', 'preset', 'flex-1'),
+  wfiInlineInput('네거티브 프롬프트', 'uc', 'preset', 'flex-1'),
   wfiGroup('샘플링 설정', [
     wfiPush('top'),
-    wfiInlineInput('스탭 수', 'steps', true, 'flex-none'),
-    wfiInlineInput('프롬프트 가이던스', 'promptGuidance', true, 'flex-none'),
-    wfiInlineInput('SMEA', 'smea', true, 'flex-none'),
-    wfiInlineInput('DYN', 'dyn', true, 'flex-none'),
-    wfiInlineInput('샘플링', 'sampling', true, 'flex-none'),
-    wfiInlineInput('노이즈 스케줄', 'noiseSchedule', true, 'flex-none'),
-    wfiInlineInput('CFG 리스케일', 'cfgRescale', true, 'flex-none'),
+    wfiInlineInput('스탭 수', 'steps', 'preset', 'flex-none'),
+    wfiInlineInput('프롬프트 가이던스', 'promptGuidance', 'preset', 'flex-none'),
+    wfiInlineInput('SMEA', 'smea', 'preset', 'flex-none'),
+    wfiInlineInput('DYN', 'dyn', 'preset', 'flex-none'),
+    wfiInlineInput('샘플링', 'sampling', 'preset', 'flex-none'),
+    wfiInlineInput('노이즈 스케줄', 'noiseSchedule', 'preset', 'flex-none'),
+    wfiInlineInput('CFG 리스케일', 'cfgRescale', 'preset', 'flex-none'),
   ]),
-  wfiInlineInput('바이브 설정', 'vibes', true, 'flex-none'),
+  wfiInlineInput('바이브 설정', 'vibes', 'preset', 'flex-none'),
   // wfiInlineInput('시드', 'seed', true, 'flex-none'),
 ]);
 
@@ -286,22 +287,22 @@ const SDI2IPreset = SDInpaintPreset.clone()
   .addIntVar('noise', 0, 1, 0.01, 0)
 
 const SDI2IUI = wfiStack([
-  wfiInlineInput('이미지', 'image', true, 'flex-none'),
-  wfiInlineInput('강도', 'strength', true, 'flex-none'),
-  wfiInlineInput('노이즈', 'noise', true, 'flex-none'),
-  wfiInlineInput('프롬프트', 'prompt', true, 'flex-1'),
-  wfiInlineInput('네거티브 프롬프트', 'uc', true, 'flex-1'),
+  wfiInlineInput('이미지', 'image', 'preset', 'flex-none'),
+  wfiInlineInput('강도', 'strength', 'preset', 'flex-none'),
+  wfiInlineInput('노이즈', 'noise', 'preset', 'flex-none'),
+  wfiInlineInput('프롬프트', 'prompt', 'preset', 'flex-1'),
+  wfiInlineInput('네거티브 프롬프트', 'uc', 'preset', 'flex-1'),
   wfiGroup('샘플링 설정', [
     wfiPush('top'),
-    wfiInlineInput('스탭 수', 'steps', true, 'flex-none'),
-    wfiInlineInput('프롬프트 가이던스', 'promptGuidance', true, 'flex-none'),
-    wfiInlineInput('SMEA', 'smea', true, 'flex-none'),
-    wfiInlineInput('DYN', 'dyn', true, 'flex-none'),
-    wfiInlineInput('샘플링', 'sampling', true, 'flex-none'),
-    wfiInlineInput('노이즈 스케줄', 'noiseSchedule', true, 'flex-none'),
-    wfiInlineInput('CFG 리스케일', 'cfgRescale', true, 'flex-none'),
+    wfiInlineInput('스탭 수', 'steps', 'preset', 'flex-none'),
+    wfiInlineInput('프롬프트 가이던스', 'promptGuidance', 'preset', 'flex-none'),
+    wfiInlineInput('SMEA', 'smea', 'preset', 'flex-none'),
+    wfiInlineInput('DYN', 'dyn', 'preset', 'flex-none'),
+    wfiInlineInput('샘플링', 'sampling', 'preset', 'flex-none'),
+    wfiInlineInput('노이즈 스케줄', 'noiseSchedule', 'preset', 'flex-none'),
+    wfiInlineInput('CFG 리스케일', 'cfgRescale', 'preset', 'flex-none'),
   ]),
-  wfiInlineInput('바이브 설정', 'vibes', true, 'flex-none'),
+  wfiInlineInput('바이브 설정', 'vibes', 'preset', 'flex-none'),
   // wfiInlineInput('시드', 'seed', true, 'flex-none'),
 ]);
 
