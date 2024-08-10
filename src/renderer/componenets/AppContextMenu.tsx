@@ -11,6 +11,7 @@ import {
   StyleContextAlt,
   ContextMenuType,
   genericSceneFromJSON,
+  GallaryImageContextAlt,
 } from '../models/types';
 
 export const AppContextMenu = observer(() => {
@@ -51,24 +52,26 @@ export const AppContextMenu = observer(() => {
       });
     }
   };
-  const duplicateImage = async (ctx: ImageContextAlt) => {
+  const duplicateImage = async (ctx: GallaryImageContextAlt) => {
     if (!ctx.scene) return;
-    const tmp = ctx.path.slice(0, ctx.path.lastIndexOf('/'));
-    await backend.copyFile(
-      ctx.path,
-      tmp + '/' + Date.now().toString() + '.png',
-    );
+    for (const path of ctx.path) {
+      const tmp = path.slice(0, path.lastIndexOf('/'));
+      await backend.copyFile(
+        path,
+        tmp + '/' + Date.now().toString() + '.png',
+      );
+    }
     imageService.refresh(appState.curSession!, ctx.scene);
     appState.pushDialog({
       type: 'yes-only',
       text: '이미지를 복제했습니다',
     });
   };
-  const copyImage = (ctx: ImageContextAlt) => {
+  const copyImage = (ctx: GallaryImageContextAlt) => {
     appState.pushDialog({
       type: 'dropdown',
       text: '이미지를 어디에 복사할까요?',
-      items: Object.keys(appState.curSession!.scenes).map((key) => ({
+      items: Array.from(appState.curSession!.scenes.keys()).map((key) => ({
         text: key,
         value: key,
       })),
@@ -80,13 +83,15 @@ export const AppContextMenu = observer(() => {
           return;
         }
 
-        await backend.copyFile(
-          ctx.path,
-          imageService.getImageDir(appState.curSession!, scene) +
-            '/' +
-            Date.now().toString() +
-            '.png',
-        );
+        for (const path of ctx.path) {
+          await backend.copyFile(
+            path,
+            imageService.getImageDir(appState.curSession!, scene) +
+              '/' +
+              Date.now().toString() +
+              '.png',
+          );
+        }
         imageService.refresh(appState.curSession!, scene);
         appState.pushDialog({
           type: 'yes-only',
@@ -95,38 +100,58 @@ export const AppContextMenu = observer(() => {
       },
     });
   };
-  const clipboardImage = async (ctx: ImageContextAlt) => {
-    await backend.copyImageToClipboard(ctx.path);
+  const clipboardImage = async (ctx: GallaryImageContextAlt) => {
+    await backend.copyImageToClipboard(ctx.path[0]);
   };
-  const favImage = (ctx: ImageContextAlt) => {
+  const favImage = (ctx: GallaryImageContextAlt) => {
     if (!ctx.scene) return;
-    const path = ctx.path.split('/').pop()!;
-    if (ctx.scene.mains.includes(path)) {
-      ctx.scene.mains.splice(ctx.scene.mains.indexOf(path), 1);
-    } else {
-      ctx.scene.mains.push(path);
+    for (const path_ of ctx.path) {
+      const path = path_.split('/').pop()!;
+      if (ctx.scene.mains.includes(path)) {
+        ctx.scene.mains.splice(ctx.scene.mains.indexOf(path), 1);
+      } else {
+        ctx.scene.mains.push(path);
+      }
     }
   };
-  const deleteImg = async (ctx: ImageContextAlt) => {
+  const deleteImg = async (ctx: GallaryImageContextAlt) => {
     appState.pushDialog({
       type: 'confirm',
       text: '정말로 삭제하시겠습니까?',
       callback: async () => {
-        await deleteImageFiles(appState.curSession!, [ctx.path], ctx.scene);
+        await deleteImageFiles(appState.curSession!, ctx.path, ctx.scene);
       }
     });
   };
   const handleImageItemClick = ({ id, props }: any) => {
+    const ctx2: GallaryImageContextAlt = {
+      ...props.ctx,
+      type: 'gallary_image',
+      path: [props.ctx.path],
+    };
     if (id === 'duplicate') {
-      duplicateImage(props.ctx as ImageContextAlt);
+      duplicateImage(ctx2);
     } else if (id === 'copy') {
-      copyImage(props.ctx as ImageContextAlt);
+      copyImage(ctx2);
     } else if (id === 'clipboard') {
-      clipboardImage(props.ctx as ImageContextAlt);
+      clipboardImage(ctx2);
     } else if (id === 'fav') {
-      favImage(props.ctx as ImageContextAlt);
+      favImage(ctx2);
     } else if (id === 'delete') {
-      deleteImg(props.ctx as ImageContextAlt);
+      deleteImg(ctx2);
+    }
+  };
+  const handleImageItemClick2 = ({ id, props }: any) => {
+    if (id === 'duplicate') {
+      duplicateImage(props.ctx);
+    } else if (id === 'copy') {
+      copyImage(props.ctx);
+    } else if (id === 'clipboard') {
+      clipboardImage(props.ctx);
+    } else if (id === 'fav') {
+      favImage(props.ctx);
+    } else if (id === 'delete') {
+      deleteImg(props.ctx);
     }
   };
   const exportStyle = async (ctx: StyleContextAlt) => {
@@ -176,20 +201,20 @@ export const AppContextMenu = observer(() => {
         </Item>
       </Menu>
       <Menu id={ContextMenuType.GallaryImage}>
-        <Item id="fav" onClick={handleImageItemClick}>
+        <Item id="fav" onClick={handleImageItemClick2}>
           즐겨찾기 토글
         </Item>
-        <Item id="delete" onClick={handleImageItemClick}>
+        <Item id="delete" onClick={handleImageItemClick2}>
           해당 이미지 삭제
         </Item>
-        <Item id="duplicate" onClick={handleImageItemClick}>
+        <Item id="duplicate" onClick={handleImageItemClick2}>
           해당 이미지 복제
         </Item>
-        <Item id="copy" onClick={handleImageItemClick}>
+        <Item id="copy" onClick={handleImageItemClick2}>
           다른 씬으로 이미지 복사
         </Item>
         {!isMobile && (
-          <Item id="clipboard" onClick={handleImageItemClick}>
+          <Item id="clipboard" onClick={handleImageItemClick2}>
             클립보드로 이미지 복사
           </Item>
         )}
