@@ -19,6 +19,7 @@ export interface NovelAiFetcher {
 export class NovelAiImageGenService implements ImageGenService {
   constructor(fetcher: NovelAiFetcher) {
     this.apiEndpoint = 'https://api.novelai.net';
+    this.apiEndpoint2 = 'https://image.novelai.net';
     this.headers = {
       'Content-Type': 'application/json',
     };
@@ -67,6 +68,7 @@ export class NovelAiImageGenService implements ImageGenService {
   }
 
   private apiEndpoint: string;
+  private apiEndpoint2: string;
   private headers: any;
   private fetcher: NovelAiFetcher;
 
@@ -193,7 +195,7 @@ export class NovelAiImageGenService implements ImageGenService {
     };
 
     const arrayBuffer = await this.fetcher.fetchArrayBuffer(
-      url + '/ai/generate-image',
+      this.apiEndpoint2 + '/ai/generate-image',
       body,
       headers,
     );
@@ -236,14 +238,22 @@ export class NovelAiImageGenService implements ImageGenService {
       width: resolutionValue.width,
       height: resolutionValue.height,
     };
+    if (params.method !== 'emotion' && params.method !== 'colorize') {
+      body.defry = undefined;
+      body.prompt = undefined;
+    }
+    if (params.method === 'emotion') {
+      body.prompt = params.emotion! + ';;' + body.prompt;
+    }
 
+    console.log(body);
     const headers = {
       Authorization: `Bearer ${authorization}`,
       'Content-Type': 'application/json',
     };
 
     const arrayBuffer = await this.fetcher.fetchArrayBuffer(
-      url + '/ai/augment-image',
+      this.apiEndpoint2 + '/ai/augment-image',
       body,
       headers,
     );
@@ -253,7 +263,7 @@ export class NovelAiImageGenService implements ImageGenService {
       throw new Error('No entries found in the ZIP file');
     }
 
-    const imageEntry = zip.file(zipEntries[0])!;
+    const imageEntry = zip.file(zipEntries[zipEntries.length-1])!;
     return await imageEntry.async('base64');
   }
 }

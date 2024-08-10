@@ -15,6 +15,7 @@ export interface WorkFlowDef {
   title: string;
   presetVars: WFVar[];
   sharedVars: WFVar[];
+  metaVars: WFVar[];
   backendType: WFBackendType;
   editor: WFIElement;
   innerEditor?: WFIElement;
@@ -32,6 +33,7 @@ export type WFHandler = (
   preset: any,
   shared: any,
   samples: number,
+  meta?: any,
   onComplete?: (img: string) => void,
   nodelay?: boolean,
 ) => void | Promise<void>;
@@ -108,6 +110,17 @@ export interface WFMaskVar extends WFAbstractVar {
   imageRef: string;
 }
 
+export interface WFSelectItem {
+  label: string;
+  value: string;
+}
+
+export interface WFSelectVar extends WFAbstractVar {
+  type: 'select';
+  options: WFSelectItem[];
+  default: string;
+}
+
 export type WFVar =
   | WFIntVar
   | WFVibeSetVar
@@ -119,7 +132,10 @@ export type WFVar =
   | WFMaskVar
   | WFBackendVar
   | WFNullIntVar
-  | WFStringVar;
+  | WFStringVar
+  | WFSelectVar;
+
+export type WFFieldType = 'preset' | 'shared' | 'meta';
 
 export type WFIFlex = 'flex-1' | 'flex-2' | 'flex-none';
 
@@ -142,8 +158,9 @@ export interface WFIInlineInput extends WFIAbstract {
   type: 'inline';
   label: string;
   field: string;
-  preset: boolean;
+  fieldType: WFFieldType;
   flex: WFIFlex;
+  menuPlacement?: 'top' | 'bottom';
 }
 
 export interface WFIGroup extends WFIAbstract {
@@ -152,9 +169,28 @@ export interface WFIGroup extends WFIAbstract {
   inputs: WFIElement[];
 }
 
+export interface WFIIfIn extends WFIAbstract {
+  type: 'ifIn';
+  field: string;
+  fieldType: WFFieldType;
+  values: string[];
+  element: WFIElement;
+}
+
+export interface WFISceneOnly extends WFIAbstract {
+  type: 'sceneOnly';
+  element: WFIElement;
+}
+
 export interface WFIMiddlePlaceholderInput extends WFIAbstract {
   type: 'middlePlaceholder';
   label: string;
+}
+
+export interface WFIShowImage extends WFIAbstract {
+  type: 'showImage';
+  field: string;
+  fieldType: WFFieldType;
 }
 
 export interface WFIPush extends WFIAbstract {
@@ -169,7 +205,10 @@ export type WFIElement =
   | WFIInlineInput
   | WFIGroup
   | WFIMiddlePlaceholderInput
-  | WFIPush;
+  | WFIPush
+  | WFIIfIn
+  | WFISceneOnly
+  | WFIShowImage;
 
 function createDefaultValue(varObj: WFVar) {
   switch (varObj.type) {
@@ -195,6 +234,8 @@ function createDefaultValue(varObj: WFVar) {
       return null;
     case 'string':
       return (varObj as WFStringVar).default;
+    case 'select':
+      return (varObj as WFSelectVar).default;
     default:
       throw new Error('Unknown type');
   }
@@ -356,6 +397,16 @@ export class WFVarBuilder {
     return this;
   }
 
+  addSelectVar(name: string, options: WFSelectItem[], defaultValue: string): this {
+    this.vars.push({
+      type: 'select',
+      name,
+      options,
+      default: defaultValue,
+    });
+    return this;
+  }
+
   build(): WFVar[] {
     return this.vars;
   }
@@ -377,6 +428,10 @@ export class WFWorkFlow {
 
   buildShared() {
     return materializeWFObj(this.def.type, this.def.sharedVars);
+  }
+
+  buildMeta() {
+    return materializeWFObj(this.def.type, this.def.metaVars);
   }
 
   buildPreset() {
@@ -405,6 +460,12 @@ export class WFWorkFlow {
     shared.fromJSON(json);
     return shared;
   }
+
+  metaFromJSON(json: any) {
+    const meta = this.buildMeta();
+    meta.fromJSON(json);
+    return meta;
+  }
 }
 
 export function wfiPresetSelect(): WFIPresetSelect {
@@ -422,10 +483,11 @@ export function wfiStack(inputs: WFIElement[]): WFIStack {
 export function wfiInlineInput(
   label: string,
   field: string,
-  preset: boolean,
+  fieldType: WFFieldType,
   flex: WFIFlex,
+  menuPlacment?: 'top' | 'bottom',
 ): WFIInlineInput {
-  return { type: 'inline', label, field, preset, flex };
+  return { type: 'inline', label, field, fieldType, flex, menuPlacement: menuPlacment };
 }
 
 export function wfiGroup(label: string, inputs: WFIElement[]): WFIGroup {
@@ -444,6 +506,26 @@ export function wfiPush(
   return { type: 'push', direction };
 }
 
+export function wfiIfIn(
+  field: string,
+  fieldType: WFFieldType,
+  values: string[],
+  element: WFIElement,
+): WFIIfIn {
+  return { type: 'ifIn', field, fieldType, values, element };
+}
+
+export function wfiSceneOnly(element: WFIElement): WFISceneOnly {
+  return { type: 'sceneOnly', element };
+}
+
+export function wfiShowImage(
+  field: string,
+  fieldType: WFFieldType,
+): WFIShowImage {
+  return { type: 'showImage', field, fieldType };
+}
+
 export class WFDefBuilder {
   private workflowDef: WorkFlowDef;
 
@@ -452,6 +534,7 @@ export class WFDefBuilder {
       type,
       presetVars: [],
       sharedVars: [],
+      metaVars: [],
       backendType: 'none',
       editor: null as any,
       innerEditor: null as any,
@@ -473,6 +556,11 @@ export class WFDefBuilder {
 
   setSharedVars(sharedVars: WFVar[]): this {
     this.workflowDef.sharedVars = sharedVars;
+    return this;
+  }
+
+  setMetaVars(metaVars: WFVar[]): this {
+    this.workflowDef.metaVars = metaVars;
     return this;
   }
 

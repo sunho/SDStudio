@@ -384,6 +384,7 @@ function migrateScene(scene: any): IScene {
     resolution: scene.resolution,
     slots: scene.slots.map((slot:any) => slot.map(migratePromptPiece)),
     game: scene.game,
+    meta: {},
     round: migrateRound(scene.round),
     imageMap: scene.imageMap,
     mains: scene.mains,

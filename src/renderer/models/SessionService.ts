@@ -57,6 +57,7 @@ export class SessionService extends ResourceSyncService<Session> {
             slots: [[{ prompt: '', id: v4() }]],
             game: undefined,
             round: undefined,
+            meta: {},
             imageMap: [],
             mains: [],
           },

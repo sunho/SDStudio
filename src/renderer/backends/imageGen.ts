@@ -86,6 +86,8 @@ export type AugmentMethod =
 
 export interface ImageAugmentInput {
   method: AugmentMethod;
+  outputFilePath: string;
+  emotion?: string;
   prompt?: string;
   weaken?: number;
   image: string;

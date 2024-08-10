@@ -384,6 +384,7 @@ const QueueControl = observer(
                   slots: [[{ id: v4(), prompt: '', enabled: true }]],
                   mains: [],
                   imageMap: [],
+                  meta: {},
                   round: undefined,
                   game: undefined,
                 }),
