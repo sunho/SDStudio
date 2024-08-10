@@ -1,5 +1,5 @@
 import { WFWorkFlow, WorkFlowDef } from './WorkFlow';
-import { Session, GenericScene, PromptNode } from '../types';
+import { Session, GenericScene, PromptNode, SDAbstractJob } from '../types';
 
 export enum WorkFlowCategoryFlag {
   General = 1 << 0,
@@ -102,6 +102,19 @@ export class WorkFlowService {
       throw new Error(`Unknown workflow type: ${type}`);
     }
     return await wf.def.createPrompt!(session, scene, preset, shared);
+  }
+
+  createPreset(
+    type: string,
+    job: SDAbstractJob<string>,
+    image?: string,
+    mask?: string
+  ) {
+    const wf = this.workflows.get(type);
+    if (!wf) {
+      throw new Error(`Unknown workflow type: ${type}`);
+    }
+    return wf.def.createPreset!(job, image, mask);
   }
 
   async pushJob(

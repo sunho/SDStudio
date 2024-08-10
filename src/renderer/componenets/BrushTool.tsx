@@ -299,7 +299,7 @@ const BrushTool = forwardRef<BrushToolRef, Props>(
 
     return (
       <div className="canvas-container overflow-auto w-full md:w-auto h-auto md:h-full ">
-        {loaded && <img src={image} className="canvas-image" />}
+        {loaded && <img src={image} className="canvas-image" draggable={false} />}
         <canvas
           className="canvas"
           ref={canvasRef}

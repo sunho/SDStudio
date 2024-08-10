@@ -146,6 +146,7 @@ export const ExternalImageView = observer(
         <div className="flex-1 overflow-hidden">
           <img
             src={base64ToDataUri(image)}
+            draggable={false}
             className="w-full h-full object-contain bg-checkboard"
           />
         </div>

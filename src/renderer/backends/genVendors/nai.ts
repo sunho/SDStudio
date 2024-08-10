@@ -29,6 +29,7 @@ export class NovelAiImageGenService implements ImageGenService {
     const modelMap = {
       anime: 'nai-diffusion-3',
       inpaint: 'nai-diffusion-3-inpainting',
+      i2i: 'nai-diffusion-3',
     } as const;
     return modelMap[model];
   }
@@ -115,11 +116,23 @@ export class NovelAiImageGenService implements ImageGenService {
     const resolutionValue = this.translateResolution(params.resolution);
     const samplingValue = this.translateSampling(params.sampling);
 
+    const seed = params.seed ?? this.getRandomInt(1, 2100000000);
+    let action = undefined;
+    switch (params.model) {
+    case Model.Anime:
+      break;
+    case Model.Inpaint:
+      action = 'infill';
+      break;
+    case Model.I2I:
+      action = 'img2img'
+      break;
+    }
     const url = this.apiEndpoint;
     const body: any = {
       input: params.prompt,
       model: modelValue,
-      action: params.model == Model.Inpaint ? 'infill' : undefined,
+      action: action,
       parameters: {
         width: resolutionValue.width,
         height: resolutionValue.height,
@@ -130,9 +143,9 @@ export class NovelAiImageGenService implements ImageGenService {
         uncond_scale: 1,
         sampler: samplingValue,
         steps: params.steps,
-        noise: 0,
-        seed: params.seed ?? this.getRandomInt(1, 2100000000),
-        extra_noise_seed: this.getRandomInt(1, 2100000000),
+        noise: params.noise,
+        seed: seed,
+        extra_noise_seed: seed,
         n_samples: 1,
         ucPreset: 3,
         sm: params.sampling === Sampling.DDIM ? false : params.sm,
@@ -162,6 +175,8 @@ export class NovelAiImageGenService implements ImageGenService {
     }
     if (params.image) {
       body.parameters.image = params.image;
+    }
+    if (params.mask) {
       body.parameters.mask = params.mask;
     }
     if (params.model === Model.Inpaint) {

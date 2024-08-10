@@ -1,6 +1,7 @@
 export enum Model {
   Anime = 'anime',
   Inpaint = 'inpaint',
+  I2I = 'i2i',
 }
 
 export enum Resolution {
@@ -69,6 +70,7 @@ export interface ImageGenInput {
   vibes: Vibe[];
   image?: string;
   mask?: string;
+  noise?: number;
   imageStrength?: number;
   seed?: number;
   originalImage?: boolean;

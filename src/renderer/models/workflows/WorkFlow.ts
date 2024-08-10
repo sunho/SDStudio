@@ -3,6 +3,7 @@ import {
   GenericScene,
   ModelBackend,
   PromptNode,
+  SDAbstractJob,
   Session,
   VibeItem,
 } from '../types';
@@ -21,6 +22,7 @@ export interface WorkFlowDef {
   i2i: boolean;
   handler: WFHandler;
   createPrompt?: WFCreatePrompt;
+  createPreset?: WFCreatePreset;
 }
 
 export type WFHandler = (
@@ -33,12 +35,19 @@ export type WFHandler = (
   onComplete?: (img: string) => void,
   nodelay?: boolean,
 ) => void | Promise<void>;
+
 export type WFCreatePrompt = (
   session: Session,
   scene: GenericScene,
   preset: any,
   shared: any,
 ) => PromptNode[] | Promise<PromptNode[]>;
+
+export type WFCreatePreset = (
+  job: SDAbstractJob<string>,
+  image?: string,
+  mask?: string
+) => any;
 
 export interface WFAbstractVar {
   name: string;
@@ -494,6 +503,11 @@ export class WFDefBuilder {
 
   setCreatePrompt(createPrompt: WFCreatePrompt): this {
     this.workflowDef.createPrompt = createPrompt;
+    return this;
+  }
+
+  setCreatePreset(createPreset: WFCreatePreset): this {
+    this.workflowDef.createPreset = createPreset;
     return this;
   }
 

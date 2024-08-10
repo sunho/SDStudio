@@ -105,6 +105,7 @@ export const CellPreview = ({
     <div className="relative" style={style}>
       {image && (
         <img
+          draggable={false}
           src={image}
           style={{
             maxWidth: cellSize,
@@ -300,6 +301,7 @@ const Cell = memo(
                   maxWidth: cellSize,
                   maxHeight: cellSize,
                 }}
+                draggable={false}
                 onContextMenu={(e) => {
                   show({
                     event: e,
@@ -697,6 +699,7 @@ const ResultDetailView = observer(
           {image && (
             <img
               src={image}
+              draggable={false}
               onContextMenu={(e) => {
                 show({
                   event: e,

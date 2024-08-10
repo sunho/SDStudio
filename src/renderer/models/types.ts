@@ -78,6 +78,13 @@ export interface SDInpaintJob extends SDAbstractJob<PromptNode> {
   originalImage?: boolean;
 }
 
+export interface SDI2IJob extends SDAbstractJob<PromptNode> {
+  type: 'sd_i2i';
+  image: string;
+  strength: number;
+  noise: number;
+}
+
 export interface AugmentJob extends AbstractJob {
   type: 'augment';
   image: string;
@@ -93,7 +100,7 @@ export interface UpscaleJob extends AbstractJob {
   resolution: string;
 }
 
-export type Job = SDJob | SDInpaintJob | AugmentJob | UpscaleJob;
+export type Job = SDJob | SDInpaintJob | AugmentJob | UpscaleJob | SDI2IJob;
 
 export interface IPiece {
   name: string;

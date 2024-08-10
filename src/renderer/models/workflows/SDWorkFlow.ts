@@ -18,6 +18,7 @@ import {
   SDAbstractJob,
   PromptNode,
   SDInpaintJob,
+  SDI2IJob,
 } from '../types';
 import {
   createSDPrompts,
@@ -202,64 +203,58 @@ const SDInpaintUI = wfiStack([
   // wfiInlineInput('시드', 'seed', true, 'flex-none'),
 ]);
 
-const SDInpaintHandler = async (
-  session: Session,
-  scene: GenericScene,
-  prompt: PromptNode,
-  preset: any,
-  shared: any,
-  samples: number,
-  onComplete?: (img: string) => void,
-) => {
-  const image = dataUriToBase64(
-    (await imageService.fetchVibeImage(session, preset.image))!,
-  );
-  const mask = dataUriToBase64(
-    (await imageService.fetchVibeImage(session, preset.mask))!,
-  );
-  const job: SDInpaintJob = {
-    type: 'sd_inpaint',
-    cfgRescale: preset.cfgRescale,
-    steps: preset.steps,
-    promptGuidance: preset.promptGuidance,
-    smea: preset.smea,
-    dyn: preset.dyn,
-    prompt: { type: 'text', text: preset.prompt },
-    sampling: preset.sampling,
-    uc: preset.uc,
-    noiseSchedule: preset.noiseSchedule,
-    backend: preset.backend,
-    vibes: preset.vibes,
-    strength: preset.strength,
-    originalImage: preset.originalImage,
-    image: image,
-    mask: mask,
+const createSDI2IHandler = (type: string) => {
+  const handler = async (
+    session: Session,
+    scene: GenericScene,
+    prompt: PromptNode,
+    preset: any,
+    shared: any,
+    samples: number,
+    onComplete?: (img: string) => void,
+  ) => {
+    const image = dataUriToBase64(
+      (await imageService.fetchVibeImage(session, preset.image))!,
+    );
+    const isInpaint = type === 'SDInpaint';
+    const getMask = async () => dataUriToBase64(
+      (await imageService.fetchVibeImage(session, preset.mask))!,
+    );
+    const job: SDInpaintJob | SDI2IJob = {
+      type: isInpaint ? 'sd_inpaint' : 'sd_i2i',
+      cfgRescale: preset.cfgRescale,
+      steps: preset.steps,
+      promptGuidance: preset.promptGuidance,
+      smea: preset.smea,
+      dyn: preset.dyn,
+      prompt: { type: 'text', text: preset.prompt },
+      sampling: preset.sampling,
+      uc: preset.uc,
+      noiseSchedule: preset.noiseSchedule,
+      backend: preset.backend,
+      vibes: preset.vibes,
+      strength: preset.strength,
+      originalImage: isInpaint ? preset.originalImage : true,
+      image: image,
+      mask: isInpaint ? await getMask() : '',
+      noise: isInpaint ? undefined : preset.noise,
+    };
+    const param: TaskParam = {
+      session: session,
+      job: job,
+      scene: scene,
+      outputPath: imageService.getOutputDir(session, scene),
+      onComplete: onComplete,
+    };
+    taskQueueService.addTask(param, samples);
   };
-  const param: TaskParam = {
-    session: session,
-    job: job,
-    scene: scene,
-    outputPath: imageService.getOutputDir(session, scene),
-    onComplete: onComplete,
-  };
-  taskQueueService.addTask(param, samples);
+  return handler;
 };
 
-export const SDInpaintDef = new WFDefBuilder('SDInpaint')
-  .setTitle('인페인트')
-  .setBackendType('image')
-  .setI2I(true)
-  .setHasMask(true)
-  .setPresetVars(SDInpaintPreset.build())
-  .setSharedVars(new WFVarBuilder().build())
-  .setEditor(SDInpaintUI)
-  .setHandler(SDInpaintHandler)
-  .build();
-
 export function createInpaintPreset(
-  image: string,
-  mask: string,
   job: SDAbstractJob<string>,
+  image?: string,
+  mask?: string,
 ): any {
   const preset = workFlowService.buildPreset('SDInpaint');
   preset.image = image;
@@ -274,3 +269,68 @@ export function createInpaintPreset(
   preset.uc = job.uc;
   return preset;
 }
+
+export const SDInpaintDef = new WFDefBuilder('SDInpaint')
+  .setTitle('인페인트')
+  .setBackendType('image')
+  .setI2I(true)
+  .setHasMask(true)
+  .setPresetVars(SDInpaintPreset.build())
+  .setSharedVars(new WFVarBuilder().build())
+  .setEditor(SDInpaintUI)
+  .setHandler(createSDI2IHandler('SDInpaint'))
+  .setCreatePreset(createInpaintPreset)
+  .build();
+
+const SDI2IPreset = SDInpaintPreset.clone()
+  .addIntVar('noise', 0, 1, 0.01, 0)
+
+const SDI2IUI = wfiStack([
+  wfiInlineInput('이미지', 'image', true, 'flex-none'),
+  wfiInlineInput('강도', 'strength', true, 'flex-none'),
+  wfiInlineInput('노이즈', 'noise', true, 'flex-none'),
+  wfiInlineInput('프롬프트', 'prompt', true, 'flex-1'),
+  wfiInlineInput('네거티브 프롬프트', 'uc', true, 'flex-1'),
+  wfiGroup('샘플링 설정', [
+    wfiPush('top'),
+    wfiInlineInput('스탭 수', 'steps', true, 'flex-none'),
+    wfiInlineInput('프롬프트 가이던스', 'promptGuidance', true, 'flex-none'),
+    wfiInlineInput('SMEA', 'smea', true, 'flex-none'),
+    wfiInlineInput('DYN', 'dyn', true, 'flex-none'),
+    wfiInlineInput('샘플링', 'sampling', true, 'flex-none'),
+    wfiInlineInput('노이즈 스케줄', 'noiseSchedule', true, 'flex-none'),
+    wfiInlineInput('CFG 리스케일', 'cfgRescale', true, 'flex-none'),
+  ]),
+  wfiInlineInput('바이브 설정', 'vibes', true, 'flex-none'),
+  // wfiInlineInput('시드', 'seed', true, 'flex-none'),
+]);
+
+function createI2IPreset(
+  job: SDAbstractJob<string>,
+  image?: string,
+  mask?: string,
+): any {
+  const preset = workFlowService.buildPreset('SDI2I');
+  preset.image = image;
+  preset.mask = mask;
+  preset.cfgRescale = job.cfgRescale;
+  preset.promptGuidance = job.promptGuidance;
+  preset.smea = job.smea;
+  preset.dyn = job.dyn;
+  preset.sampling = job.sampling;
+  preset.noiseSchedule = job.noiseSchedule;
+  preset.prompt = job.prompt;
+  preset.uc = job.uc;
+  return preset;
+}
+
+export const SDI2IDef = new WFDefBuilder('SDI2I')
+  .setTitle('이미지 투 이미지')
+  .setBackendType('image')
+  .setI2I(true)
+  .setPresetVars(SDI2IPreset.build())
+  .setSharedVars(new WFVarBuilder().build())
+  .setEditor(SDI2IUI)
+  .setHandler(createSDI2IHandler('SDI2I'))
+  .setCreatePreset(createI2IPreset)
+  .build();
