@@ -21,6 +21,7 @@ const ConfigScreen = observer(({ onSave }: ConfigScreenProps) => {
   const [useGPU, setUseGPU] = useState(false);
   const [whiteMode, setWhiteMode] = useState(false);
   const [noIpCheck, setNoIpCheck] = useState(false);
+  const [useLocalBgRemoval, setUseLocalBgRemoval] = useState(false);
   const [refreshImage, setRefreshImage] = useState(false);
   const [ready, setReady] = useState(false);
   const [quality, setQuality] = useState('');
@@ -38,6 +39,7 @@ const ConfigScreen = observer(({ onSave }: ConfigScreenProps) => {
       setQuality(config.removeBgQuality ?? 'normal');
       setNoIpCheck(config.noIpCheck ?? false);
       setRefreshImage(config.refreshImage ?? false);
+      setUseLocalBgRemoval(config.useLocalBgRemoval ?? false);
     })();
     const checkReady = () => {
       setReady(localAIService.ready);
@@ -176,6 +178,12 @@ const ConfigScreen = observer(({ onSave }: ConfigScreenProps) => {
                 <option value="mspaint">그림판</option>
               </select>
             </div>
+            <label
+              className="block text-sm gray-label"
+            >
+              로컬 배경 제거 모델 사용{' '}
+              <input type="checkbox" checked={useLocalBgRemoval} onChange={(e) => setUseLocalBgRemoval(e.target.checked)} />
+            </label>
             {!ready && (
               <div className="mt-4">
                 <button
@@ -185,7 +193,7 @@ const ConfigScreen = observer(({ onSave }: ConfigScreenProps) => {
                   }}
                 >
                   {!localAIService.downloading
-                    ? '배경 제거 기능 활성화 (배경 제거 모델을 설치)'
+                    ? '로커 배경 제거 모델 설치'
                     : stageTexts[stage] + ` (${(progress * 100).toFixed(2)}%)`}
                 </button>
               </div>
@@ -301,6 +309,7 @@ const ConfigScreen = observer(({ onSave }: ConfigScreenProps) => {
               noIpCheck: noIpCheck,
               refreshImage: refreshImage,
               whiteMode: whiteMode,
+              useLocalBgRemoval: useLocalBgRemoval,
             };
             await backend.setConfig(config);
             if (old.useCUDA !== useGPU) localAIService.modelChanged();
