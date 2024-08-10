@@ -115,7 +115,6 @@ export class AppState {
                 text: '그림체를 임포트 했습니다',
               });
             } else {
-              console.log("external");
               this.externalImage = base64;
             }
           } catch (e) {}
@@ -189,7 +188,6 @@ export class AppState {
                     cur.scenes.get(key)!.resolution = newJson.scenes[key].resolution;
                   } else {
                     const scene = newJson.scenes[key];
-                    console.log(key, scene);
                     cur.scenes.set(key, Scene.fromJSON(scene));
                     cur.scenes.get(key)!.mains = [];
                     cur.scenes.get(key)!.game = undefined;

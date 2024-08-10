@@ -262,14 +262,6 @@ const Cell = memo(
             } else {
               mscene.imageMap.splice(dropImageIndex + 1, 0, draggedPath);
             }
-            console.log(
-              dropPlayer,
-              draggedPlayer,
-              dropImageIndex,
-              draggedImageIndex,
-            );
-            console.log(mscene.game);
-            console.log(mscene.imageMap);
             await imageService.refresh(curSession!, mscene);
           }
         },

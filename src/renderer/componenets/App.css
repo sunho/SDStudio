@@ -338,14 +338,15 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 .wrapper {
-  height: 50% !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 @media (min-width: 768px) {
-  .wrapper {
+  /* .wrapper {
     width: 50% !important;
     height: 100% !important;
-  }
+  } */
 }
 
 @media (min-width: 1280px) {

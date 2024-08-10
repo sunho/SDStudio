@@ -167,7 +167,6 @@ export const App = observer(() => {
   useEffect(() => {
     const removeDonwloadProgressListener = backend.onDownloadProgress(
       (progress: any) => {
-        console.log(progress);
         localAIService.notifyDownloadProgress(progress.percent);
       },
     );
@@ -180,7 +179,6 @@ export const App = observer(() => {
     });
     const removeImageChangedListener = backend.onImageChanged(
       async (path: string) => {
-        console.log('image-changed', path);
         imageService.invalidateCache(path);
       },
     );

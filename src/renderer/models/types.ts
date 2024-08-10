@@ -354,7 +354,6 @@ export class Session implements Serealizable {
 
   @action
   addScene(scene: GenericScene): void {
-    console.log('name', scene.name);
     if (scene.type === 'scene') {
       this.scenes.set(scene.name, scene);
     } else {

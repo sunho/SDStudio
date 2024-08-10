@@ -279,7 +279,6 @@ const TaskQueueControl = observer(({}) => {
           onClick={() => {
             (async () => {
               const costs = taskQueueService.calculateCost();
-              console.log("costs", costs);
               const message = costs.map(x=>(`${x.text} (씬: ${x.scene})`)).slice(0,10).join('\n');
               if (costs.length > 0) {
                 appState.pushDialog({

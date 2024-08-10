@@ -281,9 +281,7 @@ async function migrateSessionLegacy(session: any) {
 }
 
 export async function migrateSession(oldSession: any): Promise<ISession> {
-  console.log(oldSession);
   await migrateSessionLegacy(oldSession);
-  console.log("b2");
   const newSession: ISession = {
     version: 1,
     name: oldSession.name,
@@ -331,7 +329,6 @@ export async function migrateSession(oldSession: any): Promise<ISession> {
     newSession.presetShareds[newShared.type] = newShared;
   }
 
-  console.log(newSession);
   return newSession;
 }
 

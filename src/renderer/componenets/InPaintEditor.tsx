@@ -20,6 +20,7 @@ import { appState } from '../models/AppService';
 import { observer } from 'mobx-react-lite';
 import { InnerPreSetEditor } from './PreSetEdtior';
 import { reaction } from 'mobx';
+import { FloatView } from './FloatView';
 
 interface Props {
   editingScene: InpaintScene;
@@ -44,6 +45,7 @@ const InPaintEditor = observer(
     const [mask, setMask] = useState<string | undefined>(undefined);
     const [brushSize, setBrushSize] = useState(brushSizeSaved);
     const [brushing, setBrushing] = useState(true);
+    const [open, setOpen] = useState(false);
     const def = workFlowService.getDef(editingScene.workflowType);
     useEffect(() => {
       if (isMobile) {
@@ -140,8 +142,8 @@ const InPaintEditor = observer(
 
     const brushTool = useRef<BrushToolRef | null>(null);
     return (
-      <div className="md:flex py-4 h-full w-full overflow-hidden">
-        <div className="px-3 flex flex-col grow-0 h-1/2 md:h-auto md:w-1/2 xl:w-1/3 gap-2 overflow-hidden">
+      <div className="flex flex-col md:flex-row py-3 h-full w-full overflow-hidden">
+        <div className="px-3 flex flex-col flex-none md:h-auto md:w-1/2 xl:w-1/3 gap-2 overflow-hidden">
           <div className="flex flex-wrap gap-2">
             <div className="mb-1 flex items-center gap-3 flex-none">
               <label className="gray-label">씬 이름: </label>
@@ -192,7 +194,21 @@ const InPaintEditor = observer(
               </div>
             </div>
           </div>
-          <div className="flex-1">
+          {open && <FloatView priority={1} onEscape={() => setOpen(false)}>
+            <InnerPreSetEditor
+              type={editingScene.workflowType}
+              preset={editingScene.preset}
+              shared={undefined}
+              element={workFlowService.getI2IEditor(editingScene.workflowType)}
+              middlePromptMode={false}
+            />
+          </FloatView>}
+          <div className="flex-none md:hidden mb-2">
+            <button className="round-button back-sky w-full" onClick={() => setOpen(true)}>
+              씬 세팅 열기
+            </button>
+          </div>
+          <div className="flex-1 hidden md:block overflow-hidden">
             <InnerPreSetEditor
               nopad
               type={editingScene.workflowType}
@@ -249,26 +265,28 @@ const InPaintEditor = observer(
             </div>
           )}
         </div>
-        <TransformWrapper
-          disabled={def.hasMask && brushing}
-          centerOnInit={true}
-        >
-          <TransformComponent wrapperClass="wrapper flex-none items-center justify-center">
-            <BrushTool
-              brushSize={brushSize}
-              mask={mask ? base64ToDataUri(mask) : undefined}
-              ref={brushTool}
-              image={base64ToDataUri(image)}
-              imageWidth={width}
-              imageHeight={height}
-            />
-          </TransformComponent>
-          {!isMobile && def.hasMask && (
-            <div className="canvas-tooltip dark:text-white dark:bg-gray-600">
-              ctrl+z 로 실행 취소 가능
-            </div>
-          )}
-        </TransformWrapper>
+        <div className="flex-1 overflow-hidden">
+          <TransformWrapper
+            disabled={def.hasMask && brushing}
+            centerOnInit={true}
+          >
+            <TransformComponent wrapperClass="wrapper flex-none items-center justify-center">
+              <BrushTool
+                brushSize={brushSize}
+                mask={mask ? base64ToDataUri(mask) : undefined}
+                ref={brushTool}
+                image={base64ToDataUri(image)}
+                imageWidth={width}
+                imageHeight={height}
+              />
+            </TransformComponent>
+            {!isMobile && def.hasMask && (
+              <div className="canvas-tooltip dark:text-white dark:bg-gray-600">
+                ctrl+z 로 실행 취소 가능
+              </div>
+            )}
+          </TransformWrapper>
+        </div>
       </div>
     );
   },
