@@ -28,7 +28,7 @@ import {
   dataUriToBase64,
   deleteImageFiles,
 } from '../models/ImageService';
-import { queueI2IWorkflow, queueRemoveBg, queueWorkflow } from '../models/TaskQueueService';
+import { queueI2IWorkflow, queueWorkflow } from '../models/TaskQueueService';
 import {
   GenericScene,
   ContextMenuType,
@@ -41,6 +41,7 @@ import { appState, SceneSelectorItem } from '../models/AppService';
 import { observer } from 'mobx-react-lite';
 import { createInpaintPreset } from '../models/workflows/SDWorkFlow';
 import { reaction } from 'mobx';
+import { oneTimeFlowMap, oneTimeFlows } from '../models/workflows/OneTimeFlows';
 
 interface SceneCellProps {
   scene: GenericScene;
@@ -68,6 +69,13 @@ export const SceneCell = observer(
       id: ContextMenuType.Scene,
     });
     const [image, setImage] = useState<string | undefined>(undefined);
+    let emoji = '';
+    if (scene.type === 'inpaint') {
+      const def = workFlowService.getDef(scene.workflowType);
+      if (def) {
+        emoji = def.emoji ?? '';
+      }
+    }
 
     const cellSizes = ['w-48 h-48', 'w-36 h-36 md:w-64 md:h-64', 'w-96 h-96'];
     const cellSizes2 = [
@@ -248,7 +256,7 @@ export const SceneCell = observer(
           <div
             className={'p-2 flex text-lg text-default ' + cellSizes3[cellSize]}
           >
-            <div className="truncate flex-1">{scene.name}</div>
+            <div className="truncate flex-1">{emoji}{scene.name}</div>
             <div className="flex-none text-gray-400">
               {gameService.getOutputs(curSession!, scene).length}{' '}
             </div>
@@ -542,52 +550,45 @@ const QueueControl = observer(
               },
             },
           ];
-    if (type === 'scene' && !isMobile) {
-      buttons.push({
-        text: '이미지 변형',
-        className: 'back-gray',
-        // @ts-ignore
-        onClick: async (scene: Scene, path: string, close: () => void) => {
-          const menu = await appState.pushDialogAsync({
-            type: 'select',
-            text: '이미지 변형 방법을 선택해주세요',
-            items: [{
-              text: '이미지 변형 씬 생성',
-              value: 'create'
-            },
-            {
-              text: '배경 제거',
-              value: 'removebg'
-            }
-          ]});
-          if (!menu) return;
-          if (menu === 'create') {
-            const flows = workFlowService.i2iFlows;
-            const items = flows.map((x) => ({
-              text: x.def.title,
-              value: x.getType()
-            }));
-            const method = await appState.pushDialogAsync({
-              type: 'select',
-              text: '변형 씬에서 사용할 방법을 선택해주세요',
-              items: items
-            });
-            if (!method) return;
-            await createInpaintScene(scene, method, path, close);
-          } else if (menu === 'removebg') {
-            if (!localAIService.ready) {
-              appState.pushMessage(
-              '환경설정에서 배경 제거 기능을 활성화해주세요',
-            );
-            return;
+    buttons.push({
+      text: '이미지 변형',
+      className: 'back-gray',
+      // @ts-ignore
+      onClick: async (scene: Scene, path: string, close: () => void) => {
+        const menu = await appState.pushDialogAsync({
+          type: 'select',
+          text: '이미지 변형 방법을 선택해주세요',
+          items: [{
+            text: '이미지 변형 씬 생성',
+            value: 'create'
           }
+        ].concat(oneTimeFlows.map((x) => ({
+          text: x.text,
+          value: x.text
+          })))
+        });
+        if (!menu) return;
+        if (menu === 'create') {
+          const flows = workFlowService.i2iFlows;
+          const items = flows.map((x) => ({
+            text: (x.def.emoji??'')+x.def.title,
+            value: x.getType()
+          }));
+          const method = await appState.pushDialogAsync({
+            type: 'select',
+            text: '변형 씬에서 사용할 방법을 선택해주세요',
+            items: items
+          });
+          if (!method) return;
+          await createInpaintScene(scene, method, path, close);
+        } else {
           let image = await imageService.fetchImage(path);
           image = dataUriToBase64(image!);
-          queueRemoveBg(curSession!, scene, image);
-        }
-        },
-      });
-    }
+          const job = await extractPromptDataFromBase64(image);
+          oneTimeFlowMap.get(menu)!.handler(curSession!, scene, image, undefined, job);
+      }
+      },
+    });
 
     const [adding, setAdding] = useState<boolean>(false);
     const panel = useMemo(() => {

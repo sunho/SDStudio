@@ -59,6 +59,9 @@ const AugmentGenHandler = async (
   onComplete?: (img: string) => void,
   nodelay?: boolean,
 ) => {
+  if (!meta) {
+    meta = workFlowService.buildMeta('AugmentGen');
+  }
   const image = (await imageService.fetchVibeImage(session, shared.image))!;
   const job: AugmentJob = {
     type: 'augment',
@@ -176,6 +179,7 @@ export const AugmentDef = new WFDefBuilder('Augment')
   .setTitle('이미지 수정')
   .setBackendType('image')
   .setI2I(true)
+  .setEmoji('🪛')
   .setPresetVars(AugmentPreset.build())
   .setEditor(AugmentUI)
   .setCreatePreset(createAugmentPreset)

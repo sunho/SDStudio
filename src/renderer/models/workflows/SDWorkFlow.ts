@@ -214,9 +214,9 @@ const createSDI2IHandler = (type: string) => {
     samples: number,
     onComplete?: (img: string) => void,
   ) => {
-    const image = dataUriToBase64(
+    const image = preset.image.endsWith('.png') ? dataUriToBase64(
       (await imageService.fetchVibeImage(session, preset.image))!,
-    );
+    ) : preset.image;
     const isInpaint = type === 'SDInpaint';
     const getMask = async () => dataUriToBase64(
       (await imageService.fetchVibeImage(session, preset.mask))!,
@@ -235,6 +235,7 @@ const createSDI2IHandler = (type: string) => {
       backend: preset.backend,
       vibes: preset.vibes,
       strength: preset.strength,
+      overrideResolution: preset.overrideResolution,
       originalImage: isInpaint ? preset.originalImage : true,
       image: image,
       mask: isInpaint ? await getMask() : '',
@@ -274,6 +275,7 @@ export function createInpaintPreset(
 export const SDInpaintDef = new WFDefBuilder('SDInpaint')
   .setTitle('인페인트')
   .setBackendType('image')
+  .setEmoji('🖌️')
   .setI2I(true)
   .setHasMask(true)
   .setPresetVars(SDInpaintPreset.build())
@@ -285,6 +287,7 @@ export const SDInpaintDef = new WFDefBuilder('SDInpaint')
 
 const SDI2IPreset = SDInpaintPreset.clone()
   .addIntVar('noise', 0, 1, 0.01, 0)
+  .addStringVar('overrideResolution', '');
 
 const SDI2IUI = wfiStack([
   wfiInlineInput('이미지', 'image', 'preset', 'flex-none'),
@@ -306,7 +309,7 @@ const SDI2IUI = wfiStack([
   // wfiInlineInput('시드', 'seed', true, 'flex-none'),
 ]);
 
-function createI2IPreset(
+export function createI2IPreset(
   job: SDAbstractJob<string>,
   image?: string,
   mask?: string,
@@ -328,6 +331,7 @@ function createI2IPreset(
 export const SDI2IDef = new WFDefBuilder('SDI2I')
   .setTitle('이미지 투 이미지')
   .setBackendType('image')
+  .setEmoji('🔄')
   .setI2I(true)
   .setPresetVars(SDI2IPreset.build())
   .setSharedVars(new WFVarBuilder().build())

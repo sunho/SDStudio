@@ -53,6 +53,7 @@ import {
   gameService,
   backend,
   taskQueueService,
+  workFlowService,
 } from '../models';
 import { dataUriToBase64, deleteImageFiles } from '../models/ImageService';
 import { getResultDirectory } from '../models/SessionService';
@@ -957,6 +958,13 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
         : paths.filter((path) => isMainImage && isMainImage(path));
     };
 
+    let emoji = '';
+    let title = '';
+    if (scene.type === 'inpaint') {
+      emoji = workFlowService.getDef(scene.workflowType)?.emoji ?? '';
+      title = workFlowService.getDef(scene.workflowType)?.title ?? '';
+    }
+
     return (
       <div className="w-full h-full flex flex-col">
         {tournament && (
@@ -982,7 +990,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
               ) : (!isMobile ? (
                 scene.type === 'inpaint' ? (
                   <span className="inline-flex items-center gap-1">
-                    🖌️ 인페인트 씬 {scene.name}의 생성된 이미지
+                    {emoji} {title} 씬 {scene.name}의 생성된 이미지
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1">
@@ -991,7 +999,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
                 )
               ) : scene.type === 'inpaint' ? (
                 <span className="inline-flex items-center gap-1">
-                  🖌️ 인페인트 씬 {scene.name}
+                  {emoji} {title} 씬 {scene.name}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1">

@@ -13,6 +13,8 @@ import {
   genericSceneFromJSON,
   GallaryImageContextAlt,
 } from '../models/types';
+import { oneTimeFlowMap, oneTimeFlows } from '../models/workflows/OneTimeFlows';
+import { extractPromptDataFromBase64 } from '../models/util';
 
 export const AppContextMenu = observer(() => {
   const duplicateScene = async (ctx: SceneContextAlt) => {
@@ -123,6 +125,24 @@ export const AppContextMenu = observer(() => {
       }
     });
   };
+  const transformImage = async (ctx: GallaryImageContextAlt) => {
+    const items = oneTimeFlows.map(x => ({
+      text: x.text,
+      value: x.text
+    }));
+    const menu = await appState.pushDialogAsync({
+      text: '이미지 변형 방법을 선택하세요',
+      type: 'select',
+      items: items,
+    });
+    if (!menu) return;
+    for (const p of ctx.path) {
+      let image = await imageService.fetchImage(p);
+      image = dataUriToBase64(image!);
+      const job = await extractPromptDataFromBase64(image);
+      oneTimeFlowMap.get(menu)!.handler(appState.curSession!, ctx.scene!, image, undefined, job);
+    }
+  };
   const handleImageItemClick = ({ id, props }: any) => {
     const ctx2: GallaryImageContextAlt = {
       ...props.ctx,
@@ -152,6 +172,8 @@ export const AppContextMenu = observer(() => {
       favImage(props.ctx);
     } else if (id === 'delete') {
       deleteImg(props.ctx);
+    } else if (id === 'transform') {
+      transformImage(props.ctx);
     }
   };
   const exportStyle = async (ctx: StyleContextAlt) => {
@@ -203,6 +225,9 @@ export const AppContextMenu = observer(() => {
       <Menu id={ContextMenuType.GallaryImage}>
         <Item id="fav" onClick={handleImageItemClick2}>
           즐겨찾기 토글
+        </Item>
+        <Item id="transform" onClick={handleImageItemClick2}>
+          이미지 변형
         </Item>
         <Item id="delete" onClick={handleImageItemClick2}>
           해당 이미지 삭제
