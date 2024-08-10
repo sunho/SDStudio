@@ -18,10 +18,8 @@ export interface Dialog {
 
 const ConfirmWindow = observer(() => {
   const [inputValue, setInputValue] = useState<string>('');
-  console.log('DIAG', appState.dialogs);
 
   const handleConfirm = () => {
-    console.log('confirm');
     const currentDialog = appState.dialogs[appState.dialogs.length - 1];
     if (appState.dialogs.length > 0) appState.dialogs.pop();
     if (currentDialog && currentDialog.callback) {

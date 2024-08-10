@@ -223,7 +223,6 @@ export class AndroidBackend extends Backend {
       directory: Directory.Documents,
     });
     const fullDir = urlRes.uri.slice(7);
-    console.log(fullDir);
     files = files.map((x) => ({
       name: x.name,
       path: fullDir + '/' + x.path,

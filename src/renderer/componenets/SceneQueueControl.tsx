@@ -448,7 +448,6 @@ const QueueControl = observer(
     };
 
     const createInpaintScene = async (scene: GenericScene, workflowType: string, path: string, close: () => void) => {
-      console.log("Create inpaint scene", scene, workflowType, path);
       let image = await imageService.fetchImage(path);
       image = dataUriToBase64(image!);
       let cnt = 0;

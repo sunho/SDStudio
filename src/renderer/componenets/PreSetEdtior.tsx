@@ -259,7 +259,6 @@ export const VibeButton = ({ input }: { input: WFIInlineInput }) => {
   const { editVibe, setEditVibe, preset, shared, meta } =
     useContext(WFElementContext)!;
   const getField = () => {
-    console.log(input.field);
     if (input.fieldType === 'preset') return preset[input.field];
     if (input.fieldType === 'shared') return shared[input.field];
     return meta![input.field];

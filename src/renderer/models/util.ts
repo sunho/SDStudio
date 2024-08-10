@@ -64,7 +64,6 @@ export async function extractPromptDataFromBase64(base64: string): Promise<SDAbs
   const comment = exif['Comment'];
   if (comment && comment.value) {
     const data = JSON.parse(comment.value as string);
-    console.log(data)
 
     if (data['prompt']) {
       return {
