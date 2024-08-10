@@ -548,8 +548,15 @@ export enum ContextMenuType {
 }
 
 export interface ImageContextAlt {
-  type: 'image' | 'gallary_image';
+  type: 'image';
   path: string;
+  scene?: GenericScene;
+  starable?: boolean;
+}
+
+export interface GallaryImageContextAlt {
+  type: 'gallary_image';
+  path: string[];
   scene?: GenericScene;
   starable?: boolean;
 }

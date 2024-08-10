@@ -23,9 +23,11 @@ import {
   FaArrowLeft,
   FaArrowRight,
   FaCalendarTimes,
+  FaCheck,
   FaEdit,
   FaFolder,
   FaPaintBrush,
+  FaRegObjectGroup,
   FaStar,
   FaTrash,
 } from 'react-icons/fa';
@@ -33,7 +35,7 @@ import { PromptHighlighter } from './SceneEditor';
 import QueueControl from './SceneQueueControl';
 import { FloatView } from './FloatView';
 import memoizeOne from 'memoize-one';
-import { FaPlus } from 'react-icons/fa6';
+import { FaPlus, FaRegSquareCheck } from 'react-icons/fa6';
 import { useContextMenu } from 'react-contexify';
 import { useDrag, useDrop } from 'react-dnd';
 import { getEmptyImage } from 'react-dnd-html5-backend';
@@ -68,10 +70,13 @@ interface ImageGalleryProps {
   onFilenameChange?: (src: string, dst: string) => void;
   pageSize?: number;
   isHidden?: boolean;
+  selectMode?: boolean;
+  selectedImages: Set<string>;
 }
 
 interface ImageGalleryRef {
   refresh: () => void;
+  refeshImage(path: string): void;
 }
 
 export const CellPreview = ({
@@ -129,6 +134,7 @@ const Cell = memo(
       isMainImage,
       onFilenameChange,
       imageSize,
+      selectedImages
     } = data as any;
 
     const { curSession } = appState;
@@ -152,6 +158,7 @@ const Cell = memo(
         } catch (e: any) {
           setImage(undefined);
         }
+        forceUpdate({});
       };
       const dispose = reaction(()=>scene.mains.join(''), ()=>{forceUpdate({});});
       const refreshMainImage = () => {
@@ -294,7 +301,7 @@ const Cell = memo(
       >
         {path && image && (
           <>
-            <div className="relative">
+            <div className="relative ">
               <img
                 src={image}
                 style={{
@@ -308,7 +315,7 @@ const Cell = memo(
                     props: {
                       ctx: {
                         type: 'gallary_image',
-                        path,
+                        path: [path],
                         scene: scene,
                         starable: true,
                       },
@@ -323,6 +330,32 @@ const Cell = memo(
               {isMain && (
                 <div className="absolute left-0 top-0 z-10 text-yellow-400 m-2 text-md ">
                   <FaStar />
+                </div>
+              )}
+              {selectedImages.has(path) && (
+                <div className="absolute left-0 top-0 z-10 bg-sky-500 opacity-50 text-md w-full h-full" onContextMenu={(e)=>{
+                  const cands = [];
+                  const set = new Set<string>();
+                  for (const image of filePaths) {
+                    set.add(image);
+                  }
+                  for (const image of selectedImages) {
+                    if (set.has(image)) {
+                      cands.push(image);
+                    }
+                  }
+                  show({
+                    event: e,
+                    props: {
+                      ctx: {
+                        type: 'gallary_image',
+                        path: cands,
+                        scene: scene,
+                        starable: true
+                      }
+                    }
+                  })
+                }}>
                 </div>
               )}
             </div>
@@ -351,6 +384,7 @@ const createItemData = memoizeOne(
     isMainImage,
     onFilenameChange,
     imageSize,
+    selectedImages,
   ) => {
     return {
       scene,
@@ -362,6 +396,7 @@ const createItemData = memoizeOne(
       isMainImage,
       onFilenameChange,
       imageSize,
+      selectedImages,
     };
   },
 );
@@ -375,6 +410,8 @@ const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
       filePaths,
       isMainImage,
       onSelected,
+      selectMode,
+      selectedImages,
       onFilenameChange,
     },
     ref,
@@ -390,6 +427,12 @@ const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
       refresh: () => {
         refreshImageFuncs.current.forEach((refresh) => refresh());
       },
+      refeshImage: (path: string) => {
+        const refresh = refreshImageFuncs.current.get(path);
+        if (refresh) {
+          refresh();
+        }
+      }
     }));
 
     useEffect(() => {
@@ -441,6 +484,7 @@ const ImageGallery = forwardRef<ImageGalleryRef, ImageGalleryProps>(
             isMainImage,
             onFilenameChange,
             imageSize,
+            selectedImages,
           )}
           outerElementType={CustomScrollbarsVirtualGrid}
           overscanRowCount={overcountCounts[Math.ceil(imageSize / 200) - 1]}
@@ -779,10 +823,14 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
   ) => {
     const { curSession, samples } = appState;
     const [_, forceUpdate] = useState<{}>({});
+    const [selectMode, setSelectMode] = useState<boolean>(false);
     const [tournament, setTournament] = useState<boolean>(false);
+    const selectedImages = useRef(new Set<string>());
     const [selectedImageIndex, setSelectedImageIndex] = useState<
       number | undefined
     >(undefined);
+    const gallaryRef = useRef<ImageGalleryRef>(null);
+    const gallaryRef2 = useRef<ImageGalleryRef>(null);
     const imagesSizes = [
       { name: 'S', size: 200 },
       { name: 'M', size: 400 },
@@ -823,8 +871,22 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
         (path) => imageService.getOutputDir(curSession!, scene) + '/' + path,
       );
     const onSelected = useCallback((index: any) => {
-      setSelectedImageIndex(index);
-    }, []);
+      if (selectMode) {
+        if (selectedImages.current.has(paths[index])) {
+          selectedImages.current.delete(paths[index]);
+        } else {
+          selectedImages.current.add(paths[index]);
+        }
+        if (gallaryRef.current) {
+          gallaryRef.current.refeshImage(paths[index]);
+        }
+        if (gallaryRef2.current) {
+          gallaryRef2.current.refeshImage(paths[index]);
+        }
+      } else {
+        setSelectedImageIndex(index);
+      }
+    }, [selectMode, paths]);
     const onDeleteImages = async (scene: GenericScene) => {
       appState.pushDialog({
         type: 'select',
@@ -913,7 +975,11 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
         <div className="flex-none p-2 md:p-4 border-b line-color">
           <div className="mb-2 md:mb-4 flex items-center">
             <span className="font-bold text-lg md:text-2xl text-default">
-              {!isMobile ? (
+              {selectMode ? (
+                <span className="inline-flex items-center gap-1">
+                  이미지 선택 모드 ON
+                </span>
+              ) : (!isMobile ? (
                 scene.type === 'inpaint' ? (
                   <span className="inline-flex items-center gap-1">
                     🖌️ 인페인트 씬 {scene.name}의 생성된 이미지
@@ -931,7 +997,7 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
                 <span className="inline-flex items-center gap-1">
                   🖼️ 일반 씬 {scene.name}
                 </span>
-              )}
+              ))}
             </span>
           </div>
           <div className="md:flex justify-between items-center mt-2 md:mt-4">
@@ -994,6 +1060,17 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
                 </button>
               )}
               <button
+                className={`round-button ` + (selectMode ? 'back-sky' : 'back-gray')}
+                onClick={()=>{
+                  if (selectMode) {
+                    selectedImages.current.clear();
+                  }
+                  setSelectMode(!selectMode);
+                }}
+                >
+                <FaRegSquareCheck/>
+              </button>
+              <button
                 className={`round-button back-red`}
                 onClick={() => {
                   onDeleteImages(scene);
@@ -1021,11 +1098,14 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
           <ImageGallery
             scene={scene}
             onFilenameChange={onFilenameChange}
+            ref={gallaryRef}
             isMainImage={isMainImage}
             filePaths={paths}
             imageSize={imagesSizes[imageSize].size}
             isHidden={selectedTab !== 0}
+            selectedImages={selectedImages.current}
             onSelected={onSelected}
+            selectMode={selectMode}
           />
           <QueueControl
             type="inpaint"
@@ -1055,10 +1135,12 @@ const ResultViewer = forwardRef<ResultVieweRef, ResultViewerProps>(
           )}
           <ImageGallery
             scene={scene}
+            ref={gallaryRef2}
             onFilenameChange={onFilenameChange}
             isMainImage={isMainImage}
             filePaths={paths.filter((path) => isMainImage && isMainImage(path))}
             imageSize={imagesSizes[imageSize].size}
+            selectedImages={selectedImages.current}
             isHidden={selectedTab !== 1}
             onSelected={onSelected}
           />
