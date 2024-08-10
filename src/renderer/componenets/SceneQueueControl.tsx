@@ -28,7 +28,7 @@ import {
   dataUriToBase64,
   deleteImageFiles,
 } from '../models/ImageService';
-import { queueRemoveBg, queueWorkflow } from '../models/TaskQueueService';
+import { queueI2IWorkflow, queueRemoveBg, queueWorkflow } from '../models/TaskQueueService';
 import {
   GenericScene,
   ContextMenuType,
@@ -142,12 +142,22 @@ export const SceneCell = observer(
 
     const addToQueue = async (scene: GenericScene) => {
       try {
-        queueWorkflow(
-          curSession,
-          appState.curSession?.selectedWorkflow!,
-          scene,
-          appState.samples,
-        );
+        if (scene.type === 'scene') {
+          await queueWorkflow(
+            curSession,
+            appState.curSession?.selectedWorkflow!,
+            scene,
+            appState.samples,
+          );
+        } else {
+          await queueI2IWorkflow(
+            curSession,
+            scene.workflowType,
+            scene.preset,
+            scene,
+            appState.samples,
+          )
+        }
       } catch (e: any) {
         appState.pushMessage('프롬프트 에러: ' + e.message);
       }
@@ -175,6 +185,7 @@ export const SceneCell = observer(
         } catch (e: any) {
           setImage(undefined);
         }
+        rerender({});
       };
       refreshImage();
       gameService.addEventListener('updated', refreshImage);
@@ -331,12 +342,22 @@ const QueueControl = observer(
     const addAllToQueue = async () => {
       try {
         for (const scene of curSession.getScenes(type)) {
-          queueWorkflow(
-            curSession,
-            curSession.selectedWorkflow!,
-            scene,
-            appState.samples,
-          );
+          if (scene.type === 'scene') {
+            await queueWorkflow(
+              curSession,
+              curSession.selectedWorkflow!,
+              scene,
+              appState.samples,
+            );
+          } else {
+            await queueI2IWorkflow(
+              curSession,
+              scene.workflowType,
+              scene.preset,
+              scene,
+              appState.samples
+            );
+          }
         }
       } catch (e: any) {
         appState.pushMessage('프롬프트 에러: ' + e.message);
