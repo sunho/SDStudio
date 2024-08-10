@@ -11,6 +11,7 @@ import JSZip from 'jszip';
 import { Buffer } from 'buffer';
 
 import libsodium_wrappers_sumo_1 from 'libsodium-wrappers-sumo';
+import { getImageDimensions } from '../../componenets/BrushTool';
 
 export interface NovelAiFetcher {
   fetchArrayBuffer(url: string, body: any, headers: any): Promise<ArrayBuffer>;
@@ -244,6 +245,11 @@ export class NovelAiImageGenService implements ImageGenService {
     }
     if (params.method === 'emotion') {
       body.prompt = params.emotion! + ';;' + body.prompt;
+    }
+    if (params.method === 'bg-removal') {
+      const {width, height} = await getImageDimensions(params.image);
+      body.width = width;
+      body.height = height;
     }
 
     console.log(body);

@@ -78,6 +78,9 @@ jobs:
       - name: Install dependencies
         run: |
           npm install -g npm@latest
+          cd src/native
+          npm install
+          cd ../..
           python3 -m pip install setuptools --break-system-packages
           cd release/app
           npm uninstall sharp

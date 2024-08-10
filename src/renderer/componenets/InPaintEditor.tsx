@@ -84,6 +84,7 @@ const InPaintEditor = observer(
       );
       loadImage();
       if (def.hasMask) loadMask();
+      else setBrushing(false);
       imageService.addEventListener('image-cache-invalidated', loadImage);
       return () => {
         imageService.removeEventListener('image-cache-invalidated', loadImage);
