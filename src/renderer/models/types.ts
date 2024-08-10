@@ -393,6 +393,15 @@ export class Session implements Serealizable {
   @action
   addPreset(preset: any): void {
     const presets = this.presets.get(preset.type) || [];
+    if (presets.find((p) => p.name === preset.name)) {
+      let i = 1;
+      while (
+        presets.find((p) => p.name === preset.name + i.toString())
+      ) {
+        i++;
+      }
+      preset.name = preset.name + i.toString();
+    }
     presets.push(preset);
     this.presets.set(preset.type, presets);
   }

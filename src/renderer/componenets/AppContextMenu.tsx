@@ -41,6 +41,14 @@ export const AppContextMenu = observer(() => {
       moveSceneFront(ctx);
     } else if (id === 'move-back') {
       moveSceneBack(ctx);
+    } else if (id === 'delete') {
+      appState.pushDialog({
+        type: 'confirm',
+        text: '정말로 삭제하시겠습니까?',
+        callback: () => {
+          appState.curSession!.removeScene(ctx.scene.type, ctx.scene.name);
+        },
+      });
     }
   };
   const duplicateImage = async (ctx: ImageContextAlt) => {

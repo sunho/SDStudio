@@ -334,25 +334,29 @@ export function embedJSONInPNG(inputBase64: string, jsonData: any) {
 }
 
 export function readJSONFromPNG(base64PNG: string) {
-  const buffer = Buffer.from(base64PNG, 'base64');
-  const chunks = extractChunks(buffer);
-  const jsonChunk = chunks.find((chunk) => chunk.name === 'tEXt');
-  if (jsonChunk) {
-    let base64JsonData = Buffer.from(jsonChunk.data).toString();
-    const startIndex = base64JsonData.indexOf('json:') + 5;
-    base64JsonData = base64JsonData.slice(startIndex);
-    const jsonData = JSON.parse(
-      Buffer.from(base64JsonData, 'base64').toString(),
-    );
-    return jsonData;
-  } else {
-    throw new Error('No JSON data found in the PNG.');
+  try {
+    const buffer = Buffer.from(base64PNG, 'base64');
+    const chunks = extractChunks(buffer);
+    const jsonChunk = chunks.find((chunk) => chunk.name === 'tEXt');
+    if (jsonChunk) {
+      let base64JsonData = Buffer.from(jsonChunk.data).toString();
+      const startIndex = base64JsonData.indexOf('json:') + 5;
+      base64JsonData = base64JsonData.slice(startIndex);
+      const jsonData = JSON.parse(
+        Buffer.from(base64JsonData, 'base64').toString(),
+      );
+      return jsonData;
+    } else {
+      return undefined;
+    }
+  } catch (e) {
+    return undefined;
   }
 }
 
 export async function importPreset(session: Session, base64: string) {
   let json = readJSONFromPNG(base64);
-  if (!json.type || !json.name) {
+  if (!json || !json.type || !json.name) {
     return undefined;
   }
   if (json.type === 'style') {
@@ -374,17 +378,8 @@ export async function importPreset(session: Session, base64: string) {
   }
   const path = await imageService.storeVibeImage(session, base64);
   json.profile = path;
-  if (session.presets.get(json.type)!.find((p) => p.name === json.name)) {
-    let i = 1;
-    while (
-      session.presets.get(json.type)!.find((p) => p.name === json.name + i.toString())
-    ) {
-      i++;
-    }
-    json.name = json.name + i.toString();
-  }
   const preset = workFlowService.presetFromJSON(json);
-  session.presets.get(json.type)!.push(preset);
+  session.addPreset(preset);
   return preset;
 }
 
