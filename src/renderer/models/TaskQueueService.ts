@@ -55,7 +55,7 @@ export interface TaskParam {
   session: Session;
   job: Job;
   outputPath: string;
-  scene?: GenericScene;
+  scene: GenericScene;
   onComplete?: (path: string) => void;
   nodelay?: boolean;
 }
@@ -158,6 +158,11 @@ export interface TaskInfo {
   emoji: string;
 }
 
+interface CostItem {
+  scene: string;
+  text: string;
+}
+
 interface TaskHandler {
   createTimeEstimator(): TaskTimeEstimator;
   checkTask(task: Task): boolean;
@@ -165,6 +170,7 @@ interface TaskHandler {
   getNumTries(task: Task): number;
   handleDelay(task: Task, numTry: number): Promise<void>;
   getInfo(task: Task): TaskInfo;
+  calculateCost(task: Task): CostItem[];
 }
 
 export const getSceneKey = (session: Session, scene: GenericScene) => {
@@ -338,6 +344,27 @@ class GenerateImageTaskHandler implements TaskHandler {
   getNumTries(task: Task) {
     return 40;
   }
+
+  calculateCost(task: Task): CostItem[] {
+    const res: CostItem[] = [];
+    const job: SDAbstractJob<PromptNode> = task.params
+      .job as SDAbstractJob<PromptNode>;
+    const name = task.params.scene.name;
+    if (job.steps > 28) {
+      res.push({
+        scene: name,
+        text: '스탭 수 28개 초과',
+      });
+    }
+    const resolution = task.params.scene.resolution;
+    if (resolution === Resolution.WallpaperLandscape || resolution === Resolution.LargeLandscape || resolution === Resolution.LargePortrait || resolution === Resolution.LargeSquare || resolution === Resolution.WallpaperPortrait) {
+      res.push({
+        scene: name,
+        text: '씬 해상도가 큼',
+      });
+    }
+    return res;
+  }
 }
 
 class RemoveBgTaskHandler implements TaskHandler {
@@ -383,6 +410,10 @@ class RemoveBgTaskHandler implements TaskHandler {
       name: title,
       emoji: '🔪',
     };
+  }
+
+  calculateCost(task: Task): CostItem[] {
+    return [];
   }
 }
 
@@ -499,6 +530,16 @@ export class TaskQueueService extends EventTarget {
       this.runInternal(this.currentRun);
       this.dispatchEvent(new CustomEvent('start', {}));
     }
+  }
+
+  calculateCost(): CostItem[] {
+    const res: CostItem[] = [];
+    for (const task of this.queue) {
+      const handler = this.handlers[task!.cls];
+      const costs = handler.calculateCost(task!);
+      res.push(...costs);
+    }
+    return res;
   }
 
   statsAllTasks(): TaskStats {
