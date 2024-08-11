@@ -589,5 +589,5 @@ export const isValidSession = (session: any) => {
 };
 
 export const isValidPieceLibrary = (library: any) => {
-  return typeof library.name === 'string' && Array.isArray(library.pieces);
+  return (typeof library.name === 'string' || typeof library.description=== 'string') && library.pieces;
 };
