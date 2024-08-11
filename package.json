@@ -19,7 +19,7 @@
     "url": "https://sunho.io"
   },
   "main": "./src/main/main.ts",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "scripts": {
     "build": "concurrently \"npm run build:main\" \"npm run build:renderer\"",
     "build:dll": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.ts",
@@ -97,6 +97,7 @@
     "@capacitor/ios": "^6.1.0",
     "@capacitor/share": "^6.0.1",
     "@capawesome/capacitor-file-picker": "^6.0.1",
+    "@dqbd/tiktoken": "^1.0.15",
     "@vitejs/plugin-react": "^4.3.1",
     "@xenova/transformers": "^2.17.2",
     "adm-zip": "^0.5.12",
