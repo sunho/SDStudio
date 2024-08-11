@@ -37,6 +37,9 @@ export class SessionService extends ResourceSyncService<Session> {
       await backend.writeFile('projects/' + rc.name + '.json.bak', JSON.stringify(rc));
       rc = await legacy.migrateSession(rc);
     }
+    if (Array.isArray(rc.presets)) {
+      await legacy.recoverSession(rc);
+    }
     await this.migrateSession(rc);
     console.log("migrated", rc);
     return rc;

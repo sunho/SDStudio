@@ -6,6 +6,7 @@ import defaultassets from "../defaultassets";
 import extractChunks from "png-chunks-extract";
 import { IInpaintScene, IPieceLibrary, IPromptPiece, IScene, ISession, IVibeItem, Round } from "./types";
 import { Buffer } from 'buffer';
+import { appState } from "./AppService";
 
 export const defaultUC = `worst quality, bad quality, displeasing, very displeasing, lowres, bad anatomy, bad perspective, bad proportions, bad aspect ratio, bad face, long face, bad teeth, bad neck, long neck, bad arm, bad hands, bad ass, bad leg, bad feet, bad reflection, bad shadow, bad link, bad source, wrong hand, wrong feet, missing limb, missing eye, missing tooth, missing ear, missing finger, extra faces, extra eyes, extra eyebrows, extra mouth, extra tongue, extra teeth, extra ears, extra breasts, extra arms, extra hands, extra legs, extra digits, fewer digits, cropped head, cropped torso, cropped shoulders, cropped arms, cropped legs, mutation, deformed, disfigured, unfinished, chromatic aberration, text, error, jpeg artifacts, watermark, scan, scan artifacts`;
 
@@ -480,4 +481,23 @@ export function migratePieceLibrary(library: any): IPieceLibrary {
       multi: multi[k],
     })),
   };
+}
+
+export function recoverSession(session: any) {
+  session.presetShareds = {};
+  if (Array.isArray(session.presets)) {
+    const newPresets: any = {};
+    for (const data of session.presets) {
+      if (Array.isArray(data) && data[0] && data[0].type) {
+        newPresets[data[0].type] = data;
+      }
+    }
+    session.presets = newPresets;
+  } else {
+    session.presets = {};
+  }
+  appState.pushDialog({
+    type: 'yes-only',
+    text: '구버전 SD 스튜디오로 프로젝트를 열어서 손상된 부분을 복구했습니다'
+  })
 }
