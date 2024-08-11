@@ -1,6 +1,8 @@
 import { backend, imageService, localAIService, taskQueueService, workFlowService } from "..";
 import { AugmentMethod, Resolution, upscaleReoslution } from "../../backends/imageGen";
+import { getImageDimensions } from "../../componenets/BrushTool";
 import { appState } from "../AppService";
+import { dataUriToBase64 } from "../ImageService";
 import { queueI2IWorkflow, TaskParam } from "../TaskQueueService";
 import { AugmentJob, GenericScene, SDAbstractJob, Session } from "../types";
 import { createI2IPreset } from "./SDWorkFlow";
@@ -27,6 +29,8 @@ export const queueRemoveBg = async (
     backend: {
       type: config.useLocalBgRemoval ? 'SD' : 'NAI'
     },
+    width: 0,
+    height: 0,
   };
   const params: TaskParam = {
     session,
@@ -39,13 +43,15 @@ export const queueRemoveBg = async (
 };
 
 const createQueueAugment = (method: AugmentMethod) => {
-  return (
+  return async (
     session: Session,
     scene: GenericScene,
     image: string,
     onComplete?: (path: string) => void,
     imgJob?: SDAbstractJob<string>,
   ) => {
+
+    const { width, height } = await getImageDimensions(image);
     const job: AugmentJob = {
       type: 'augment',
       image: image,
@@ -54,6 +60,8 @@ const createQueueAugment = (method: AugmentMethod) => {
       backend: {
         type: 'NAI',
       },
+      width: width,
+      height: height,
     };
     const params: TaskParam = {
       session,

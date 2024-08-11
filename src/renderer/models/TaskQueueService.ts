@@ -35,6 +35,7 @@ import {
 import { sleep } from './util';
 import { lowerPromptNode, toPARR } from './PromptService';
 import { dataUriToBase64 } from './ImageService';
+import { getImageDimensions } from '../componenets/BrushTool';
 
 const FAST_TASK_TIME_ESTIMATOR_SAMPLE_COUNT = 16;
 const TASK_TIME_ESTIMATOR_SAMPLE_COUNT = 128;
@@ -456,7 +457,6 @@ class AugmentTaskHandler implements TaskHandler {
       emotion: job.emotion,
       weaken: job.weaken,
       image: job.image,
-      resolution: task.params.scene!.resolution as Resolution,
     };
     await backend.augmentImage(params);
     if (task.params.onComplete) task.params.onComplete(outputFilePath);
@@ -494,13 +494,12 @@ class AugmentTaskHandler implements TaskHandler {
 
   calculateCost(task: Task): CostItem[] {
     const res: CostItem[] = [];
-    const resolution = task.params.scene.resolution;
     const name = task.params.scene.name;
     const job = task.params.job as AugmentJob;
-    if (resolution === Resolution.WallpaperLandscape || resolution === Resolution.LargeLandscape || resolution === Resolution.LargePortrait || resolution === Resolution.LargeSquare || resolution === Resolution.WallpaperPortrait) {
+    if (job.width > 1216 || job.height > 1216) {
       res.push({
         scene: name,
-        text: '씬 해상도가 큼',
+        text: '해상도가 큼',
       });
     }
     if (job.method === 'bg-removal') {
