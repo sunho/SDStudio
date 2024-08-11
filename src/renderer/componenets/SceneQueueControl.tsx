@@ -398,13 +398,22 @@ const QueueControl = observer(
                 }),
               );
             } else {
+              const menu = await appState.pushDialogAsync({
+                type: 'select',
+                text: '이미지 변형 방법을 선택해주세요',
+                items: workFlowService.i2iFlows.map((x) => ({
+                  text: (x.def.emoji??'')+x.def.title,
+                  value: x.getType()
+                })),
+              });
+              if (!menu) return;
               curSession.addScene(
                 InpaintScene.fromJSON({
                   type: 'inpaint',
                   name: inputValue,
                   resolution: 'portrait',
-                  workflowType: 'SDInpaint',
-                  preset: workFlowService.buildPreset('SDInpaint').toJSON(),
+                  workflowType: menu,
+                  preset: workFlowService.buildPreset(menu).toJSON(),
                   mains: [],
                   imageMap: [],
                   round: undefined,
