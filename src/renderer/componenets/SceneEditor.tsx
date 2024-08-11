@@ -111,7 +111,6 @@ export const BigPromptEditor = observer(
     queuePrompt,
     setMainImage,
   }: BigPromptEditorProps) => {
-    const { curSession, pushMessage } = appState;
     const [image, setImage] = useState<string | undefined>(undefined);
     const [path, setPath] = useState<string | undefined>(initialImagePath);
     const [_, rerender] = useState<{}>({});

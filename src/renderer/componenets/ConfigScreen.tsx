@@ -16,7 +16,7 @@ interface ConfigScreenProps {
 }
 
 const ConfigScreen = observer(({ onSave }: ConfigScreenProps) => {
-  const { curSession, pushDialog, pushMessage } = appState;
+  const { curSession, } = appState;
   const [imageEditor, setImageEditor] = useState('');
   const [useGPU, setUseGPU] = useState(false);
   const [whiteMode, setWhiteMode] = useState(false);
@@ -79,14 +79,14 @@ const ConfigScreen = observer(({ onSave }: ConfigScreenProps) => {
       try {
         await loginService.login(email, password);
       } catch (err: any) {
-        pushMessage('로그인 실패:' + err.message);
+        appState.pushMessage('로그인 실패:' + err.message);
       }
     })();
   };
 
   const clearImageCache = async () => {
     if (!curSession) return;
-    pushMessage('이미지 캐시 초기화 시작');
+    appState.pushMessage('이미지 캐시 초기화 시작');
     for (const scene of Object.values(curSession.scenes)) {
       try {
         await backend.deleteDir(
@@ -96,7 +96,7 @@ const ConfigScreen = observer(({ onSave }: ConfigScreenProps) => {
     }
     imageService.cache.cache.clear();
     await imageService.refreshBatch(curSession);
-    pushDialog({
+    appState.pushDialog({
       type: 'yes-only',
       text: '이미지 캐시 초기화 완료',
     });
@@ -107,7 +107,7 @@ const ConfigScreen = observer(({ onSave }: ConfigScreenProps) => {
     const config = await backend.getConfig();
     config.saveLocation = folder;
     await backend.setConfig(config);
-    pushDialog({
+    appState.pushDialog({
       type: 'yes-only',
       text: '저장 위치 지정 완료. 프로그램을 껏다 켜주세요',
     });
