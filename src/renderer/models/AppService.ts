@@ -209,6 +209,9 @@ export class AppState {
           this.pushMessage('세션을 먼저 선택해주세요.');
           return;
         }
+        if (!json.version) {
+          json = migratePieceLibrary(json);
+        }
         if (!(json.name in this.curSession.library)) {
           this.curSession.library.set(json.name, PieceLibrary.fromJSON(json));
           sessionService.reloadPieceLibraryDB(this.curSession);
@@ -230,9 +233,6 @@ export class AppState {
               return;
             }
             json.name = value;
-            if (!json.version) {
-              json = migratePieceLibrary(json);
-            }
             this.curSession!.library.set(value, PieceLibrary.fromJSON(json));
           },
         });
