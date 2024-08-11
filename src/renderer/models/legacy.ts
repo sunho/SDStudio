@@ -371,6 +371,9 @@ function migrateRound(round: any): Round | undefined {
   if (!round) {
     return undefined;
   }
+  if (round.players == null || round.players.some((x: any) => x == null)) {
+    return undefined;
+  }
   return {
     curPlayer: round.curPlayer,
     players: round.players.map((player: any) => (player.path)),
