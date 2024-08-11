@@ -193,7 +193,7 @@ const ConfigScreen = observer(({ onSave }: ConfigScreenProps) => {
                   }}
                 >
                   {!localAIService.downloading
-                    ? '로커 배경 제거 모델 설치'
+                    ? '로컬 배경 제거 모델 설치'
                     : stageTexts[stage] + ` (${(progress * 100).toFixed(2)}%)`}
                 </button>
               </div>
