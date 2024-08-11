@@ -41,13 +41,28 @@ export abstract class ResourceSyncService<
       throw new Error('Resource already exists');
     }
     this.resources[name] = await this.createDefault(name);
-    await this.getHook(this.resources[name], name);
+    await this.onAdded(name);
     this.#markUpdated(name);
     await this.update();
   }
 
   list() {
     return this.resourceList;
+  }
+
+  async onAdded(name: string) {
+    const resource = this.resources[name];
+    const dispose = reaction(
+      () => resource.toJSON(),
+      (_) => {
+        this.#markUpdated(name);
+      },
+      {
+        delay: this.updateInterval,
+      },
+    );
+    this.disposes[name] = dispose;
+    await this.getHook(this.resources[name], name);
   }
 
   getPath(name: string) {
@@ -83,18 +98,7 @@ export abstract class ResourceSyncService<
         let obj = JSON.parse(str);
         obj = await this.migrate(obj);
         this.resources[name] = this.dummy!.fromJSON(obj);
-        const resource = this.resources[name];
-        await this.getHook(this.resources[name], name);
-        const dispose = reaction(
-          () => resource.toJSON(),
-          (_) => {
-            this.#markUpdated(name);
-          },
-          {
-            delay: this.updateInterval,
-          },
-        );
-        this.disposes[name] = dispose;
+        await this.onAdded(name);
         this.dispatchEvent(
           new CustomEvent<{ name: string }>('fetched', { detail: { name } }),
         );
@@ -138,7 +142,7 @@ export abstract class ResourceSyncService<
     }
     value = await this.migrate(value);
     this.resources[name] = this.dummy!.fromJSON(value);
-    await this.getHook(this.resources[name], name);
+    await this.onAdded(name);
     this.#markUpdated(name);
     await this.update();
   }
