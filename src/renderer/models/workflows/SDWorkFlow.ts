@@ -124,6 +124,9 @@ const SDImageGenHandler = async (
     vibes: shared.vibes,
     seed: shared.seed,
   };
+  if (shared.type === 'SDImageGenEasy') {
+    job.uc = shared.uc + ', ' + preset.uc;
+  }
   const param: TaskParam = {
     session: session,
     job: job,
