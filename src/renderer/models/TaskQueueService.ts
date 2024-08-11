@@ -481,7 +481,7 @@ class AugmentTaskHandler implements TaskHandler {
   }
 
   getNumTries(task: Task) {
-    return 1;
+    return 40;
   }
 
   getInfo(task: Task) {

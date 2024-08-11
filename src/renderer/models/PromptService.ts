@@ -175,7 +175,7 @@ export const createSDPrompts = async (
   const dfs = async () => {
     if (promptComb.length === scene.slots.length) {
       let front = toPARR(preset.frontPrompt);
-      if (shared.type === 'sd_style') {
+      if (shared.type === 'SDImageGenEasy') {
         front = front.concat(toPARR(shared.characterPrompt));
         const newFront = [];
         const rest = [];
@@ -234,7 +234,7 @@ export const createSDPrompts = async (
         if (middle[right] !== '|') cur.push(middle[right]);
         right++;
       }
-      if (shared.type === 'sd_style') {
+      if (shared.type === 'SDImageGenEasy') {
         cur = cur.concat(toPARR(shared.backgroundPrompt));
       }
       cur = cur.concat(toPARR(preset.backPrompt));

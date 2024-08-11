@@ -21,7 +21,11 @@ export const ExternalImageView = observer(
     const [job, setJob] = useState<SDAbstractJob<string>|undefined>(undefined);
     useEffect(() => {
       (async ()=>{
+        if (!image) return;
         const newJob = await extractPromptDataFromBase64(image);
+        if (!newJob) return;
+        newJob.prompt = newJob.prompt ?? '';
+        newJob.uc = newJob.uc ?? '';
         setJob(newJob);
       })();
     },[image]);
@@ -144,11 +148,11 @@ export const ExternalImageView = observer(
           </div>
         </div>
         <div className="flex-1 overflow-hidden">
-          <img
+          {image && <img
             src={base64ToDataUri(image)}
             draggable={false}
             className="w-full h-full object-contain bg-checkboard"
-          />
+          />}
         </div>
       </div>
     );
