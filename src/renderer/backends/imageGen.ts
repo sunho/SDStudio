@@ -114,7 +114,6 @@ export interface ImageAugmentInput {
   prompt?: string;
   weaken?: number;
   image: string;
-  resolution: Resolution;
 }
 
 export interface ImageGenService {

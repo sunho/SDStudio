@@ -230,14 +230,14 @@ export class NovelAiImageGenService implements ImageGenService {
 
   async augmentImage(authorization: string, params: ImageAugmentInput) {
     const url = this.apiEndpoint;
-    const resolutionValue = this.translateResolution(params.resolution);
+    const {width, height} = await getImageDimensions(params.image);
     const body: any = {
       image: params.image,
       prompt: params.prompt,
       defry: params.weaken,
       req_type: params.method,
-      width: resolutionValue.width,
-      height: resolutionValue.height,
+      width: width,
+      height: height,
     };
     if (params.method !== 'emotion' && params.method !== 'colorize') {
       body.defry = undefined;
@@ -246,12 +246,6 @@ export class NovelAiImageGenService implements ImageGenService {
     if (params.method === 'emotion') {
       body.prompt = params.emotion! + ';;' + body.prompt;
     }
-    if (params.method === 'bg-removal') {
-      const {width, height} = await getImageDimensions(params.image);
-      body.width = width;
-      body.height = height;
-    }
-
     console.log(body);
     const headers = {
       Authorization: `Bearer ${authorization}`,

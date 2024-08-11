@@ -93,6 +93,8 @@ export interface AugmentJob extends AbstractJob {
   prompt?: PromptNode;
   weaken?: number;
   emotion?: string;
+  width: number;
+  height: number;
   backend: ModelBackend;
 }
 

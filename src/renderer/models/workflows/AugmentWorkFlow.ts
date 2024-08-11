@@ -1,4 +1,5 @@
 import { imageService, taskQueueService, workFlowService } from "..";
+import { getImageDimensions } from "../../componenets/BrushTool";
 import { dataUriToBase64 } from "../ImageService";
 import { createSDPrompts } from "../PromptService";
 import { TaskParam } from "../TaskQueueService";
@@ -63,6 +64,7 @@ const AugmentGenHandler = async (
     meta = workFlowService.buildMeta('AugmentGen');
   }
   const image = (await imageService.fetchVibeImage(session, shared.image))!;
+  const { width, height } = await getImageDimensions(dataUriToBase64(image));
   const job: AugmentJob = {
     type: 'augment',
     image: dataUriToBase64(image),
@@ -71,6 +73,8 @@ const AugmentGenHandler = async (
     weaken: shared.weaken,
     prompt: prompt,
     backend: preset.backend,
+    width: width,
+    height: height,
   };
   const param: TaskParam = {
     session: session,
@@ -155,6 +159,7 @@ const AugmentHandler = async (
     type: 'text',
     text: preset.prompt,
   }
+  const { width, height } = await getImageDimensions(dataUriToBase64(image));
   const job: AugmentJob = {
     type: 'augment',
     image: dataUriToBase64(image),
@@ -163,6 +168,8 @@ const AugmentHandler = async (
     weaken: preset.weaken,
     prompt: promptNode,
     backend: preset.backend,
+    width: width,
+    height: height,
   };
   const param: TaskParam = {
     session: session,
