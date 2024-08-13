@@ -114,10 +114,16 @@ const VibeImage = ({
 }) => {
   const [image, setImage] = useState<string | null>(null);
   useEffect(() => {
-    (async () => {
+    const fetchImage = async () => {
       const data = await imageService.fetchImageSmall(path, 400);
       setImage(data);
-    })();
+    };
+    fetchImage();
+    imageService.addEventListener('image-cache-invalidated', (e: any) => {
+      if (e.detail.path === path) {
+        fetchImage();
+      }
+    });
   }, [path]);
   return (
     <>
