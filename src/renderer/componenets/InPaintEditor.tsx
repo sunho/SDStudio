@@ -6,12 +6,13 @@ import BrushTool, {
 } from './BrushTool';
 import { DropdownSelect, } from './UtilComponents';
 import { Resolution, resolutionMap } from '../backends/imageGen';
-import { FaArrowsAlt, FaPaintBrush, FaUndo } from 'react-icons/fa';
+import { FaArrowAltCircleLeft, FaArrowLeft, FaArrowsAlt, FaPaintBrush, FaPlay, FaStop, FaUndo } from 'react-icons/fa';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import {
   isMobile,
   imageService,
   workFlowService,
+  taskQueueService,
 } from '../models';
 import { dataUriToBase64 } from '../models/ImageService';
 import { InpaintScene } from '../models/types';
@@ -21,6 +22,8 @@ import { observer } from 'mobx-react-lite';
 import { InnerPreSetEditor } from './PreSetEdtior';
 import { reaction } from 'mobx';
 import { FloatView } from './FloatView';
+import { TaskProgressBar } from './TaskQueueControl';
+import { queueI2IWorkflow } from '../models/TaskQueueService';
 
 interface Props {
   editingScene: InpaintScene;
@@ -32,6 +35,20 @@ let brushSizeSaved = 10;
 
 const InPaintEditor = observer(
   ({ editingScene, onConfirm, onDelete }: Props) => {
+    const [_, rerender] = useState({});
+    useEffect(() => {
+      const handleProgress = () => {
+        rerender({});
+      };
+      taskQueueService.addEventListener('start', handleProgress);
+      taskQueueService.addEventListener('stop', handleProgress);
+      taskQueueService.addEventListener('progress', handleProgress);
+      return () => {
+        taskQueueService.removeEventListener('start', handleProgress);
+        taskQueueService.removeEventListener('stop', handleProgress);
+        taskQueueService.removeEventListener('progress', handleProgress);
+      };
+    });
     const { curSession } = appState;
     const resolutionOptions = Object.entries(resolutionMap)
       .map(([key, value]) => {
@@ -265,27 +282,63 @@ const InPaintEditor = observer(
             </div>
           )}
         </div>
-        <div className="flex-1 overflow-hidden">
-          <TransformWrapper
-            disabled={def.hasMask && brushing}
-            centerOnInit={true}
-          >
-            <TransformComponent wrapperClass="wrapper flex-none items-center justify-center">
-              <BrushTool
-                brushSize={brushSize}
-                mask={mask ? base64ToDataUri(mask) : undefined}
-                ref={brushTool}
-                image={base64ToDataUri(image)}
-                imageWidth={width}
-                imageHeight={height}
-              />
-            </TransformComponent>
-            {!isMobile && def.hasMask && (
-              <div className="canvas-tooltip dark:text-white dark:bg-gray-600">
-                ctrl+z 로 실행 취소 가능
-              </div>
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden">
+            <TransformWrapper
+              disabled={def.hasMask && brushing}
+              minScale={0.7}
+              centerOnInit={true}
+            >
+              <TransformComponent wrapperClass="wrapper flex-none items-center justify-center">
+                <BrushTool
+                  brushSize={brushSize}
+                  mask={mask ? base64ToDataUri(mask) : undefined}
+                  ref={brushTool}
+                  image={base64ToDataUri(image)}
+                  imageWidth={width}
+                  imageHeight={height}
+                />
+              </TransformComponent>
+              {!isMobile && def.hasMask && (
+                <div className="canvas-tooltip dark:text-white dark:bg-gray-600">
+                  ctrl+z 로 실행 취소 가능
+                </div>
+              )}
+            </TransformWrapper>
+          </div>
+          <div className="flex-none flex ml-auto gap-2 items-center mr-2 mt-2">
+            <button className={`round-button back-gray h-8 w-16 flex items-center justify-center`} onClick={async () => {
+              if (!image || !editingScene.preset.image) return;
+              await imageService.writeVibeImage(curSession!, editingScene.preset.image, image);
+            }}><FaArrowLeft size={20}/></button>
+            <TaskProgressBar fast />
+            {!taskQueueService.isRunning() ? (
+              <button
+                className={`round-button back-green h-8 w-16 md:w-36 flex items-center justify-center`}
+                onClick={async () => {
+                  await queueI2IWorkflow(curSession!, editingScene.workflowType, editingScene.preset, editingScene, 1, (path: string) => {
+                    (async () => {
+                      const data = await imageService.fetchImage(path);
+                      setImage(dataUriToBase64(data!));
+                    })();
+                  });
+                  taskQueueService.run();
+                }}
+              >
+                <FaPlay size={15} />
+              </button>
+            ) : (
+              <button
+                className={`round-button back-red h-8 w-16 md:w-36 flex items-center justify-center`}
+                onClick={() => {
+                  taskQueueService.removeAllTasks();
+                  taskQueueService.stop();
+                }}
+              >
+                <FaStop size={15} />
+              </button>
             )}
-          </TransformWrapper>
+          </div>
         </div>
       </div>
     );
