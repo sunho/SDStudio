@@ -12,6 +12,7 @@ import { Buffer } from 'buffer';
 
 import libsodium_wrappers_sumo_1 from 'libsodium-wrappers-sumo';
 import { getImageDimensions } from '../../componenets/BrushTool';
+import { backend } from '../../models';
 
 export interface NovelAiFetcher {
   fetchArrayBuffer(url: string, body: any, headers: any): Promise<ArrayBuffer>;
@@ -119,6 +120,8 @@ export class NovelAiImageGenService implements ImageGenService {
     const resolutionValue = this.translateResolution(params.resolution);
     const samplingValue = this.translateSampling(params.sampling);
 
+    const config = await backend.getConfig();
+
     const seed = params.seed ?? this.getRandomInt(1, 2100000000);
     let action = undefined;
     switch (params.model) {
@@ -156,7 +159,7 @@ export class NovelAiImageGenService implements ImageGenService {
         negative_prompt: params.uc,
         params_version: 1,
         strength: params.imageStrength,
-        qualityToggle: true,
+        qualityToggle: config.disableQuality ? false : true,
         reference_image_multiple: [],
         reference_information_extracted_multiple: [],
         reference_strength_multiple: [],

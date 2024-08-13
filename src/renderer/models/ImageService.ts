@@ -503,7 +503,9 @@ export const deleteImageFiles = async (
   scene?: GenericScene,
 ) => {
   for (const path of paths) {
-    await backend.trashFile(path);
+    try {
+      await backend.trashFile(path);
+    } catch(e) {}
     await imageService.invalidateCache(path);
   }
   if (scene) {

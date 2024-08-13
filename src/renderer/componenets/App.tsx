@@ -254,8 +254,6 @@ export const App = observer(() => {
       emoji: <FaPuzzlePiece />,
     },
   ];
-  const editorKey = '';
-
   return (
     <DndProvider
       backend={isMobile ? TouchBackend : HTML5Backend}
@@ -293,7 +291,7 @@ export const App = observer(() => {
                 {appState.curSession && (
                   <>
                     <StackGrow outerClassName="hidden md:block">
-                      <PreSetEditor key={editorKey} middlePromptMode={false} />
+                      <PreSetEditor key={appState.curSession.name} middlePromptMode={false} />
                     </StackGrow>
                     <StackGrow>
                       <TabComponent
@@ -301,7 +299,7 @@ export const App = observer(() => {
                         tabs={tabs}
                         toggleView={
                           <PreSetEditor
-                            key={editorKey + '2'}
+                            key={appState.curSession.name + '2'}
                             middlePromptMode={false}
                           />
                         }
