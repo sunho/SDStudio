@@ -20,4 +20,5 @@ export interface Config {
   refreshImage?: boolean;
   uuid?: string;
   whiteMode?: boolean;
+  disableQuality?: boolean;
 }
