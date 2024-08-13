@@ -119,11 +119,15 @@ const VibeImage = ({
       setImage(data);
     };
     fetchImage();
-    imageService.addEventListener('image-cache-invalidated', (e: any) => {
+    const handler = (e: any) => {
       if (e.detail.path === path) {
         fetchImage();
       }
-    });
+    };
+    imageService.addEventListener('image-cache-invalidated', handler);
+    return () => {
+      imageService.removeEventListener('image-cache-invalidated', handler);
+    };
   }, [path]);
   return (
     <>
