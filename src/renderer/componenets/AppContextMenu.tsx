@@ -136,11 +136,13 @@ export const AppContextMenu = observer(() => {
       items: items,
     });
     if (!menu) return;
+    const menuItem = oneTimeFlowMap.get(menu)!;
+    const input = menuItem.getInput ? await menuItem.getInput(appState.curSession!) : undefined;
     for (const p of ctx.path) {
       let image = await imageService.fetchImage(p);
       image = dataUriToBase64(image!);
       const job = await extractPromptDataFromBase64(image);
-      oneTimeFlowMap.get(menu)!.handler(appState.curSession!, ctx.scene!, image, undefined, job);
+      menuItem.handler(appState.curSession!, ctx.scene!, image, undefined, job, input);
     }
   };
   const handleImageItemClick = ({ id, props }: any) => {

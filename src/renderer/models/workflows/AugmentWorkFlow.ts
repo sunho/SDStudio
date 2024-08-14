@@ -18,7 +18,7 @@ const AugmentGenShared = new WFVarBuilder()
     , 'emotion'
   )
 
-const emotions = ['neutral', 'happy', 'sad', 'angry', 'scared', 'surprised', 'tired', 'excited', 'nervous', 'thinking', 'confused', 'shy', 'disgusted', 'smug', 'bored', 'laughing', 'irritated', 'aroused', 'embarrassed', 'worried', 'love', 'determined', 'hurt', 'playful']
+export const emotions = ['neutral', 'happy', 'sad', 'angry', 'scared', 'surprised', 'tired', 'excited', 'nervous', 'thinking', 'confused', 'shy', 'disgusted', 'smug', 'bored', 'laughing', 'irritated', 'aroused', 'embarrassed', 'worried', 'love', 'determined', 'hurt', 'playful']
 
 const AugmentGenMeta = new WFVarBuilder()
   .addSelectVar('emotion', emotions.map((e) => ({value:e,label:e})), 'neutral')
