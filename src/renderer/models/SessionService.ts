@@ -257,7 +257,15 @@ export class SessionService extends ResourceSyncService<Session> {
     await this.createFrom(name, session);
   }
 
-  async migrateSession(session: any) {
+  async migrateSession(session: ISession) {
+    const types = ['SDImageGen', 'SDImageGenEasy'];
+    for (const type of types) {
+      if (session.presetShareds[type]) {
+        for (const vibe of session.presetShareds[type].vibes) {
+          if (vibe.path) vibe.path = vibe.path.split('/').pop()!;
+        }
+      }
+    }
   }
 
   async saveInpaintImages(
