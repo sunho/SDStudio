@@ -740,13 +740,15 @@ export class AppState {
           items: items,
         });
         if (!menu) return;
+        const menuItem = oneTimeFlowMap.get(menu)!;
+        const input = menuItem.getInput ? await menuItem.getInput(this.curSession!) : undefined;
         for (const scene of selected) {
           for (let path of scene.mains) {
             path = imageService.getOutputDir(this.curSession!, scene) + '/' + path;
             let image = await imageService.fetchImage(path);
             image = dataUriToBase64(image!);
             const job = await extractPromptDataFromBase64(image);
-            oneTimeFlowMap.get(menu)!.handler(appState.curSession!, scene, image, undefined, job);
+            oneTimeFlowMap.get(menu)!.handler(appState.curSession!, scene, image, undefined, job, input);
           }
         }
       } else {

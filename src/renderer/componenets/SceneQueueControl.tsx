@@ -593,7 +593,9 @@ const QueueControl = observer(
           let image = await imageService.fetchImage(path);
           image = dataUriToBase64(image!);
           const job = await extractPromptDataFromBase64(image);
-          oneTimeFlowMap.get(menu)!.handler(curSession!, scene, image, undefined, job);
+          const menuItem = oneTimeFlowMap.get(menu)!;
+          const input = menuItem.getInput ? await menuItem.getInput(curSession!) : undefined;
+          menuItem.handler(curSession!, scene, image, undefined, job, input);
       }
       },
     });

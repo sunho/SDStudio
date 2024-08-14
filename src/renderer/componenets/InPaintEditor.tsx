@@ -287,6 +287,7 @@ const InPaintEditor = observer(
             <TransformWrapper
               disabled={def.hasMask && brushing}
               minScale={0.7}
+              initialScale={0.7}
               centerOnInit={true}
             >
               <TransformComponent wrapperClass="wrapper flex-none items-center justify-center">
