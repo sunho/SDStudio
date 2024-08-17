@@ -38,7 +38,7 @@ Stable Diffusion 계열 API와 모델을 사용하기 편하게 해주는 프론
 
 ![](images/img11.png)
 
-### 프롬프트 조합 기
+### 프롬프트 조합 기능
 
 ![](images/img7.png)
 
