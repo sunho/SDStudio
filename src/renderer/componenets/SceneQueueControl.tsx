@@ -596,7 +596,7 @@ const QueueControl = observer(
           const menuItem = oneTimeFlowMap.get(menu)!;
           const input = menuItem.getInput ? await menuItem.getInput(curSession!) : undefined;
           menuItem.handler(curSession!, scene, image, undefined, job, input);
-      }
+        }
       },
     });
 

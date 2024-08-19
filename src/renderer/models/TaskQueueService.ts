@@ -1,5 +1,6 @@
 import { v4 } from 'uuid';
 import {
+  convertResolution,
   ImageAugmentInput,
   ImageGenInput,
   Model,
@@ -202,6 +203,17 @@ async function handleNAIDelay(numTry: number, fast: boolean) {
 
 type ImageTaskType = 'gen' | 'inpaint' | 'i2i';
 
+const lowerResolution = (res: Resolution, width?: number, height?: number) => {
+  if (res === Resolution.Custom) {
+    return {
+      width: width!,
+      height: height!,
+    }
+  } else {
+    return convertResolution(res);
+  }
+}
+
 class GenerateImageTaskHandler implements TaskHandler {
   type: ImageTaskType;
   fast: boolean;
@@ -263,11 +275,12 @@ class GenerateImageTaskHandler implements TaskHandler {
         strength: x.strength,
       })),
     );
+    const resol = job.overrideResolution ? job.overrideResolution : task.params.scene!.resolution as Resolution;
     const arg: ImageGenInput = {
       prompt: prompt,
       uc: job.uc,
       model: Model.Anime,
-      resolution: job.overrideResolution ? job.overrideResolution : task.params.scene!.resolution as Resolution,
+      resolution: lowerResolution(resol, task.params.scene!.resolutionWidth, task.params.scene!.resolutionHeight),
       sampling: job.sampling as Sampling,
       sm: job.smea,
       dyn: job.dyn,
@@ -377,6 +390,14 @@ class GenerateImageTaskHandler implements TaskHandler {
         scene: name,
         text: '씬 해상도가 큼',
       });
+    } else if (resolution === Resolution.Custom) {
+      const totalPixels = (task.params.scene.resolutionWidth! * task.params.scene.resolutionHeight!) ?? 0;
+      if (totalPixels > 1024*1024) {
+        res.push({
+          scene: name,
+          text: '씬 해상도가 큼',
+        });
+      }
     }
     return res;
   }
@@ -819,6 +840,7 @@ export const queueI2IWorkflow = async (
   onComplete?: (path: string) => void,
 ) => {
   const def = workFlowService.getDef(type);
+  console.log('queueI2IWorkflow', type, preset, scene, samples, onComplete);
   await def.handler(
     session,
     scene,

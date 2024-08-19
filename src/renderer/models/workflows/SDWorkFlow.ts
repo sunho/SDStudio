@@ -215,6 +215,7 @@ const createSDI2IHandler = (type: string) => {
     preset: any,
     shared: any,
     samples: number,
+    meta?: any,
     onComplete?: (img: string) => void,
   ) => {
     const image = preset.image.endsWith('.png') ? dataUriToBase64(

@@ -37,26 +37,6 @@ export class NovelAiImageGenService implements ImageGenService {
     return modelMap[model];
   }
 
-  private translateResolution(resolution: Resolution): {
-    height: number;
-    width: number;
-  } {
-    const resolutionMap = {
-      small_landscape: { height: 512, width: 768 },
-      small_portrait: { height: 768, width: 512 },
-      small_square: { height: 640, width: 640 },
-      landscape: { height: 832, width: 1216 },
-      portrait: { height: 1216, width: 832 },
-      square: { height: 1024, width: 1024 },
-      large_landscape: { height: 1024, width: 1536 },
-      large_portrait: { height: 1536, width: 1024 },
-      large_square: { height: 1472, width: 1472 },
-      wallpaper_portrait: { height: 1088, width: 1920 },
-      wallpaper_landscape: { height: 1920, width: 1088 },
-    } as const;
-    return resolutionMap[resolution];
-  }
-
   private translateSampling(sampling: Sampling): string {
     const samplingMap = {
       k_euler_ancestral: 'k_euler_ancestral',
@@ -116,11 +96,16 @@ export class NovelAiImageGenService implements ImageGenService {
   }
 
   public async generateImage(authorization: string, params: ImageGenInput) {
-    const modelValue = this.translateModel(params.model);
-    const resolutionValue = this.translateResolution(params.resolution);
+    let modelValue = this.translateModel(params.model);
+    const resolutionValue = params.resolution;
     const samplingValue = this.translateSampling(params.sampling);
 
     const config = await backend.getConfig();
+    if (config.useAnimalModel) {
+      if (params.model === Model.Anime) {
+        modelValue = 'nai-diffusion-furry-3';
+      }
+    }
 
     const seed = params.seed ?? this.getRandomInt(1, 2100000000);
     let action = undefined;

@@ -21,4 +21,5 @@ export interface Config {
   uuid?: string;
   whiteMode?: boolean;
   disableQuality?: boolean;
+  useAnimalModel?: boolean;
 }

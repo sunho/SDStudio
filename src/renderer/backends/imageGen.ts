@@ -16,6 +16,7 @@ export enum Resolution {
   LargeSquare = 'large_square',
   WallpaperPortrait = 'wallpaper_portrait',
   WallpaperLandscape = 'wallpaper_landscape',
+  Custom = 'custom',
 }
 
 export const upscaleReoslution = (resolution: Resolution) => {
@@ -36,6 +37,8 @@ export const upscaleReoslution = (resolution: Resolution) => {
       return Resolution.WallpaperPortrait;
     case Resolution.WallpaperLandscape:
       return Resolution.WallpaperLandscape;
+    case Resolution.Custom:
+      return Resolution.Custom;
     default:
       return resolution;
   }
@@ -53,7 +56,15 @@ export const resolutionMap = {
   large_square: { height: 1472, width: 1472 },
   wallpaper_portrait: { height: 1088, width: 1920 },
   wallpaper_landscape: { height: 1920, width: 1088 },
+  custom: { height: 0, width: 0 },
 } as const;
+
+export const convertResolution = (resolution: Resolution): ImageSize => {
+  return {
+    width: resolutionMap[resolution].width,
+    height: resolutionMap[resolution].height,
+  }
+};
 
 export enum Sampling {
   KEulerAncestral = 'k_euler_ancestral',
@@ -77,11 +88,16 @@ export interface Vibe {
   strength: number;
 }
 
+export interface ImageSize {
+  width: number;
+  height: number;
+}
+
 export interface ImageGenInput {
   model: Model;
   prompt: string;
   uc: string;
-  resolution: Resolution;
+  resolution: ImageSize;
   sampling: Sampling;
   outputFilePath: string;
   sm: boolean;
