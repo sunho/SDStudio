@@ -205,6 +205,8 @@ export interface Round {
 export interface IAbstractScene {
   name: string;
   resolution: string;
+  resolutionWidth?: number;
+  resolutionHeight?: number;
   game?: Game;
   round?: Round;
   imageMap: string[];
@@ -214,6 +216,8 @@ export interface IAbstractScene {
 export class AbstractScene implements IAbstractScene {
   @observable accessor name: string = '';
   @observable accessor resolution: string = '';
+  @observable accessor resolutionWidth: number | undefined = undefined;
+  @observable accessor resolutionHeight: number | undefined = undefined;
   @observable.shallow accessor game: Game | undefined = undefined;
   @observable.ref accessor round: Round | undefined = undefined;
   @observable.shallow accessor imageMap: string[] = [];
@@ -227,6 +231,8 @@ export class AbstractScene implements IAbstractScene {
     scene.round = json.round;
     scene.imageMap = json.imageMap;
     scene.mains = json.mains;
+    scene.resolutionWidth = json.resolutionWidth;
+    scene.resolutionHeight = json.resolutionHeight;
     return scene;
   }
 
@@ -238,6 +244,8 @@ export class AbstractScene implements IAbstractScene {
       round: this.round,
       imageMap: this.imageMap,
       mains: this.mains,
+      resolutionHeight: this.resolutionHeight,
+      resolutionWidth: this.resolutionWidth,
     };
   }
 }

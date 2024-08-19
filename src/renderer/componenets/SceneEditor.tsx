@@ -547,6 +547,8 @@ const SceneEditor = observer(({ scene, onClosed, onDeleted }: Props) => {
 
   const resolutionOptions = Object.entries(resolutionMap)
     .map(([key, value]) => {
+      const resolVal = (scene.resolutionWidth ?? '') + 'x' + (scene.resolutionHeight ?? '');
+      if (key === 'custom') return { label: '커스텀 (' + resolVal + ')', value: key };
       return { label: `${value.width}x${value.height}`, value: key };
     })
     .filter((x) => !x.value.startsWith('small'));
@@ -573,7 +575,7 @@ const SceneEditor = observer(({ scene, onClosed, onDeleted }: Props) => {
                 options={resolutionOptions}
                 menuPlacement="bottom"
                 selectedOption={scene.resolution}
-                onSelect={(opt) => {
+                onSelect={async (opt) => {
                   if (
                     opt.value.startsWith('large') ||
                     opt.value.startsWith('wallpaper')
@@ -585,6 +587,25 @@ const SceneEditor = observer(({ scene, onClosed, onDeleted }: Props) => {
                         scene.resolution = opt.value as Resolution;
                       },
                     });
+                  } else if (opt.value === 'custom') {
+                    const width = await appState.pushDialogAsync({
+                      type: 'input-confirm',
+                      text: '해상도 너비를 입력해주세요'
+                    });
+                    if (width == null) return;
+                    const height = await appState.pushDialogAsync({
+                      type: 'input-confirm',
+                      text: '해상도 높이를 입력해주세요'
+                    });
+                    if (height == null) return;
+                    try {
+                      const customResolution = { width: parseInt(width), height: parseInt(height) };
+                      scene.resolution = opt.value as Resolution;
+                      scene.resolutionWidth = (customResolution.width + 63) & ~63;
+                      scene.resolutionHeight = (customResolution.height + 63) & ~63;
+                    } catch (e: any) {
+                      appState.pushMessage(e.message);
+                    }
                   } else {
                     scene.resolution = opt.value as Resolution;
                   }

@@ -52,6 +52,8 @@ const InPaintEditor = observer(
     const { curSession } = appState;
     const resolutionOptions = Object.entries(resolutionMap)
       .map(([key, value]) => {
+        const resolVal = (editingScene.resolutionWidth ?? '') + 'x' + (editingScene.resolutionHeight ?? '');
+        if (key === 'custom') return { label: '커스텀 (' + resolVal + ')', value: key };
         return { label: `${value.width}x${value.height}`, value: key };
       })
       .filter((x) => !x.value.startsWith('small'));
@@ -138,7 +140,7 @@ const InPaintEditor = observer(
       });
     };
 
-    const confirm = async () => {
+    const saveMask = async () => {
       if (def.hasMask) {
         const mask = await brushTool.current!.getMaskBase64();
         if (!editingScene.preset.mask) {
@@ -154,6 +156,10 @@ const InPaintEditor = observer(
           );
         }
       }
+    };
+
+    const confirm = async () => {
+      await saveMask();
       onConfirm();
     };
 
@@ -191,7 +197,7 @@ const InPaintEditor = observer(
                   options={resolutionOptions}
                   menuPlacement="bottom"
                   selectedOption={editingScene.resolution}
-                  onSelect={(opt) => {
+                  onSelect={async (opt) => {
                     if (
                       opt.value.startsWith('large') ||
                       opt.value.startsWith('wallpaper')
@@ -203,6 +209,25 @@ const InPaintEditor = observer(
                           editingScene.resolution = opt.value as Resolution;
                         },
                       });
+                    } else if (opt.value === 'custom') {
+                      const width = await appState.pushDialogAsync({
+                        type: 'input-confirm',
+                        text: '해상도 너비를 입력해주세요'
+                      });
+                      if (width == null) return;
+                      const height = await appState.pushDialogAsync({
+                        type: 'input-confirm',
+                        text: '해상도 높이를 입력해주세요'
+                      });
+                      if (height == null) return;
+                      try {
+                        const customResolution = { width: parseInt(width), height: parseInt(height) };
+                        editingScene.resolution = opt.value as Resolution;
+                        editingScene.resolutionWidth = (customResolution.width + 63) & ~63;
+                        editingScene.resolutionHeight = (customResolution.height + 63) & ~63;
+                      } catch (e: any) {
+                        appState.pushMessage(e.message);
+                      }
                     } else {
                       editingScene.resolution = opt.value as Resolution;
                     }
@@ -317,6 +342,7 @@ const InPaintEditor = observer(
               <button
                 className={`round-button back-green h-8 w-16 md:w-36 flex items-center justify-center`}
                 onClick={async () => {
+                  await saveMask();
                   await queueI2IWorkflow(curSession!, editingScene.workflowType, editingScene.preset, editingScene, 1, (path: string) => {
                     (async () => {
                       const data = await imageService.fetchImage(path);

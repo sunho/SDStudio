@@ -22,6 +22,7 @@ const ConfigScreen = observer(({ onSave }: ConfigScreenProps) => {
   const [whiteMode, setWhiteMode] = useState(false);
   const [noIpCheck, setNoIpCheck] = useState(false);
   const [disableQuality, setDisableQuality] = useState(false);
+  const [animalModel, setAnimalModel] = useState(false);
   const [useLocalBgRemoval, setUseLocalBgRemoval] = useState(false);
   const [refreshImage, setRefreshImage] = useState(false);
   const [ready, setReady] = useState(false);
@@ -41,6 +42,8 @@ const ConfigScreen = observer(({ onSave }: ConfigScreenProps) => {
       setNoIpCheck(config.noIpCheck ?? false);
       setRefreshImage(config.refreshImage ?? false);
       setUseLocalBgRemoval(config.useLocalBgRemoval ?? false);
+      setDisableQuality(config.disableQuality ?? false);
+      setAnimalModel(config.useAnimalModel ?? false);
     })();
     const checkReady = () => {
       setReady(localAIService.ready);
@@ -308,6 +311,16 @@ const ConfigScreen = observer(({ onSave }: ConfigScreenProps) => {
             onChange={(e) => setDisableQuality(e.target.checked)}
           />
         </div>
+        <div className="mt-4 flex items-center gap-2">
+          <label htmlFor="whiteMode" className="text-sm gray-label">
+            NAI 동물 모델 사용
+          </label>
+          <input
+            type="checkbox"
+            checked={animalModel}
+            onChange={(e) => setAnimalModel(e.target.checked)}
+          />
+        </div>
         <button
           className="mt-4 w-full back-sky py-2 rounded hover:brightness-95 active:brightness-90"
           onClick={async () => {
@@ -322,6 +335,7 @@ const ConfigScreen = observer(({ onSave }: ConfigScreenProps) => {
               disableQuality: disableQuality,
               whiteMode: whiteMode,
               useLocalBgRemoval: useLocalBgRemoval,
+              useAnimalModel: animalModel,
             };
             await backend.setConfig(config);
             if (old.useCUDA !== useGPU) localAIService.modelChanged();
